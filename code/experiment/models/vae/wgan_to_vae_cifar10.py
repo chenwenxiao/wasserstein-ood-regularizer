@@ -19,7 +19,9 @@ from tfsnippet.examples.utils import (MLResults,
                                       print_with_title)
 import numpy as np
 
+from code.experiment.datasets.svhn import load_svhn
 from code.experiment.models.gradient_penalty import get_gradient_penalty, spectral_norm
+from code.experiment.utils import make_diagram
 
 
 class ExpConfig(spt.Config):
@@ -53,6 +55,7 @@ class ExpConfig(spt.Config):
     gradient_penalty_algorithm = 'interpolate'  # both or interpolate
     gradient_penalty_weight = 2
     gradient_penalty_index = 6
+    wasserstein_regularizer_weight = 1.0
 
     n_critical = 5
     # evaluation parameters
@@ -336,16 +339,13 @@ def main():
         test_chain = test_q_net.chain(p_net, observed={'x': input_x}, n_z=config.test_n_qz, latent_axis=0,
                                       beta=beta)
         test_recon = tf.reduce_mean(test_chain.model['x'].log_prob())
-        test_nll = -tf.reduce_mean(
-            test_chain.vi.evaluation.is_loglikelihood()
-        )
+        test_ele_nll = test_chain.vi.evaluation.is_loglikelihood()
+        test_nll = -tf.reduce_mean(test_ele_nll)
         test_lb = tf.reduce_mean(test_chain.vi.lower_bound.elbo())
     xi_node = get_var('p_net/xi')
     # derive the optimizer
     with tf.name_scope('optimizing'):
         VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('G_theta') + tf.trainable_variables(
-            'beta') + tf.trainable_variables('posterior_flow') + tf.trainable_variables('D_psi')
-        VAE_nD_params = tf.trainable_variables('q_net') + tf.trainable_variables('G_theta') + tf.trainable_variables(
             'beta') + tf.trainable_variables('posterior_flow')
         D_params = tf.trainable_variables('D_psi')
         G_params = tf.trainable_variables('G_theta')
@@ -354,7 +354,7 @@ def main():
             VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)
         with tf.variable_scope('VAE_nD_optimizer'):
             VAE_nD_optimizer = tf.train.AdamOptimizer(learning_rate)
-            VAE_nD_grads = VAE_nD_optimizer.compute_gradients(VAE_nD_loss, VAE_nD_params)
+            VAE_nD_grads = VAE_nD_optimizer.compute_gradients(VAE_nD_loss, VAE_params)
         with tf.variable_scope('D_optimizer'):
             D_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5, beta2=0.999)
             D_grads = D_optimizer.compute_gradients(D_loss, D_params)
@@ -448,6 +448,12 @@ def main():
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=False)
     test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
 
+    svhn_train, svhn_test = load_svhn(x_shape=config.x_shape)
+    svhn_train = (svhn_train - 127.5) / 256.0 * 2
+    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+    svhn_train_flow = spt.DataFlow.arrays([svhn_train, svhn_train], config.test_batch_size)
+    svhn_test_flow = spt.DataFlow.arrays([svhn_test, svhn_test], config.test_batch_size)
+
     with spt.utils.create_session().as_default() as session, train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
@@ -491,7 +497,8 @@ def main():
                             # vae training
                             [_, batch_VAE_loss, beta_value, xi_value, batch_train_recon, batch_train_kl,
                              batch_train_grad_penalty] = session.run(
-                                [VAE_nD_train_op, VAE_nD_loss, beta, xi_node, train_recon, train_kl, train_grad_penalty],
+                                [VAE_nD_train_op, VAE_nD_loss, beta, xi_node, train_recon, train_kl,
+                                 train_grad_penalty],
                                 feed_dict={
                                     input_x: x
                                 })
@@ -531,6 +538,7 @@ def main():
                 if epoch % config.test_epoch_freq == 0:
                     with loop.timeit('eval_time'):
                         evaluator.run()
+                    make_diagram(test_ele_nll, [train_flow, test_flow, svhn_train_flow, svhn_test_flow], input_x)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

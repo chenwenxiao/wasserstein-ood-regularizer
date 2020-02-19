@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="cd61c13b-5ecc-4885-b942-6a6c56b5bbdb" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/code/experiment/models/vae/vae_cifar10.py" afterPath="$PROJECT_DIR$/code/experiment/models/vae/vae_cifar10.py" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/code/experiment/models/vae/vae_cifar10.py" afterPath="$PROJECT_DIR$/code/experiment/models/vae/wgan_to_vae_cifar10.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/code/experiment/datasets/svhn.py" afterPath="$PROJECT_DIR$/code/experiment/datasets/svhn.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -16,14 +18,24 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="vae_cifar10.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/code/experiment/models/vae/vae_cifar10.py">
+      <file leaf-file-name="wgan_to_vae_cifar10.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/code/experiment/models/vae/wgan_to_vae_cifar10.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="330">
-              <caret line="492" column="64" lean-forward="false" selection-start-line="492" selection-start-column="64" selection-end-line="492" selection-end-column="64" />
+            <state relative-caret-position="423">
+              <caret line="440" column="48" lean-forward="true" selection-start-line="440" selection-start-column="48" selection-end-line="440" selection-end-column="48" />
               <folding>
                 <element signature="e#24#40#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="svhn.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/code/experiment/datasets/svhn.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="180">
+              <caret line="17" column="4" lean-forward="false" selection-start-line="17" selection-start-column="4" selection-end-line="17" selection-end-column="4" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -56,6 +68,10 @@
       <find>act_norm</find>
       <find>pull_back_energy_weight</find>
       <find>uniform_scale</find>
+      <find>train_n_pz</find>
+      <find>test_n_pz</find>
+      <find>wasser</find>
+      <find>test_e</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -67,6 +83,8 @@
         <option value="$PROJECT_DIR$/code/experiment/utils.py" />
         <option value="$PROJECT_DIR$/code/experiment/models/gradient_penalty.py" />
         <option value="$PROJECT_DIR$/code/experiment/models/vae/vae_cifar10.py" />
+        <option value="$PROJECT_DIR$/code/experiment/datasets/svhn.py" />
+        <option value="$PROJECT_DIR$/code/experiment/models/vae/wgan_to_vae_cifar10.py" />
       </list>
     </option>
   </component>
@@ -244,8 +262,8 @@
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32919255" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.310559" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.20347223" sideWeight="0.49565217" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3094629" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.20958512" sideWeight="0.49565217" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
@@ -323,10 +341,18 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/code/experiment/models/vae/vae_cifar10.py">
+    <entry file="file://$PROJECT_DIR$/code/experiment/datasets/svhn.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="330">
-          <caret line="492" column="64" lean-forward="false" selection-start-line="492" selection-start-column="64" selection-end-line="492" selection-end-column="64" />
+        <state relative-caret-position="180">
+          <caret line="17" column="4" lean-forward="false" selection-start-line="17" selection-start-column="4" selection-end-line="17" selection-end-column="4" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/code/experiment/models/vae/wgan_to_vae_cifar10.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="423">
+          <caret line="440" column="48" lean-forward="true" selection-start-line="440" selection-start-column="48" selection-end-line="440" selection-end-column="48" />
           <folding>
             <element signature="e#24#40#0" expanded="true" />
           </folding>
