@@ -32,9 +32,9 @@ def spectral_norm(w, iteration=1):
     return w_norm
 
 
-def get_gradient_penalty(input_origin_x, sample_x, D, value_ndims, algorithm='interpolate',
+def get_gradient_penalty(input_x, sample_x, D, value_ndims, algorithm='interpolate',
                          gradient_penalty_weight=2.0, gradient_penalty_index=6.0):
-    x = input_origin_x
+    x = input_x
     x_shape = x.shape
     x_ = tf.reshape(sample_x, x_shape)
     x_shape[-value_ndims:] = 1
