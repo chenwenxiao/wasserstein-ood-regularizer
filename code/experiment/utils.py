@@ -28,6 +28,7 @@ from scipy.misc import logsumexp
 
 from tfsnippet.preprocessing import UniformNoiseSampler
 
+
 def get_ele(ops, flow):
     packs = []
     for [batch_x, batch_ox] in flow:
@@ -91,11 +92,14 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name):
     draw_curve(data_list[1], data_list[3], fig_name)
     pyplot.savefig('plotting/%s_curve.jpg' % fig_name)
 
+
 def make_diagram(op, flows, colors=['red', 'salmon', 'green', 'lightgreen'],
-                 names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'], x_label, fig_name):
+                 names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
+                 x_label='log(bit/dims)', fig_name='log_pro_histogram'):
     packs = [get_ele(op, flow) for flow in flows]
     plot_fig(packs, colors, names, x_label, fig_name)
     return packs
+
 
 if __name__ == '__main__':
     pass
