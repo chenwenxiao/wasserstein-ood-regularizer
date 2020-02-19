@@ -1,37 +1,15 @@
 # -*- coding: utf-8 -*-
-import functools
-import sys
-from argparse import ArgumentParser
-from contextlib import contextmanager
 import tensorflow as tf
-from pprint import pformat
 
 from matplotlib import pyplot
-from tensorflow.contrib.framework import arg_scope, add_arg_scope
-
-import tfsnippet as spt
-from tfsnippet import DiscretizedLogistic
-from tfsnippet.examples.utils import (MLResults,
-                                      save_images_collection,
-                                      bernoulli_as_pixel,
-                                      bernoulli_flow,
-                                      bernoulli_flow,
-                                      print_with_title)
-from code.experiments.utils import get_inception_score, get_fid
-from code.experiments.datasets.svhn import load_svhn
-from code.experiments.datasets.imagenet import load_imagenet_test
-from code.experiments.datasets.lsun import load_lsun_test
-
 import numpy as np
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
-from scipy.misc import logsumexp
-
-from tfsnippet.preprocessing import UniformNoiseSampler
 
 
-def get_ele(ops, flow):
+def get_ele(ops, flow, input_x):
     packs = []
-    for [batch_x, batch_ox] in flow:
+    session = tf.get_default_session()
+    for batch_x in flow:
         pack = session.run(
             ops, feed_dict={
                 input_x: batch_x,
@@ -93,10 +71,10 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name):
     pyplot.savefig('plotting/%s_curve.jpg' % fig_name)
 
 
-def make_diagram(op, flows, colors=['red', 'salmon', 'green', 'lightgreen'],
+def make_diagram(op, flows, input_x, colors=['red', 'salmon', 'green', 'lightgreen'],
                  names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
                  x_label='log(bit/dims)', fig_name='log_pro_histogram'):
-    packs = [get_ele(op, flow) for flow in flows]
+    packs = [get_ele(op, flow, input_x) for flow in flows]
     plot_fig(packs, colors, names, x_label, fig_name)
     return packs
 
