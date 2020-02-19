@@ -438,21 +438,22 @@ def main():
                 return images
 
     # prepare for training and testing data
-    (_x_train, _y_train), (_x_test, _y_test) = \
-        spt.datasets.load_cifar10(x_shape=config.x_shape)
+    (_x_train, _y_train), (_x_test, _y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape)
     x_train = (_x_train - 127.5) / 256.0 * 2
     x_test = (_x_test - 127.5) / 256.0 * 2
-    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
-                                     skip_incomplete=True)
-    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=False)
-    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=False)
-    test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
+    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
+    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
 
     svhn_train, svhn_test = load_svhn(x_shape=config.x_shape)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
     svhn_train_flow = spt.DataFlow.arrays([svhn_train, svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test, svhn_test], config.test_batch_size)
+
+    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
+                                     skip_incomplete=True)
+    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=False)
+    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=False)
 
     with spt.utils.create_session().as_default() as session, train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
@@ -478,7 +479,7 @@ def main():
                 metrics={'test_nll': test_nll, 'test_lb': test_lb,
                          'test_recon': test_recon},
                 inputs=[input_x],
-                data_flow=test_flow,
+                data_flow=cifar_test_flow,
                 time_metric_name='test_time'
             )
 
@@ -538,7 +539,8 @@ def main():
                 if epoch % config.test_epoch_freq == 0:
                     with loop.timeit('eval_time'):
                         evaluator.run()
-                    make_diagram(test_ele_nll, [train_flow, test_flow, svhn_train_flow, svhn_test_flow], input_x)
+                    make_diagram(test_ele_nll,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()
