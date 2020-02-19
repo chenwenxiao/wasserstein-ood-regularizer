@@ -102,21 +102,16 @@ def q_net(x, posterior_flow, observed=None, n_z=None):
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg), ):
         h_x = tf.to_float(x)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 96, kernel_size=5, scope='level_0')  # output: (28, 28, 16)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 96, scope='level_1')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 192, strides=2, scope='level_2')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 192, scope='level_4')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 192, strides=2, scope='level_5')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 192, scope='level_7')  # output: (7, 7, 64)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 192, scope='level_9')  # output: (7, 7, 64)
-
-        z_dim_channel = 16 * config.z_dim // config.x_shape[0] // config.x_shape[0]
-        z_mean = spt.layers.resnet_conv2d_block(h_x, z_dim_channel, scope='z_mean',
-                                                kernel_initializer=tf.zeros_initializer())
-        z_logstd = spt.layers.resnet_conv2d_block(h_x, z_dim_channel, scope='z_logstd',
-                                                  kernel_initializer=tf.zeros_initializer())
-        z_mean = spt.ops.reshape_tail(z_mean, ndims=3, shape=[-1])
-        z_logstd = spt.ops.reshape_tail(z_logstd, ndims=3, shape=[-1])
+        h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (32, 32, 16)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_1')  # output: (32, 32, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_2')  # output: (32, 32, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (32, 32, 128)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_5')  # output: (16, 16, 256)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2, scope='level_7')  # output: (8, 8, 512)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2, scope='level_8')  # output: (4, 4, 512)
+        h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
+        z_mean = spt.layers.dense(h_x, config.z_dim)
+        z_logstd = spt.layers.dense(h_x, config.z_dim)
 
     # sample z ~ q(z|x)
     z = net.add('z', spt.Normal(mean=z_mean, logstd=spt.ops.maybe_clip_value(z_logstd, min_val=config.min_logstd_of_q)),
@@ -137,17 +132,14 @@ def G_theta(z, return_std=False):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        z_dim_channel = 16 * config.z_dim // config.x_shape[0] // config.x_shape[1]
-        # h_z = spt.layers.dense(z, config.z_dim, normalizer_fn=None)
-        h_z = spt.ops.reshape_tail(z, ndims=1, shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, z_dim_channel))
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 192, scope='level_0')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 192, scope='level_1')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 192, scope='level_2')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 192, strides=2, scope='level_3')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 192, scope='level_5')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 192, scope='level_6')  # output:
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 96, strides=2, scope='level_8')  # output:
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 96, kernel_size=5, scope='level_9')  # output: (28, 28, 16)
+        h_z = spt.layers.dense(z, 512 * config.x_shape[0] // 8 * config.x_shape[1] // 8, normalizer_fn=None)
+        h_z = spt.ops.reshape_tail(h_z, ndims=1, shape=(config.x_shape[0] // 8, config.x_shape[1] // 8, 512))
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 512, strides=2, scope='level_2')  # output: (8, 8, 512)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 256, strides=2, scope='level_3')  # output: (16, 16, 256)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_5')  # output: (32, 32, 128)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output: (32, 32, 64)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output: (32, 32, 32)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (32, 32, 16)
         x_mean = spt.layers.conv2d(
             h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_mean',
             kernel_initializer=tf.zeros_initializer(), activation_fn=tf.nn.tanh
@@ -178,12 +170,12 @@ def D_psi(x, y=None):
                    weight_norm=spectral_norm if config.gradient_penalty_algorithm == 'spectral' else None,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
         h_x = tf.to_float(x)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_1')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_2')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_3')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_4')  # output: (7, 7, 64)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_5')  # output: (7, 7, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (32, 32, 16)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (32, 32, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (32, 32, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_4')  # output: (16, 16, 128)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_6')  # output: (8, 8, 256)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2, scope='level_8')  # output: (4, 4, 512)
 
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
         h_x = spt.layers.dense(h_x, 64, scope='level_-2')
@@ -499,7 +491,7 @@ def main():
                             # vae training
                             [_, batch_VAE_loss, beta_value, xi_value, batch_train_recon, batch_train_kl,
                              batch_train_grad_penalty] = session.run(
-                                [VAE_train_op, VAE_loss, beta, xi_node, train_recon, train_kl, train_grad_penalty],
+                                [VAE_nD_train_op, VAE_nD_loss, beta, xi_node, train_recon, train_kl, train_grad_penalty],
                                 feed_dict={
                                     input_x: x
                                 })
