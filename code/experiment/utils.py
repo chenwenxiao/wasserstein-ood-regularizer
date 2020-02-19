@@ -1,0 +1,101 @@
+# -*- coding: utf-8 -*-
+import functools
+import sys
+from argparse import ArgumentParser
+from contextlib import contextmanager
+import tensorflow as tf
+from pprint import pformat
+
+from matplotlib import pyplot
+from tensorflow.contrib.framework import arg_scope, add_arg_scope
+
+import tfsnippet as spt
+from tfsnippet import DiscretizedLogistic
+from tfsnippet.examples.utils import (MLResults,
+                                      save_images_collection,
+                                      bernoulli_as_pixel,
+                                      bernoulli_flow,
+                                      bernoulli_flow,
+                                      print_with_title)
+from code.experiments.utils import get_inception_score, get_fid
+from code.experiments.datasets.svhn import load_svhn
+from code.experiments.datasets.imagenet import load_imagenet_test
+from code.experiments.datasets.lsun import load_lsun_test
+
+import numpy as np
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
+from scipy.misc import logsumexp
+
+from tfsnippet.preprocessing import UniformNoiseSampler
+
+def get_ele(ops, flow):
+    packs = []
+    for [batch_x, batch_ox] in flow:
+        pack = session.run(
+            ops, feed_dict={
+                input_x: batch_x,
+            })  # [3, batch_size]
+        pack = np.transpose(np.asarray(pack), (1, 0))  # [batch_size, len_ops]
+        packs.append(pack)
+    packs = np.concatenate(packs, axis=0)  # [len_of_flow, len_ops]
+    packs = np.transpose(np.asarray(packs), (1, 0))  # [len_ops, len_of_flow]
+    return packs
+
+
+def draw_curve(cifar_test, svhn_test, fig_name):
+    label = np.concatenate(([1] * len(cifar_test), [-1] * len(svhn_test)))
+    score = np.concatenate((cifar_test, svhn_test))
+
+    fpr, tpr, thresholds = roc_curve(label, score)
+    precision, recall, thresholds = precision_recall_curve(label, score)
+    pyplot.plot(recall, precision)
+    pyplot.plot(fpr, tpr)
+    print('%s auc: %4f, ap: %4f' % (
+        fig_name, auc(fpr, tpr), average_precision_score(label, score)))
+
+
+def draw_metric(metric, color, label):
+    metric = list(metric)
+
+    n, bins, patches = pyplot.hist(metric, 40, normed=True, facecolor=color, alpha=0.4, label=label)
+
+    index = []
+    for i in range(len(bins) - 1):
+        index.append((bins[i] + bins[i + 1]) / 2)
+
+    def smooth(c, N=5):
+        weights = np.hanning(N)
+        return np.convolve(weights / weights.sum(), c)[N - 1:-N + 1]
+
+    n[2:-2] = smooth(n)
+    pyplot.plot(index, n, color=color)
+    pyplot.legend()
+    print('%s done.' % label)
+
+
+def plot_fig(data_list, color_list, label_list, x_label, fig_name):
+    pyplot.cla()
+    pyplot.plot()
+    pyplot.grid(c='silver', ls='--')
+    pyplot.xlabel(x_label)
+    spines = pyplot.gca().spines
+    for sp in spines:
+        spines[sp].set_color('silver')
+
+    for i in range(len(data_list)):
+        draw_metric(data_list[i], color_list[i], label_list[i])
+    pyplot.savefig('plotting/%s.jpg' % fig_name)
+
+    pyplot.cla()
+    pyplot.plot()
+    draw_curve(data_list[1], data_list[3], fig_name)
+    pyplot.savefig('plotting/%s_curve.jpg' % fig_name)
+
+def make_diagram(op, flows, colors=['red', 'salmon', 'green', 'lightgreen'],
+                 names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'], x_label, fig_name):
+    packs = [get_ele(op, flow) for flow in flows]
+    plot_fig(packs, colors, names, x_label, fig_name)
+    return packs
+
+if __name__ == '__main__':
+    pass
