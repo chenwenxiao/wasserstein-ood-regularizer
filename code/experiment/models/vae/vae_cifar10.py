@@ -514,8 +514,7 @@ def main():
                             # vae training
                             [_, batch_VAE_loss, beta_value, xi_value, batch_train_recon, batch_train_kl,
                              batch_train_grad_penalty] = session.run(
-                                [VAE_train_op, VAE_loss, beta, xi_node, train_recon,
-                                 train_kl, train_grad_penalty],
+                                [VAE_train_op, VAE_loss, beta, xi_node, train_recon, train_kl, train_grad_penalty],
                                 feed_dict={
                                     input_x: x
                                 })
