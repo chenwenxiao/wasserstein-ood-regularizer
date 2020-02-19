@@ -24,7 +24,7 @@ from code.experiment.models.gradient_penalty import get_gradient_penalty, spectr
 
 class ExpConfig(spt.Config):
     # model parameters
-    z_dim = 1024
+    z_dim = 256
     act_norm = False
     weight_norm = False
     l2_reg = 0.0002
@@ -41,23 +41,18 @@ class ExpConfig(spt.Config):
     warm_up_epoch = 800
     beta = 1e-8
     initial_xi = 0.0
-    pull_back_energy_weight = 1000.0
     uniform_scale = False
 
     max_step = None
     batch_size = 128
-    noise_len = 8
-    smallest_step = 5e-5
     initial_lr = 0.0001
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = [200, 400, 600, 800, 1000, 1200, 1400, 1600]
     lr_anneal_step_freq = None
 
-    use_dg = False
     gradient_penalty_algorithm = 'interpolate'  # both or interpolate
     gradient_penalty_weight = 2
     gradient_penalty_index = 6
-    kl_balance_weight = 1.0
 
     n_critical = 5
     # evaluation parameters
@@ -68,16 +63,8 @@ class ExpConfig(spt.Config):
     test_batch_size = 64
     test_epoch_freq = 100
     plot_epoch_freq = 20
-    grad_epoch_freq = 10
 
-    test_fid_n_pz = 5000
-    test_x_samples = 1
-    log_Z_times = 100000
-    log_Z_x_samples = 8
-
-    len_train = 50000
     sample_n_z = 100
-    fid_samples = 5000
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -85,8 +72,6 @@ class ExpConfig(spt.Config):
     @property
     def x_shape(self):
         return (32, 32, 3)
-
-    x_shape_multiple = 32 * 32 * 3
 
 
 config = ExpConfig()
