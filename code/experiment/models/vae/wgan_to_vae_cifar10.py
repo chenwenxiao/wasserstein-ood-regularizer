@@ -345,10 +345,9 @@ def main():
     xi_node = get_var('p_net/xi')
     # derive the optimizer
     with tf.name_scope('optimizing'):
-        VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('G_theta') + tf.trainable_variables(
-            'beta') + tf.trainable_variables('posterior_flow')
+        VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('posterior_flow')
         D_params = tf.trainable_variables('D_psi')
-        G_params = tf.trainable_variables('G_theta')
+        G_params = tf.trainable_variables('G_theta') + tf.trainable_variables('beta')
         with tf.variable_scope('VAE_optimizer'):
             VAE_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)

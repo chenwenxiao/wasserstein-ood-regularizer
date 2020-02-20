@@ -19,21 +19,11 @@
       <file leaf-file-name="wgan_to_vae_cifar10.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/code/experiment/models/vae/wgan_to_vae_cifar10.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="495">
-              <caret line="447" column="49" lean-forward="true" selection-start-line="447" selection-start-column="49" selection-end-line="447" selection-end-column="49" />
+            <state relative-caret-position="358">
+              <caret line="349" column="78" lean-forward="false" selection-start-line="349" selection-start-column="78" selection-end-line="349" selection-end-column="78" />
               <folding>
                 <element signature="e#24#40#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="svhn.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/code/experiment/datasets/svhn.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="180">
-              <caret line="17" column="4" lean-forward="false" selection-start-line="17" selection-start-column="4" selection-end-line="17" selection-end-column="4" />
-              <folding />
             </state>
           </provider>
         </entry>
@@ -295,16 +285,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/code/experiment/utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="267">
-          <caret line="75" column="45" lean-forward="false" selection-start-line="75" selection-start-column="45" selection-end-line="75" selection-end-column="45" />
-          <folding>
-            <element signature="e#24#47#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/code/experiment/models/vae/vae_bernouli.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="195">
@@ -347,10 +327,18 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/code/experiment/utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="517">
+          <caret line="73" column="4" lean-forward="false" selection-start-line="73" selection-start-column="4" selection-end-line="73" selection-end-column="4" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/code/experiment/models/vae/wgan_to_vae_cifar10.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="495">
-          <caret line="447" column="49" lean-forward="true" selection-start-line="447" selection-start-column="49" selection-end-line="447" selection-end-column="49" />
+        <state relative-caret-position="358">
+          <caret line="349" column="78" lean-forward="false" selection-start-line="349" selection-start-column="78" selection-end-line="349" selection-end-column="78" />
           <folding>
             <element signature="e#24#40#0" expanded="true" />
           </folding>
