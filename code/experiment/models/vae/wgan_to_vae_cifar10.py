@@ -43,7 +43,7 @@ class ExpConfig(spt.Config):
     warm_up_epoch = 800
     beta = 1e-8
     initial_xi = 0.0
-    uniform_scale = False
+    uniform_scale = True
 
     max_step = None
     batch_size = 128
@@ -64,8 +64,8 @@ class ExpConfig(spt.Config):
     test_n_pz = 1000
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 100
-    plot_epoch_freq = 20
+    test_epoch_freq = 10
+    plot_epoch_freq = 10
 
     sample_n_z = 100
 
@@ -194,7 +194,7 @@ def p_net(observed=None, n_z=None, beta=1.0):
     # sample z ~ p(z)
     normal = spt.Normal(mean=tf.zeros([1, config.z_dim]),
                         logstd=tf.zeros([1, config.z_dim]))
-    z = net.add('z', normal, n_samples=n_z)
+    z = net.add('z', normal, n_samples=n_z, group_ndims=1)
     x_mean, x_logstd = G_theta(z, return_std=True)
     x = net.add('x', DiscretizedLogistic(
         mean=x_mean,
@@ -219,8 +219,9 @@ def get_all_loss(q_net, p_net, pn_theta):
         )
         VAE_nD_loss = -train_recon + train_kl
 
-        gp = get_gradient_penalty(p_net['x'], pn_theta['x'], D_psi, config.batch_size, config.x_shape)
-        energy_fake = D_psi(pn_theta['x'])
+        sample_x = pn_theta['x'].distribution.mean
+        gp = get_gradient_penalty(p_net['x'], sample_x, D_psi, config.batch_size, config.x_shape)
+        energy_fake = D_psi(sample_x)
         energy_real = D_psi(p_net['x'])
 
         adv_G_loss = tf.reduce_mean(energy_fake)
@@ -345,9 +346,10 @@ def main():
         test_lb = tf.reduce_mean(test_chain.vi.lower_bound.elbo())
     # derive the optimizer
     with tf.name_scope('optimizing'):
-        VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('posterior_flow')
+        VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables(
+            'posterior_flow') + tf.trainable_variables('beta')
         D_params = tf.trainable_variables('D_psi')
-        G_params = tf.trainable_variables('G_theta') + tf.trainable_variables('beta')
+        G_params = tf.trainable_variables('G_theta')
         with tf.variable_scope('VAE_optimizer'):
             VAE_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)
@@ -372,7 +374,7 @@ def main():
             sample_n_z = config.sample_n_z
             plot_net = p_net(n_z=sample_n_z, beta=beta)
             x_plots = 256.0 * tf.reshape(
-                plot_net['x'], (-1,) + config.x_shape) / 2 + 127.5
+                plot_net['x'].distribution.mean, (-1,) + config.x_shape) / 2 + 127.5
             reconstruct_q_net = q_net(input_x, posterior_flow)
             reconstruct_z = reconstruct_q_net['z']
             reconstruct_plots = 256.0 * tf.reshape(
