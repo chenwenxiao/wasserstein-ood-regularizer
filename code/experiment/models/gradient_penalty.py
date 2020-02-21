@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tfsnippet as spt
 
 
 def spectral_norm(w, iteration=1):
@@ -32,13 +33,11 @@ def spectral_norm(w, iteration=1):
     return w_norm
 
 
-def get_gradient_penalty(input_x, sample_x, D, value_ndims, algorithm='interpolate',
+def get_gradient_penalty(input_x, sample_x, D, batch_size, x_shape, algorithm='interpolate',
                          gradient_penalty_weight=2.0, gradient_penalty_index=6.0):
-    x = input_x
-    x_shape = x.shape
-    x_ = tf.reshape(sample_x, x_shape)
-    x_shape[-value_ndims:] = 1
-    alpha = tf.random_uniform(x_shape, minval=0.0, maxval=1.0)
+    x = tf.reshape(input_x, (-1,) + x_shape)
+    x_ = tf.reshape(sample_x, (-1,) + x_shape)
+    alpha = tf.random_uniform(tf.concat([[batch_size], [1] * len(x_shape)], axis=0), minval=0, maxval=1.0)
     differences = x - x_
     interpolates = x_ + alpha * differences
 
@@ -47,7 +46,7 @@ def get_gradient_penalty(input_x, sample_x, D, value_ndims, algorithm='interpola
     if algorithm == 'interpolate':
         D_interpolates = D(interpolates)
         gradient_penalty = tf.square(tf.gradients(D_interpolates, [interpolates])[0])
-        gradient_penalty = tf.sqrt(tf.reduce_sum(gradient_penalty, tf.range(-value_ndims, 0)))
+        gradient_penalty = tf.sqrt(tf.reduce_sum(gradient_penalty, tf.range(-len(x_shape), 0)))
         gradient_penalty = gradient_penalty ** 2
         gradient_penalty = tf.pow(gradient_penalty, gradient_penalty_index / 2.0)
         gradient_penalty = tf.reduce_mean(gradient_penalty) * gradient_penalty_weight
@@ -55,7 +54,7 @@ def get_gradient_penalty(input_x, sample_x, D, value_ndims, algorithm='interpola
     if algorithm == 'interpolate-gp':
         D_interpolates = D(interpolates)
         gradient_penalty = tf.square(tf.gradients(D_interpolates, [interpolates])[0])
-        gradient_penalty = tf.sqrt(tf.reduce_sum(gradient_penalty, tf.range(-value_ndims, 0))) - 1.0
+        gradient_penalty = tf.sqrt(tf.reduce_sum(gradient_penalty, tf.range(-len(x_shape), 0))) - 1.0
         gradient_penalty = gradient_penalty ** 2
         gradient_penalty = tf.pow(gradient_penalty, gradient_penalty_index / 2.0)
         gradient_penalty = tf.reduce_mean(gradient_penalty) * gradient_penalty_weight
@@ -65,11 +64,11 @@ def get_gradient_penalty(input_x, sample_x, D, value_ndims, algorithm='interpola
         energy_real = D(x)
         energy_fake = D(x_)
         gradient_penalty_real = tf.square(tf.gradients(energy_real, [x.tensor if hasattr(x, 'tensor') else x])[0])
-        gradient_penalty_real = tf.reduce_sum(gradient_penalty_real, tf.range(-value_ndims, 0))
+        gradient_penalty_real = tf.reduce_sum(gradient_penalty_real, tf.range(-len(x_shape), 0))
         gradient_penalty_real = tf.pow(gradient_penalty_real, gradient_penalty_index / 2.0)
 
         gradient_penalty_fake = tf.square(tf.gradients(energy_fake, [x_.tensor if hasattr(x_, 'tensor') else x_])[0])
-        gradient_penalty_fake = tf.reduce_sum(gradient_penalty_fake, tf.range(-value_ndims, 0))
+        gradient_penalty_fake = tf.reduce_sum(gradient_penalty_fake, tf.range(-len(x_shape), 0))
         gradient_penalty_fake = tf.pow(gradient_penalty_fake, gradient_penalty_index / 2.0)
 
         gradient_penalty = (tf.reduce_mean(gradient_penalty_fake) + tf.reduce_mean(gradient_penalty_real)) \

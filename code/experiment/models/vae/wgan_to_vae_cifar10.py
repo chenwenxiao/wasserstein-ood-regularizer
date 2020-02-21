@@ -215,11 +215,11 @@ def get_all_loss(q_net, p_net, pn_theta):
         global train_grad_penalty
         train_recon = tf.reduce_mean(log_px_z)
         train_kl = tf.reduce_mean(
-            -p_net['z'].distribution.log_prob() + q_net['z'].log_prob()
+            -p_net['z'].log_prob() + q_net['z'].log_prob()
         )
         VAE_nD_loss = -train_recon + train_kl
 
-        gp = get_gradient_penalty(p_net['x'], pn_theta['x'], D=D_psi, value_ndims=len(config.x_shape))
+        gp = get_gradient_penalty(p_net['x'], pn_theta['x'], D_psi, config.batch_size, config.x_shape)
         energy_fake = D_psi(pn_theta['x'])
         energy_real = D_psi(p_net['x'])
 
@@ -342,7 +342,6 @@ def main():
         test_ele_nll = test_chain.vi.evaluation.is_loglikelihood()
         test_nll = -tf.reduce_mean(test_ele_nll)
         test_lb = tf.reduce_mean(test_chain.vi.lower_bound.elbo())
-    xi_node = get_var('p_net/xi')
     # derive the optimizer
     with tf.name_scope('optimizing'):
         VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('posterior_flow')
