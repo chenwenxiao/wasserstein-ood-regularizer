@@ -317,7 +317,7 @@ def main():
         dtype=tf.float32, shape=(None,) + config.x_shape, name='input_x')
     learning_rate = spt.AnnealingVariable(
         'learning_rate', config.initial_lr, config.lr_anneal_factor)
-    beta = tf.Variable(initial_value=0.0, dtype=tf.float32, name='beta', trainable=True)
+    beta = tf.Variable(initial_value=-3.0, dtype=tf.float32, name='beta', trainable=True)
 
     # derive the loss and lower-bound for training
     with tf.name_scope('training'), \
@@ -329,6 +329,7 @@ def main():
 
         VAE_loss, VAE_nD_loss, D_loss, G_loss, D_real = get_all_loss(train_q_net, train_p_net, train_pn_theta)
         VAE_loss += tf.losses.get_regularization_loss()
+        VAE_nD_loss += tf.losses.get_regularization_loss()
         D_loss += tf.losses.get_regularization_loss()
         G_loss += tf.losses.get_regularization_loss()
 
@@ -442,7 +443,7 @@ def main():
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
 
-    svhn_train, svhn_test = load_svhn(x_shape=config.x_shape)
+    (svhn_train, _y_train), (svhn_test, _y_test) = load_svhn(x_shape=config.x_shape)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
     svhn_train_flow = spt.DataFlow.arrays([svhn_train, svhn_train], config.test_batch_size)
@@ -494,15 +495,14 @@ def main():
                     while step_iterator.has_next:
                         for step, [x] in loop.iter_steps(limited(step_iterator, n_critical)):
                             # vae training
-                            [_, batch_VAE_loss, beta_value, xi_value, batch_train_recon, batch_train_kl,
+                            [_, batch_VAE_loss, beta_value, batch_train_recon, batch_train_kl,
                              batch_train_grad_penalty] = session.run(
-                                [VAE_nD_train_op, VAE_nD_loss, beta, xi_node, train_recon, train_kl,
+                                [VAE_nD_train_op, VAE_nD_loss, beta, train_recon, train_kl,
                                  train_grad_penalty],
                                 feed_dict={
                                     input_x: x
                                 })
                             loop.collect_metrics(batch_VAE_loss=batch_VAE_loss)
-                            loop.collect_metrics(xi=xi_value)
                             loop.collect_metrics(beta=beta_value)
                             loop.collect_metrics(train_kl=batch_train_kl)
                             loop.collect_metrics(train_recon=batch_train_recon)
@@ -512,12 +512,13 @@ def main():
                     while step_iterator.has_next:
                         for step, [x] in loop.iter_steps(limited(step_iterator, n_critical)):
                             # discriminator training
-                            [_, batch_D_loss, batch_D_real] = session.run(
-                                [D_train_op, D_loss, D_real], feed_dict={
+                            [_, batch_D_loss, batch_D_real, beta_value] = session.run(
+                                [D_train_op, D_loss, D_real, beta], feed_dict={
                                     input_x: x
                                 })
                             loop.collect_metrics(D_loss=batch_D_loss)
                             loop.collect_metrics(D_real=batch_D_real)
+                            loop.collect_metrics(beta=beta_value)
 
                         # generator training x
                         [_, batch_G_loss] = session.run(
