@@ -340,8 +340,8 @@ def main():
         test_chain = test_q_net.chain(p_net, observed={'x': input_x}, n_z=config.test_n_qz, latent_axis=0,
                                       beta=beta)
         test_recon = tf.reduce_mean(test_chain.model['x'].log_prob())
-        test_ele_nll = test_chain.vi.evaluation.is_loglikelihood()
-        test_nll = -tf.reduce_mean(test_ele_nll)
+        test_ele_nll = -test_chain.vi.evaluation.is_loglikelihood()
+        test_nll = tf.reduce_mean(test_ele_nll)
         test_lb = tf.reduce_mean(test_chain.vi.lower_bound.elbo())
     # derive the optimizer
     with tf.name_scope('optimizing'):
