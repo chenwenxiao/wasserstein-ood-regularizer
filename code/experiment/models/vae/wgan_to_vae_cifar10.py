@@ -64,7 +64,7 @@ class ExpConfig(spt.Config):
     test_n_pz = 1000
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 1
+    test_epoch_freq = 100
     plot_epoch_freq = 10
 
     sample_n_z = 100
@@ -108,8 +108,7 @@ def q_net(x, posterior_flow, observed=None, n_z=None):
         h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (32, 32, 16)
         h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_1')  # output: (32, 32, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_2')  # output: (32, 32, 64)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (32, 32, 128)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_5')  # output: (16, 16, 256)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_5')  # output: (16, 16, 256)
         h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_7')  # output: (8, 8, 256)
         h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_8')  # output: (4, 4, 256)
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])

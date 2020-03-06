@@ -17,7 +17,7 @@ def get_ele(op, flow, input_x):
         pack = np.asarray(pack)
         # print(pack.shape)
         packs.append(pack)
-    packs = np.concatenate(packs, axis=0)  # [len_of_flow, len_ops]
+    packs = np.concatenate(packs, axis=0)  # [len_of_flow]
     print(packs.shape)
     return packs
 
