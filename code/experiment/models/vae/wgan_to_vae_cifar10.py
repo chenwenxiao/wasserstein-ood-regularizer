@@ -64,7 +64,7 @@ class ExpConfig(spt.Config):
     test_n_pz = 1000
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 10
+    test_epoch_freq = 1
     plot_epoch_freq = 10
 
     sample_n_z = 100
@@ -110,8 +110,8 @@ def q_net(x, posterior_flow, observed=None, n_z=None):
         h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_2')  # output: (32, 32, 64)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (32, 32, 128)
         h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_5')  # output: (16, 16, 256)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2, scope='level_7')  # output: (8, 8, 512)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2, scope='level_8')  # output: (4, 4, 512)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_7')  # output: (8, 8, 256)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_8')  # output: (4, 4, 256)
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
         z_mean = spt.layers.dense(h_x, config.z_dim)
         z_logstd = spt.layers.dense(h_x, config.z_dim)
@@ -135,9 +135,9 @@ def G_theta(z, return_std=False):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 512 * config.x_shape[0] // 8 * config.x_shape[1] // 8, normalizer_fn=None)
-        h_z = spt.ops.reshape_tail(h_z, ndims=1, shape=(config.x_shape[0] // 8, config.x_shape[1] // 8, 512))
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 512, strides=2, scope='level_2')  # output: (8, 8, 512)
+        h_z = spt.layers.dense(z, 256 * config.x_shape[0] // 8 * config.x_shape[1] // 8, normalizer_fn=None)
+        h_z = spt.ops.reshape_tail(h_z, ndims=1, shape=(config.x_shape[0] // 8, config.x_shape[1] // 8, 256))
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 256, strides=2, scope='level_2')  # output: (8, 8, 256)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 256, strides=2, scope='level_3')  # output: (16, 16, 256)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_5')  # output: (32, 32, 128)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output: (32, 32, 64)
@@ -178,7 +178,7 @@ def D_psi(x, y=None):
         h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (32, 32, 64)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_4')  # output: (16, 16, 128)
         h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_6')  # output: (8, 8, 256)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2, scope='level_8')  # output: (4, 4, 512)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_8')  # output: (4, 4, 256)
 
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
         h_x = spt.layers.dense(h_x, 64, scope='level_-2')
@@ -448,11 +448,10 @@ def main():
     (svhn_train, _y_train), (svhn_test, _y_test) = load_svhn(x_shape=config.x_shape)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
-    svhn_train_flow = spt.DataFlow.arrays([svhn_train, svhn_train], config.test_batch_size)
-    svhn_test_flow = spt.DataFlow.arrays([svhn_test, svhn_test], config.test_batch_size)
+    svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
+    svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
-    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
-                                     skip_incomplete=True)
+    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
     reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=False)
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=False)
 
@@ -540,8 +539,11 @@ def main():
                 if epoch % config.test_epoch_freq == 0:
                     with loop.timeit('eval_time'):
                         evaluator.run()
-                    make_diagram(test_ele_nll,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x)
+                    make_diagram(
+                        [test_ele_nll],
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        fig_name='log_prob_histogram_{}'.format(epoch)
+                    )
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

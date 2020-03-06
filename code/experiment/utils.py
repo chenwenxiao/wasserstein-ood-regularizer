@@ -9,11 +9,13 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_prec
 def get_ele(ops, flow, input_x):
     packs = []
     session = tf.get_default_session()
-    for batch_x in flow:
+    for [batch_x] in flow:
         pack = session.run(
             ops, feed_dict={
                 input_x: batch_x,
-            })  # [3, batch_size]
+            })  # [len(ops), batch_size]
+        pack = np.asarray(pack)
+        # print(pack.shape)
         pack = np.transpose(np.asarray(pack), (1, 0))  # [batch_size, len_ops]
         packs.append(pack)
     packs = np.concatenate(packs, axis=0)  # [len_of_flow, len_ops]
