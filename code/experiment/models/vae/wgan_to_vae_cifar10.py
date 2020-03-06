@@ -540,7 +540,7 @@ def main():
                     with loop.timeit('eval_time'):
                         evaluator.run()
                     make_diagram(
-                        [test_ele_nll],
+                        test_ele_nll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
