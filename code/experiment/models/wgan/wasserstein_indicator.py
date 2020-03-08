@@ -65,13 +65,14 @@ class ExpConfig(spt.Config):
     test_n_pz = 1000
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 200
+    test_epoch_freq = 100
     plot_epoch_freq = 10
     grad_epoch_freq = 10
 
     test_fid_n_pz = 5000
     test_x_samples = 1
     log_Z_times = 10
+    sample_n_z = 100
 
     epsilon = -20
 
@@ -214,8 +215,7 @@ def get_all_loss(input_x, input_y):
             gradient_penalty = (tf.reduce_mean(gradient_penalty_fake) + tf.reduce_mean(gradient_penalty_real)) \
                                * config.gradient_penalty_weight / 2.0
 
-        adv_D_loss = -tf.reduce_mean(energy_fake) + tf.reduce_mean(
-            energy_real) + gradient_penalty
+        adv_D_loss = -tf.reduce_mean(energy_fake) + tf.reduce_mean(energy_real) + gradient_penalty
         adv_G_loss = tf.reduce_mean(energy_fake)
     return adv_D_loss, adv_G_loss, tf.reduce_mean(energy_real)
 
@@ -309,8 +309,8 @@ def main():
     with tf.name_scope('training'), \
          arg_scope([batch_norm], training=True):
         train_pn_omega = p_net(n_z=config.train_n_pz, beta=beta)
-        D_loss, G_loss, D_real = get_all_loss(input_x, input_y)
-        train_D_loss, train_G_loss, train_D_real = get_all_loss(train_pn_omega['x'].distribution.mean, input_x)
+        D_loss, G_loss, D_real = get_all_loss(input_y, input_x)
+        train_D_loss, train_G_loss, train_D_real = get_all_loss(input_x, train_pn_omega['x'].distribution.mean)
         D_loss += tf.losses.get_regularization_loss()
         G_loss += tf.losses.get_regularization_loss()
         train_D_loss += tf.losses.get_regularization_loss()
@@ -417,10 +417,11 @@ def main():
                     if config.use_gan:
                         for [x] in mixed_test_flow:
                             # spec-training discriminator
-                            [_, batch_D_loss, batch_D_real] = session.run(
-                                [train_D_train_op, train_D_loss, train_D_real], feed_dict={
+                            [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
+                                [train_D_train_op, train_D_loss, train_G_loss, train_D_real], feed_dict={
                                     input_x: x
                                 })
+                            loop.collect_metrics(G_loss=batch_G_loss)
                             loop.collect_metrics(D_loss=batch_D_loss)
                             loop.collect_metrics(D_real=batch_D_real)
 
@@ -428,10 +429,11 @@ def main():
                         for [x] in train_flow:
                             for [y] in mixed_test_flow:
                                 # spec-training discriminator
-                                [_, batch_D_loss, batch_D_real] = session.run(
-                                    [D_train_op, D_loss, D_real], feed_dict={
+                                [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
+                                    [D_train_op, D_loss, G_loss, D_real], feed_dict={
                                         input_x: x, input_y: y
                                     })
+                                loop.collect_metrics(G_loss=batch_G_loss)
                                 loop.collect_metrics(D_loss=batch_D_loss)
                                 loop.collect_metrics(D_real=batch_D_real)
                                 break

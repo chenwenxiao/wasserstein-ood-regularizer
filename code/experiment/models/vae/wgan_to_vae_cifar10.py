@@ -220,6 +220,7 @@ def get_all_loss(q_net, p_net, pn_theta):
 
         sample_x = pn_theta['x'].distribution.mean
         gp = get_gradient_penalty(p_net['x'], sample_x, D_psi, config.batch_size, config.x_shape)
+        train_grad_penalty = gp
         energy_fake = D_psi(sample_x)
         energy_real = D_psi(p_net['x'])
 
