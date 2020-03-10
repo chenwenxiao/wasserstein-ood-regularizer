@@ -39,7 +39,7 @@ class ExpConfig(spt.Config):
     result_dir = None
     write_summary = True
     max_epoch = 1000
-    warm_up_start = 1000
+    warm_up_start = 0
     warm_up_epoch = 500
     beta = 1e-8
     initial_xi = 0.0  # TODO
@@ -416,7 +416,7 @@ def main():
                 if epoch > config.warm_up_start:
                     if config.use_gan:
                         for [x] in mixed_test_flow:
-                            # spec-training discriminator
+                            # spec-training discriminator with pre-train model
                             [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
                                 [train_D_train_op, train_D_loss, train_G_loss, train_D_real], feed_dict={
                                     input_x: x
