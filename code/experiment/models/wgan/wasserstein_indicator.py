@@ -29,10 +29,10 @@ class ExpConfig(spt.Config):
     z_dim = 256
     act_norm = False
     weight_norm = False
+    batch_norm = False
     l2_reg = 0.0002
     kernel_size = 3
     shortcut_kernel_size = 1
-    batch_norm = True
     nf_layers = 20
 
     # training parameters
@@ -41,9 +41,6 @@ class ExpConfig(spt.Config):
     max_epoch = 1000
     warm_up_start = 0
     warm_up_epoch = 500
-    beta = 1e-8
-    initial_xi = 0.0  # TODO
-    pull_back_energy_weight = 256
 
     use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
     max_step = None
@@ -56,22 +53,15 @@ class ExpConfig(spt.Config):
     gradient_penalty_algorithm = 'interpolate'  # both or interpolate
     gradient_penalty_weight = 2
     gradient_penalty_index = 6
-    kl_balance_weight = 1.0
 
     n_critical = 5  # TODO
     # evaluation parameters
     train_n_pz = 256
-    train_n_qz = 1
-    test_n_pz = 1000
     test_n_qz = 10
     test_batch_size = 64
     test_epoch_freq = 100
     plot_epoch_freq = 10
-    grad_epoch_freq = 10
 
-    test_fid_n_pz = 5000
-    test_x_samples = 1
-    log_Z_times = 10
     sample_n_z = 100
 
     epsilon = -20
@@ -161,7 +151,7 @@ def D_psi(x, y=None):
 
 @add_arg_scope
 @spt.global_reuse
-def p_net(observed=None, n_z=None, beta=1.0):
+def p_net(observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
     # sample z ~ p(z)
     normal = spt.Normal(mean=tf.zeros([1, config.z_dim]),
@@ -299,16 +289,13 @@ def main():
         dtype=tf.float32, shape=(None,) + config.x_shape, name='input_x')
     input_y = tf.placeholder(
         dtype=tf.float32, shape=(None,) + config.x_shape, name='input_y')
-    warm = tf.placeholder(
-        dtype=tf.float32, shape=(), name='warm')
     learning_rate = spt.AnnealingVariable(
         'learning_rate', config.initial_lr, config.lr_anneal_factor)
-    beta = tf.Variable(initial_value=0.0, dtype=tf.float32, name='beta', trainable=True)
 
     # derive the loss and lower-bound for training
     with tf.name_scope('training'), \
          arg_scope([batch_norm], training=True):
-        train_pn_omega = p_net(n_z=config.train_n_pz, beta=beta)
+        train_pn_omega = p_net(n_z=config.train_n_pz)
         D_loss, G_loss, D_real = get_all_loss(input_y, input_x)
         train_D_loss, train_G_loss, train_D_real = get_all_loss(input_x, train_pn_omega['x'].distribution.mean)
         D_loss += tf.losses.get_regularization_loss()
@@ -344,7 +331,7 @@ def main():
         # derive the plotting function
         with tf.name_scope('plotting'):
             sample_n_z = config.sample_n_z
-            plot_net = p_net(n_z=sample_n_z, beta=beta)
+            plot_net = p_net(n_z=sample_n_z)
             x_plots = 256.0 * tf.reshape(
                 plot_net['x'].distribution.mean, (-1,) + config.x_shape) / 2 + 127.5
             x_plots = tf.clip_by_value(x_plots, 0, 255)
