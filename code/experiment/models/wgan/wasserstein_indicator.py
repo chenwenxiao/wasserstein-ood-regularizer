@@ -45,7 +45,7 @@ class ExpConfig(spt.Config):
     initial_xi = 0.0  # TODO
     pull_back_energy_weight = 256
 
-    use_gan = False
+    use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
     max_step = None
     batch_size = 256
     initial_lr = 0.0001
