@@ -40,7 +40,6 @@ class ExpConfig(spt.Config):
     write_summary = True
     max_epoch = 1000
     warm_up_start = 0
-    warm_up_epoch = 500
 
     use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
     max_step = None
