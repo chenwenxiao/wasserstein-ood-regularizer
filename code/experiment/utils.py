@@ -68,7 +68,7 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name):
 
     pyplot.cla()
     pyplot.plot()
-    draw_curve(data_list[1], data_list[3], fig_name)
+    draw_curve(data_list[1], data_list[-1], fig_name)
     pyplot.savefig('plotting/%s_curve.jpg' % fig_name)
 
 
