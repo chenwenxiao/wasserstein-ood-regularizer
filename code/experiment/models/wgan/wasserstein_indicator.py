@@ -401,7 +401,7 @@ def main():
             for epoch in epoch_iterator:
                 if epoch > config.warm_up_start:
                     if config.use_gan:
-                        for [x] in mixed_test_flow:
+                        for step, [x] in loop.iter_steps(mixed_test_flow):
                             # spec-training discriminator with pre-train model
                             [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
                                 [train_D_train_op, train_D_loss, train_G_loss, train_D_real], feed_dict={
@@ -412,7 +412,7 @@ def main():
                             loop.collect_metrics(D_real=batch_D_real)
 
                     else:
-                        for [x] in train_flow:
+                        for step, [x] in loop.iter_steps(train_flow):
                             for [y] in mixed_test_flow:
                                 # spec-training discriminator
                                 [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
