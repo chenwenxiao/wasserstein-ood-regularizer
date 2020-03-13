@@ -38,7 +38,7 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 1000
+    max_epoch = 500
     warm_up_start = 0
 
     use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
@@ -46,7 +46,7 @@ class ExpConfig(spt.Config):
     batch_size = 256
     initial_lr = 0.0001
     lr_anneal_factor = 0.5
-    lr_anneal_epoch_freq = [200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000]
+    lr_anneal_epoch_freq = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
     lr_anneal_step_freq = None
 
     gradient_penalty_algorithm = 'interpolate'  # both or interpolate
@@ -270,6 +270,10 @@ def main():
     spt.register_config_arguments(spt.settings, arg_parser, prefix='tfsnippet',
                                   title='TFSnippet options')
     arg_parser.parse_args(sys.argv[1:])
+
+    if config.use_gan:
+        config.warm_up_start = 500
+        config.max_epoch = 1000
 
     # print the config
     print_with_title('Configurations', pformat(config.to_dict()), after='\n')
