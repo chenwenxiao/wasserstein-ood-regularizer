@@ -389,7 +389,7 @@ def main():
         )
         test_omega_lb = tf.reduce_mean(test_omega_chain.vi.lower_bound.elbo())
 
-        ele_test_kl = ele_test_ll - ele_test_omega_ll
+        ele_test_kl = ele_test_omega_ll - ele_test_ll
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
