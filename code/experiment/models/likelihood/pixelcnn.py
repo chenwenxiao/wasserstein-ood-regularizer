@@ -40,17 +40,17 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 1000
-    warm_up_start = 500
+    max_epoch = 200
+    warm_up_start = 100
     initial_beta = -3.0
     uniform_scale = True
 
     max_step = None
-    batch_size = 128
+    batch_size = 32
     smallest_step = 5e-5
     initial_lr = 0.0001
     lr_anneal_factor = 0.5
-    lr_anneal_epoch_freq = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+    lr_anneal_epoch_freq = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200]
     lr_anneal_step_freq = None
 
     n_critical = 5
@@ -89,6 +89,7 @@ def dropout(inputs, training=False, scope=None):
 @add_arg_scope
 @spt.global_reuse
 def p_net(input):
+    input = tf.to_float(input)
     # prepare for the convolution stack
     output = spt.layers.pixelcnn_2d_input(input)
 
@@ -96,14 +97,22 @@ def p_net(input):
     for i in range(5):
         output = spt.layers.pixelcnn_conv2d_resnet(
             output,
-            out_channels=256 * config.x_shape[-1],
+            out_channels=64,
             vertical_kernel_size=(2, 3),
             horizontal_kernel_size=(2, 2),
             activation_fn=tf.nn.leaky_relu,
             normalizer_fn=batch_norm,
             dropout_fn=dropout
         )
-
+    output = spt.layers.pixelcnn_conv2d_resnet(
+        output,
+        out_channels=256 * config.x_shape[-1],
+        vertical_kernel_size=(2, 3),
+        horizontal_kernel_size=(2, 2),
+        activation_fn=tf.nn.leaky_relu,
+        normalizer_fn=batch_norm,
+        dropout_fn=dropout
+    )
     # get the final output of the PixelCNN 2D network.
     output = pixelcnn_2d_output(output)
     print(output)
@@ -114,6 +123,7 @@ def p_net(input):
 @add_arg_scope
 @spt.global_reuse
 def p_omega_net(input):
+    input = tf.to_float(input)
     # prepare for the convolution stack
     output = spt.layers.pixelcnn_2d_input(input)
 
@@ -121,14 +131,22 @@ def p_omega_net(input):
     for i in range(5):
         output = spt.layers.pixelcnn_conv2d_resnet(
             output,
-            out_channels=256 * config.x_shape[-1],
+            out_channels=64,
             vertical_kernel_size=(2, 3),
             horizontal_kernel_size=(2, 2),
             activation_fn=tf.nn.leaky_relu,
             normalizer_fn=batch_norm,
             dropout_fn=dropout
         )
-
+    output = spt.layers.pixelcnn_conv2d_resnet(
+        output,
+        out_channels=256 * config.x_shape[-1],
+        vertical_kernel_size=(2, 3),
+        horizontal_kernel_size=(2, 2),
+        activation_fn=tf.nn.leaky_relu,
+        normalizer_fn=batch_norm,
+        dropout_fn=dropout
+    )
     # get the final output of the PixelCNN 2D network.
     output = pixelcnn_2d_output(output)
     print(output)
@@ -212,7 +230,7 @@ def main():
 
     # input placeholders
     input_x = tf.placeholder(
-        dtype=tf.float32, shape=(None,) + config.x_shape, name='input_x')
+        dtype=tf.int32, shape=(None,) + config.x_shape, name='input_x')
     learning_rate = spt.AnnealingVariable(
         'learning_rate', config.initial_lr, config.lr_anneal_factor)
 
@@ -266,11 +284,12 @@ def main():
 
     # prepare for training and testing data
     # It is important: the `x_shape` must have channel dimension, even it is 1! (i.e. (28, 28, 1) for MNIST)
-    (_x_train, _y_train), (_x_test, _y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape)
+    # And the value of images should not be normalized, ranged from 0 to 255.
+    (_x_train, _y_train), (_x_test, _y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape, x_dtype=np.int32)
     cifar_train_flow = spt.DataFlow.arrays([_x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([_x_test], config.test_batch_size)
 
-    (svhn_train, _y_train), (svhn_test, _y_test) = load_svhn(x_shape=config.x_shape)
+    (svhn_train, _y_train), (svhn_test, _y_test) = load_svhn(x_shape=config.x_shape, x_dtype=np.int32)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
@@ -306,16 +325,16 @@ def main():
             for epoch in epoch_iterator:
                 if epoch <= config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
-                        _, batch_VAE_loss = session.run([theta_train_op, theta_loss], feed_dict={
+                        _, batch_theta_loss = session.run([theta_train_op, theta_loss], feed_dict={
                             input_x: x
                         })
-                        loop.collect_metrics(VAE_loss=batch_VAE_loss)
+                        loop.collect_metrics(theta_loss=batch_theta_loss)
                 else:
                     for step, [x] in loop.iter_steps(mixed_test_flow):
-                        _, batch_VAE_omega_loss = session.run([omega_train_op, omega_loss], feed_dict={
+                        _, batch_omega_loss = session.run([omega_train_op, omega_loss], feed_dict={
                             input_x: x
                         })
-                        loop.collect_metrics(VAE_omega_loss=batch_VAE_omega_loss)
+                        loop.collect_metrics(omega_loss=batch_omega_loss)
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()

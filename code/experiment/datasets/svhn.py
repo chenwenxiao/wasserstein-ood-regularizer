@@ -41,6 +41,9 @@ def load_svhn(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
     train_x, train_y = train_x.transpose((3, 0, 1, 2)), train_y[:, 0]
     test_x, test_y = test_x.transpose((3, 0, 1, 2)), test_y[:, 0]
 
+    train_x, test_x = np.reshape(train_x, (-1,) + x_shape), np.reshape(test_x, (-1,) + x_shape)
+    train_x, train_y = train_x.astype(x_dtype), train_y.astype(y_dtype)
+    test_x, test_y = test_x.astype(x_dtype), test_y.astype(y_dtype)
     # normalize x
     if normalize_x:
         train_x /= np.asarray(255., dtype=train_x.dtype)
