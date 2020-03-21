@@ -77,7 +77,7 @@ config = ExpConfig()
 
 
 class MyRNVPConfig(RealNVPConfig):
-    flow_depth = 20
+    flow_depth = 5
     conv_coupling_squeeze_before_first_block = True
 
 
@@ -97,15 +97,13 @@ def dropout(inputs, training=False, scope=None):
 
 @add_arg_scope
 @spt.global_reuse
-def p_net(observed=None, n_z=None):
+def p_net(glow, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
     # sample z ~ p(z)
-    normal = spt.Normal(mean=tf.zeros([1, config.z_dim]),
-                        logstd=tf.zeros([1, config.z_dim]))
+    normal = spt.Normal(mean=tf.zeros((1,) + config.x_shape),
+                        logstd=tf.zeros((1,) + config.x_shape))
     z = net.add('z', normal, n_samples=n_z, group_ndims=1)
-
-    glow = make_real_nvp(
-        rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, scope=tf.get_variable_scope())
+    _ = glow.transform(z)
     x = net.add('x', spt.distributions.FlowDistribution(
         normal, glow
     ))
@@ -115,17 +113,15 @@ def p_net(observed=None, n_z=None):
 
 @add_arg_scope
 @spt.global_reuse
-def p_omega_net(observed=None, n_z=None):
+def p_omega_net(glow_omega, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
     # sample z ~ p(z)
-    normal = spt.Normal(mean=tf.zeros([1, config.z_dim]),
-                        logstd=tf.zeros([1, config.z_dim]))
+    normal = spt.Normal(mean=tf.zeros((1,) + config.x_shape),
+                        logstd=tf.zeros((1,) + config.x_shape))
     z = net.add('z', normal, n_samples=n_z, group_ndims=1)
-
-    glow = make_real_nvp(
-        rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, scope=tf.get_variable_scope())
+    _ = glow_omega.transform(z)
     x = net.add('x', spt.distributions.FlowDistribution(
-        normal, glow
+        normal, glow_omega
     ))
 
     return net
@@ -217,13 +213,21 @@ def main():
     learning_rate = spt.AnnealingVariable(
         'learning_rate', config.initial_lr, config.lr_anneal_factor)
 
+    with tf.variable_scope('glow'):
+        glow = make_real_nvp(
+            rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, scope=tf.get_variable_scope())
+
+    with tf.variable_scope('glow_omega'):
+        glow_omega = make_real_nvp(
+            rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, scope=tf.get_variable_scope())
+
     # derive the loss and lower-bound for training
     with tf.name_scope('training'), \
          arg_scope([batch_norm], training=True):
-        train_p_net = p_net(observed={'x': input_x},
+        train_p_net = p_net(glow, observed={'x': input_x},
                             n_z=config.train_n_qz)
         VAE_loss = get_all_loss(train_p_net)
-        train_p_omega_net = p_omega_net(observed={'x': input_x},
+        train_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
                                         n_z=config.train_n_qz)
         VAE_omega_loss = get_all_loss(train_p_omega_net)
 
@@ -232,14 +236,14 @@ def main():
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
-        test_p_net = p_net(observed={'x': input_x},
+        test_p_net = p_net(glow, observed={'x': input_x},
                            n_z=config.test_n_qz)
         ele_test_ll = test_p_net['x'].log_prob()
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
 
-        test_p_omega_net = p_omega_net(observed={'x': input_x},
+        test_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
                                        n_z=config.test_n_qz)
         ele_test_omega_ll = test_p_omega_net['x'].log_prob()
         test_omega_nll = -tf.reduce_mean(
@@ -250,8 +254,8 @@ def main():
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
-        VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('p_net')
-        VAE_omega_params = tf.trainable_variables('q_omega_net') + tf.trainable_variables('p_omega_net')
+        VAE_params = tf.trainable_variables('glow') + tf.trainable_variables('p_net')
+        VAE_omega_params = tf.trainable_variables('glow_omega') + tf.trainable_variables('p_omega_net')
         with tf.variable_scope('theta_optimizer'):
             VAE_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)
@@ -265,13 +269,13 @@ def main():
 
     # derive the plotting function
     with tf.name_scope('plotting'):
-        plot_net = p_net(n_z=config.sample_n_z)
-        vae_plots = tf.reshape(plot_net['x'].distribution.mean, (-1,) + config.x_shape)
+        plot_net = p_net(glow, n_z=config.sample_n_z)
+        vae_plots = tf.reshape(plot_net['x'], (-1,) + config.x_shape)
         vae_plots = 256.0 * vae_plots / 2 + 127.5
         vae_plots = tf.clip_by_value(vae_plots, 0, 255)
 
-        plot_omega_net = p_omega_net(n_z=config.sample_n_z)
-        vae_omega_plots = tf.reshape(plot_omega_net['x'].distribution.mean, (-1,) + config.x_shape)
+        plot_omega_net = p_omega_net(glow_omega, n_z=config.sample_n_z)
+        vae_omega_plots = tf.reshape(plot_omega_net['x'], (-1,) + config.x_shape)
         vae_omega_plots = 256.0 * vae_omega_plots / 2 + 127.5
         vae_omega_plots = tf.clip_by_value(vae_omega_plots, 0, 255)
 
