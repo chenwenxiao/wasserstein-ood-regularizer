@@ -16,7 +16,7 @@ from tfsnippet.examples.utils import (MLResults,
                                       bernoulli_flow,
                                       bernoulli_flow,
                                       print_with_title)
-from code.experiments.utils import get_inception_score, get_fid
+from ood_regularizer.experiments.utils import get_inception_score, get_fid
 import numpy as np
 from scipy.misc import logsumexp
 

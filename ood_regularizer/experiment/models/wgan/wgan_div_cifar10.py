@@ -16,7 +16,7 @@ from tfsnippet.examples.utils import (MLResults,
                                       bernoulli_flow,
                                       bernoulli_flow,
                                       print_with_title)
-from code.experiments.utils import get_inception_score, get_fid
+from ood_regularizer.experiments.utils import get_inception_score, get_fid
 import numpy as np
 from scipy.misc import logsumexp
 
@@ -51,7 +51,7 @@ class ExpConfig(spt.Config):
     lr_anneal_epoch_freq = [200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000]
     lr_anneal_step_freq = None
 
-    gradient_penalty_algorithm = 'both'  # both or interpolate
+    gradient_penalty_algorithm = 'interpolate'  # both or interpolate
     gradient_penalty_weight = 2
     gradient_penalty_index = 6
     kl_balance_weight = 1.0

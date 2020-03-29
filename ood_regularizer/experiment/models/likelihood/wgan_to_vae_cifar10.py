@@ -19,9 +19,9 @@ from tfsnippet.examples.utils import (MLResults,
                                       print_with_title)
 import numpy as np
 
-from code.experiment.datasets.svhn import load_svhn
-from code.experiment.models.gradient_penalty import get_gradient_penalty, spectral_norm
-from code.experiment.utils import make_diagram
+from ood_regularizer.experiment.datasets.svhn import load_svhn
+from ood_regularizer.experiment.models.gradient_penalty import get_gradient_penalty, spectral_norm
+from ood_regularizer.experiment.utils import make_diagram
 
 
 class ExpConfig(spt.Config):

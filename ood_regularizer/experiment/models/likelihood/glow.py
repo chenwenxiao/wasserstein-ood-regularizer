@@ -21,9 +21,9 @@ import numpy as np
 
 from tfsnippet.preprocessing import UniformNoiseSampler
 
-from code.experiment.datasets.svhn import load_svhn
-from code.experiment.models.real_nvp import make_real_nvp, RealNVPConfig
-from code.experiment.utils import make_diagram
+from ood_regularizer.experiment.datasets.svhn import load_svhn
+from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPConfig
+from ood_regularizer.experiment.utils import make_diagram
 
 
 class ExpConfig(spt.Config):
@@ -100,13 +100,13 @@ def dropout(inputs, training=False, scope=None):
 def p_net(glow, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
     # sample z ~ p(z)
-    normal = spt.Normal(mean=tf.zeros((1,) + config.x_shape),
-                        logstd=tf.zeros((1,) + config.x_shape))
-    z = net.add('z', normal, n_samples=n_z, group_ndims=1)
+    normal = spt.Normal(mean=tf.zeros(config.x_shape),
+                        logstd=tf.zeros(config.x_shape))
+    z = net.add('z', normal, n_samples=n_z, group_ndims=len(config.x_shape))
     _ = glow.transform(z)
     x = net.add('x', spt.distributions.FlowDistribution(
         normal, glow
-    ))
+    ),  n_samples=n_z)
 
     return net
 
@@ -116,20 +116,20 @@ def p_net(glow, observed=None, n_z=None):
 def p_omega_net(glow_omega, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
     # sample z ~ p(z)
-    normal = spt.Normal(mean=tf.zeros((1,) + config.x_shape),
-                        logstd=tf.zeros((1,) + config.x_shape))
-    z = net.add('z', normal, n_samples=n_z, group_ndims=1)
+    normal = spt.Normal(mean=tf.zeros(config.x_shape),
+                        logstd=tf.zeros(config.x_shape))
+    z = net.add('z', normal, n_samples=n_z, group_ndims=len(config.x_shape))
     _ = glow_omega.transform(z)
     x = net.add('x', spt.distributions.FlowDistribution(
         normal, glow_omega
-    ))
+    ),  n_samples=n_z)
 
     return net
 
 
 def get_all_loss(p_net):
     with tf.name_scope('adv_prior_loss'):
-        VAE_loss = -p_net['x'].log_prob()
+        VAE_loss = -p_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
     return VAE_loss
 
 
@@ -238,14 +238,14 @@ def main():
     with tf.name_scope('testing'):
         test_p_net = p_net(glow, observed={'x': input_x},
                            n_z=config.test_n_qz)
-        ele_test_ll = test_p_net['x'].log_prob()
+        ele_test_ll = test_p_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
 
         test_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
                                        n_z=config.test_n_qz)
-        ele_test_omega_ll = test_p_omega_net['x'].log_prob()
+        ele_test_omega_ll = test_p_omega_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
         test_omega_nll = -tf.reduce_mean(
             ele_test_omega_ll
         )
@@ -306,6 +306,7 @@ def main():
 
                 # plot samples
                 images = session.run(vae_plots)
+                print(images.shape)
                 save_images_collection(
                     images=np.round(images),
                     filename='plotting/sample/{}-{}.png'.format('theta', extra_index),
@@ -313,6 +314,7 @@ def main():
                     results=results,
                 )
                 images = session.run(vae_omega_plots)
+                print(images.shape)
                 save_images_collection(
                     images=np.round(images),
                     filename='plotting/sample/{}-{}.png'.format('omega', extra_index),

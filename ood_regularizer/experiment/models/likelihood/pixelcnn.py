@@ -22,8 +22,8 @@ from tfsnippet.layers import pixelcnn_2d_output
 
 from tfsnippet.preprocessing import UniformNoiseSampler
 
-from code.experiment.datasets.svhn import load_svhn
-from code.experiment.utils import make_diagram
+from ood_regularizer.experiment.datasets.svhn import load_svhn
+from ood_regularizer.experiment.utils import make_diagram
 
 
 class ExpConfig(spt.Config):
