@@ -41,6 +41,8 @@ class ExpConfig(spt.Config):
     max_epoch = 500
     warm_up_start = 0
 
+    min_distance = 0.2
+    use_transductive = True  # can model use the data in SVHN's and CIFAR's testing set
     use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
     max_step = None
     batch_size = 256
@@ -373,7 +375,28 @@ def main():
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
-    mixed_test_flow = spt.DataFlow.arrays([np.concatenate([x_test, svhn_test])], config.batch_size, shuffle=True,
+
+    if config.use_transductive:
+        mixed_array = np.random.randint(0, 256, size=(2000,) + config.x_shape)
+        mixed_array = (mixed_array - 127.5) / 256.0 * 2
+        min_dist_list = []
+        count = 0
+        for sample in mixed_array:
+            count = count + 1
+            print(count, sample.shape)
+            dist_of_sample = np.sum((sample - x_train) ** 2, axis=(-1, -2, -3))
+            min_dist = np.min(dist_of_sample) / config.x_shape_multiple
+            min_dist_list.append(min_dist)
+        min_dist_list = np.asarray(min_dist_list)
+        print(min_dist_list)
+        print(np.mean(min_dist_list))
+        mask = min_dist_list > config.min_distance
+        mixed_array = mixed_array[mask]
+        print(mixed_array.shape)
+    else:
+        mixed_array = np.concatenate([x_test, svhn_test])
+
+    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size, shuffle=True,
                                           skip_incomplete=True)
 
     with spt.utils.create_session().as_default() as session, train_flow.threaded(5) as train_flow:
