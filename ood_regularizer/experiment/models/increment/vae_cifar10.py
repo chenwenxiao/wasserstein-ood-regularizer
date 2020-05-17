@@ -21,9 +21,8 @@ import numpy as np
 
 from tfsnippet.preprocessing import UniformNoiseSampler
 
-from ood_regularizer.experiment.datasets.celeba import load_celeba
 from ood_regularizer.experiment.datasets.svhn import load_svhn
-from ood_regularizer.experiment.utils import make_diagram
+from ood_regularizer.experiment.utils import make_diagram, plot_fig
 
 
 class ExpConfig(spt.Config):
@@ -40,15 +39,15 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 200
-    warm_up_start = 100
+    max_epoch = 300
+    warm_up_start = 300
     initial_beta = -3.0
     uniform_scale = True
     use_transductive = True
-    self_ood = False
-    mixed_radio = 1.0
-    mutation_rate = 0.1
-    noise_type = "mutation"  # or unit
+    mixed_train_epoch = 10
+    mixed_train_skip = 1024
+    initial_omega_with_theta = True
+    dynamic_epochs = True
 
     max_step = None
     batch_size = 128
@@ -63,7 +62,7 @@ class ExpConfig(spt.Config):
     train_n_qz = 1
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 100
+    test_epoch_freq = 300
     plot_epoch_freq = 20
 
     epsilon = -20.0
@@ -409,6 +408,14 @@ def main():
             VAE_train_op = VAE_optimizer.apply_gradients(VAE_grads)
             VAE_omega_train_op = VAE_omega_optimizer.apply_gradients(VAE_omega_grads)
 
+        print(VAE_params)
+        print(VAE_omega_params)
+        copy_op = []
+        for i in range(len(VAE_params)):
+            copy_op.append(tf.assign(VAE_omega_params[i], VAE_params[i]))
+            print(VAE_omega_params[i], VAE_omega_params[i])
+        copy_op = tf.group(*copy_op)
+
     # derive the plotting function
     with tf.name_scope('plotting'):
         plot_net = p_net(n_z=config.sample_n_z)
@@ -487,48 +494,22 @@ def main():
     (_x_train, _y_train), (_x_test, _y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape)
     x_train = (_x_train - 127.5) / 256.0 * 2
     x_test = (_x_test - 127.5) / 256.0 * 2
-
-    (svhn_train, _), (svhn_test, __) = load_svhn(x_shape=config.x_shape)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
-
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
+
+    (svhn_train, _y_train), (svhn_test, _y_test) = load_svhn(x_shape=config.x_shape)
+    svhn_train = (svhn_train - 127.5) / 256.0 * 2
+    svhn_test = (svhn_test - 127.5) / 256.0 * 2
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
-    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
-                                     skip_incomplete=True)
-    if config.self_ood:
-        if config.use_transductive:
-            cele_train, cele_validate, cele_test = load_celeba(img_size=32)
-            cele_test = (cele_test - 127.5) / 256.0 * 2
-            mixed_array = cele_test
-        else:
-            if config.noise_type == "mutation":
-                random_array = (np.random.randint(0, 256, size=x_train.shape) - 127.5) / 256 * 2.0
-                mixed_array = np.where(np.random.random(size=x_train.shape) < config.mutation_rate, random_array,
-                                       x_train)
-            elif config.noise_type == "gaussian":
-                random_array = np.reshape(np.random.randn(len(_x_train) * config.x_shape_multiple),
-                                          (-1,) + config.x_shape) * config.mutation_rate * 255
-                mixed_array = np.clip(np.round(random_array + _x_train), 0, 255)
-                mixed_array = (mixed_array - 127.5) / 256.0 * 2
-            elif config.noise_type == "unit":
-                random_array = np.reshape((np.random.rand(len(_x_train) * config.x_shape_multiple) * 2 - 1),
-                                          (-1,) + config.x_shape) * config.mutation_rate * 255
-                mixed_array = np.clip(np.round(random_array + _x_train), 0, 255)
-                mixed_array = (mixed_array - 127.5) / 256.0 * 2
-    else:
-        if config.use_transductive:
-            mixed_array = np.concatenate([x_test, svhn_test])
-        else:
-            mixed_array = svhn_train
+    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
 
-    np.random.shuffle(mixed_array)
-    mixed_test_flow = spt.DataFlow.arrays([mixed_array[:int(config.mixed_radio * len(mixed_array))]], config.batch_size,
-                                          shuffle=True,
-                                          skip_incomplete=True)
+    if config.use_transductive:
+        mixed_array = np.concatenate([x_test, svhn_test])
+    else:
+        mixed_array = np.random.randint(0, 256, size=(20000,) + config.x_shape)
+        mixed_array = (mixed_array - 127.5) / 256.0 * 2
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
     reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True)
@@ -561,18 +542,11 @@ def main():
             epoch_iterator = loop.iter_epochs()
             # adversarial training
             for epoch in epoch_iterator:
-                if epoch <= config.warm_up_start:
-                    for step, [x] in loop.iter_steps(train_flow):
-                        _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
-                            input_x: x
-                        })
-                        loop.collect_metrics(VAE_loss=batch_VAE_loss)
-                else:
-                    for step, [x] in loop.iter_steps(mixed_test_flow):
-                        _, batch_VAE_omega_loss = session.run([VAE_omega_train_op, VAE_omega_loss], feed_dict={
-                            input_x: x
-                        })
-                        loop.collect_metrics(VAE_omega_loss=batch_VAE_omega_loss)
+                for step, [x] in loop.iter_steps(train_flow):
+                    _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
+                        input_x: x
+                    })
+                    loop.collect_metrics(VAE_loss=batch_VAE_loss)
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
@@ -583,30 +557,37 @@ def main():
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
 
-                if epoch % config.test_epoch_freq == 0:
-                    make_diagram(
-                        ele_test_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        fig_name='log_prob_histogram_{}'.format(epoch)
-                    )
+                if epoch == config.max_epoch:
+                    if config.initial_omega_with_theta:
+                        session.run(copy_op)
+                    mixed_kl = []
+                    for i in range(0, len(mixed_array), config.mixed_train_skip):
+                        mixed_test_flow = spt.DataFlow.arrays([mixed_array[:i + config.mixed_train_skip]],
+                                                              config.batch_size, shuffle=True)
+                        if config.dynamic_epochs:
+                            repeat_epoch = int(config.mixed_train_epoch * len(mixed_array) / (mixed_test_flow.data_length))
+                        else:
+                            repeat_epoch = config.mixed_train_epoch
+                        for pse_epoch in range(repeat_epoch):
+                            for step, [x] in loop.iter_steps(mixed_test_flow):
+                                _, batch_VAE_omega_loss = session.run([VAE_omega_train_op, VAE_omega_loss], feed_dict={
+                                    input_x: x
+                                })
+                                loop.collect_metrics(VAE_omega_loss=batch_VAE_omega_loss)
+                        for j in range(len(mixed_array[i: i + config.mixed_train_skip])):
+                            mixed_kl.append(session.run(ele_test_kl, feed_dict={
+                                input_x: mixed_array[i + j: i + j + 1]
+                            })[0])
+                        print(repeat_epoch, len(mixed_kl))
+                        loop.print_logs()
 
-                    make_diagram(
-                        ele_test_omega_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
-                    )
-
-                    make_diagram(
-                        -ele_test_kl,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        fig_name='kl_histogram_{}'.format(epoch)
-                    )
-
-                    make_diagram(
-                        tf.abs(ele_test_kl),
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        fig_name='abs_kl_histogram_{}'.format(epoch)
-                    )
+                    mixed_kl = np.asarray(mixed_kl)
+                    cifar_kl = mixed_kl[:len(x_test)]
+                    svhn_kl = mixed_kl[len(x_test):]
+                    plot_fig([-cifar_kl, -svhn_kl],
+                             ['red', 'green'],
+                             ['CIFAR-10 kl', 'SVHN kl'], 'log(bit/dims)',
+                             'kl_histogram', auc_pair=(0, 1))
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

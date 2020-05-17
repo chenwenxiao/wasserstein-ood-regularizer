@@ -53,7 +53,7 @@ def draw_metric(metric, color, label):
     print('%s done.' % label)
 
 
-def plot_fig(data_list, color_list, label_list, x_label, fig_name):
+def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, -1)):
     pyplot.cla()
     pyplot.plot()
     pyplot.grid(c='silver', ls='--')
@@ -68,7 +68,7 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name):
 
     pyplot.cla()
     pyplot.plot()
-    draw_curve(data_list[1], data_list[-1], fig_name)
+    draw_curve(data_list[auc_pair[0]], data_list[auc_pair[1]], fig_name)
     pyplot.savefig('plotting/%s_curve.jpg' % fig_name)
 
 

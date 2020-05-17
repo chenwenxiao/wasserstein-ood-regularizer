@@ -14,7 +14,7 @@ usage:
 
 '''
 import requests
-import zipfile,os
+import zipfile, os
 
 import numpy as np
 import matplotlib.image as mpimg
@@ -29,9 +29,6 @@ from PIL import Image as PILImage
 from skimage import transform, filters
 from tqdm import tqdm
 
-
-
-
 DEBUG_IMG = '/Users/lwd/Downloads/img_align_celeba'
 DEBUG_EVAL = '/Users/lwd/Downloads/list_eval_partition.txt'
 
@@ -45,12 +42,10 @@ MAP_PATH = '/home/cwx17/data/CelebA_mmp'
 
 debug = False
 
-
-
 __all__ = ['CelebADataSet']
 
 
-def load_celeba(mmap_base_dir = MAP_PATH, img_size = 64):
+def load_celeba(mmap_base_dir=MAP_PATH, img_size=64):
     if mmap_base_dir is None:
         raise ValueError('`mmap_base_dir` is required for CelebA.')
     if img_size not in (32, 64):
@@ -69,7 +64,7 @@ def load_celeba(mmap_base_dir = MAP_PATH, img_size = 64):
     return train_x, valid_x, test_x
 
 
-def _resize(img, img_size=64, bbox=(40, 218-30, 15, 178-15)):
+def _resize(img, img_size=64, bbox=(40, 218 - 30, 15, 178 - 15)):
     # this function is copied from:
     # https://github.com/andersbll/autoencoding_beyond_pixels/blob/master/dataset/celeba.py
 
@@ -95,12 +90,11 @@ def _resize(img, img_size=64, bbox=(40, 218-30, 15, 178-15)):
 
 
 class CelebADataSet():
-
-    
     @staticmethod
     def make_mmap(source_dir: str,
                   mmap_base_dir: str,
-                  force: bool = False):
+                  force: bool = False,
+                  img_size: int = 64):
         """
         Generate the mmap files.
 
@@ -129,9 +123,9 @@ class CelebADataSet():
                          names=['file_name', 'set_id'],
                          dtype={'file_name': str, 'set_id': int},
                          engine='c')
-        assert(len(df[df['set_id'] == 0]) == 162770)
-        assert(len(df[df['set_id'] == 1]) == 19867)
-        assert(len(df[df['set_id'] == 2]) == 19962)
+        assert (len(df[df['set_id'] == 0]) == 162770)
+        assert (len(df[df['set_id'] == 1]) == 19867)
+        assert (len(df[df['set_id'] == 2]) == 19962)
 
         # process the images
         def process_set(set_id, target_file, img_size):
@@ -177,10 +171,10 @@ class CelebADataSet():
             with open(processed_file, 'wb') as f:
                 f.write(b'\n')
 
-        pfx = f'{64}x{64}'
-        process_set(2, f'{pfx}/test.dat', 64)
-        process_set(1, f'{pfx}/val.dat', 64)
-        process_set(0, f'{pfx}/train.dat', 64)
+        pfx = f'{img_size}x{img_size}'
+        process_set(2, f'{pfx}/test.dat', img_size)
+        process_set(1, f'{pfx}/val.dat', img_size)
+        process_set(0, f'{pfx}/train.dat', img_size)
 
 
 def download_file_from_google_drive(id, destination):
@@ -197,37 +191,38 @@ def download_file_from_google_drive(id, destination):
 
         with open(destination, "wb") as f:
             for chunk in response.iter_content(CHUNK_SIZE):
-                if chunk: # filter out keep-alive new chunks
+                if chunk:  # filter out keep-alive new chunks
                     f.write(chunk)
 
     URL = "https://docs.google.com/uc?export=download"
 
     session = requests.Session()
 
-    response = session.get(URL, params = { 'id' : id }, stream = True)
+    response = session.get(URL, params={'id': id}, stream=True)
     token = get_confirm_token(response)
 
     if token:
-        params = { 'id' : id, 'confirm' : token }
-        response = session.get(URL, params = params, stream = True)
+        params = {'id': id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
 
-    save_response_content(response, destination)  
+    save_response_content(response, destination)
+
 
 class misc():
-    @staticmethod 
+    @staticmethod
     def download_celeba_img(path):
         'url of aligned & cropped celeba https://drive.google.com/open?id=0B7EVK8r0v71pZjFTYXZWM3FlRnM'
         ' size: 218*178'
         ' format: jpg'
-        download_file_from_google_drive('0B7EVK8r0v71pZjFTYXZWM3FlRnM',path)
-
-    @staticmethod 
-    def download_celeba_eval(path):
-        'url of celeba eval https://drive.google.com/open?id=0B7EVK8r0v71pY0NSMzRuSXJEVkk'
-        download_file_from_google_drive('0B7EVK8r0v71pY0NSMzRuSXJEVkk',path)
+        download_file_from_google_drive('0B7EVK8r0v71pZjFTYXZWM3FlRnM', path)
 
     @staticmethod
-    def unzip(src,dest):
+    def download_celeba_eval(path):
+        'url of celeba eval https://drive.google.com/open?id=0B7EVK8r0v71pY0NSMzRuSXJEVkk'
+        download_file_from_google_drive('0B7EVK8r0v71pY0NSMzRuSXJEVkk', path)
+
+    @staticmethod
+    def unzip(src, dest):
         '''
         src: address of the zip
         dest: a directory to store the file
@@ -235,8 +230,10 @@ class misc():
         f = zipfile.ZipFile(src)
         if not os.path.exists(dest):
             os.makedirs(dest)
-        f.extractall(dest)  
+        f.extractall(dest)
+
     celba_size = 202598
+
 
 def prepare_celeba():
     """
@@ -259,23 +256,24 @@ def prepare_celeba():
         print('img file not exist')
         if os.path.exists(IMG_ZIP_PATH):
             print(f'zipped file exists\n unzipping\ndst: {IMG_PATH}')
-            misc.unzip(IMG_ZIP_PATH,IMG_PATH)
+            misc.unzip(IMG_ZIP_PATH, IMG_PATH)
             print('unzipped')
         else:
             print(f'zipped file dosen\'t exist\ndownloading img \ndst: {IMG_ZIP_PATH}')
             misc.download_celeba_img(IMG_ZIP_PATH)
             print(f'downloaded\nstart unzip\ndst: {IMG_PATH}')
-            misc.unzip(IMG_ZIP_PATH,IMG_PATH)
+            misc.unzip(IMG_ZIP_PATH, IMG_PATH)
             print('unzipped')
     if not os.path.exists(EVAL_PATH):
         print(f'eval doesn\'t exist\ndownloading eval \ndst: {EVAL_PATH}')
         misc.download_celeba_eval(EVAL_PATH)
         print('downloaded')
 
+
 if __name__ == '__main__':
-    # prepare_celeba()
-    # CelebADataSet.make_mmap(PRE_DIR_PATH,MAP_DIR_PATH,True)
-    x_train,x_validate,x_test=load_celeba()
+    prepare_celeba()
+    CelebADataSet.make_mmap(PRE_DIR_PATH, MAP_DIR_PATH, True, 32)
+    x_train, x_validate, x_test = load_celeba()
 
     print(x_train.shape)
     print(x_validate.shape)

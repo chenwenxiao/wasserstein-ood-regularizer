@@ -50,7 +50,7 @@ class ExpConfig(spt.Config):
     smallest_step = 5e-5
     initial_lr = 0.0001
     lr_anneal_factor = 0.5
-    lr_anneal_epoch_freq = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200]
+    lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
 
     n_critical = 5

@@ -20,6 +20,7 @@ import numpy as np
 
 from tfsnippet.preprocessing import UniformNoiseSampler
 
+from ood_regularizer.experiment.datasets.celeba import load_celeba
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.utils import make_diagram
 
@@ -38,17 +39,20 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 500
+    max_epoch = 100
     warm_up_start = 0
 
     min_distance = 0.2
     use_transductive = True  # can model use the data in SVHN's and CIFAR's testing set
     use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
+    self_ood = False
+    mixed_radio = 1.0
+    mutation_rate = 0.1
     max_step = None
     batch_size = 256
     initial_lr = 0.0001
     lr_anneal_factor = 0.5
-    lr_anneal_epoch_freq = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+    lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
 
     gradient_penalty_algorithm = 'interpolate'  # both or interpolate
@@ -374,29 +378,25 @@ def main():
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
-    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
-
-    if config.use_transductive:
-        mixed_array = np.random.randint(0, 256, size=(2000,) + config.x_shape)
-        mixed_array = (mixed_array - 127.5) / 256.0 * 2
-        min_dist_list = []
-        count = 0
-        for sample in mixed_array:
-            count = count + 1
-            print(count, sample.shape)
-            dist_of_sample = np.sum((sample - x_train) ** 2, axis=(-1, -2, -3))
-            min_dist = np.min(dist_of_sample) / config.x_shape_multiple
-            min_dist_list.append(min_dist)
-        min_dist_list = np.asarray(min_dist_list)
-        print(min_dist_list)
-        print(np.mean(min_dist_list))
-        mask = min_dist_list > config.min_distance
-        mixed_array = mixed_array[mask]
-        print(mixed_array.shape)
+    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
+                                     skip_incomplete=True)
+    if config.self_ood:
+        if config.use_transductive:
+            cele_train, cele_validate, cele_test = load_celeba(img_size=32)
+            cele_test = (cele_test - 127.5) / 256.0 * 2
+            mixed_array = cele_test
+        else:
+            random_array = (np.random.randint(0, 256, size=x_train.shape) - 127.5) / 256 * 2.0
+            mixed_array = np.where(np.random.random(size=x_train.shape) < config.mutation_rate, random_array, x_train)
     else:
-        mixed_array = np.concatenate([x_test, svhn_test])
+        if config.use_transductive:
+            mixed_array = np.concatenate([x_test, svhn_test])
+        else:
+            mixed_array = svhn_train
 
-    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size, shuffle=True,
+    np.random.shuffle(mixed_array)
+    mixed_test_flow = spt.DataFlow.arrays([mixed_array[:int(config.mixed_radio * len(mixed_array))]], config.batch_size,
+                                          shuffle=True,
                                           skip_incomplete=True)
 
     with spt.utils.create_session().as_default() as session, train_flow.threaded(5) as train_flow:
