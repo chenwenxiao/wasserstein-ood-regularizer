@@ -44,6 +44,7 @@ def _fetch_array_x(path):
         # #     img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
         # img = imresize(img,(32,32,3))
         imgs.append(img)
+        print(len(imgs))
 
     return np.array(imgs)
 
@@ -89,5 +90,4 @@ if __name__ == '__main__':
     (_x_test, _y_test) = load_imagenet_test()
     print(_x_test.shape)
 
-    im = np.array(_x_test[19])
-    print(im)
+    np.save(TEST_X_PATH, _x_test)

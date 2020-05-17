@@ -15,12 +15,7 @@ import os
 import tensorflow as tf
 import numpy as np
 
-# TRAIN_DIR_PATH = '/home/cwx17/data/lsun/train'
-# TRAIN_X_PATH = '/home/cwx17/data/lsun/train/img'
-# TRAIN_X_ARR_PATH = '/home/cwx17/data/lsun/train/imgarr.npy'
-
-TEST_DIR_PATH = '/home/cwx17/data/lsun/'
-TEST_X_PATH = '/home/cwx17/data/lsun/'
+TEST_X_PATH = '/home/cwx17/data/lsun'
 
 
 def _fetch_array_x(path):
@@ -43,7 +38,8 @@ def _fetch_array_x(path):
         # for dim in range(img.shape[2]):
         # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
         img = imresize(img, (32, 32, 3))
-        imgs.append(img)
+        if len(img.shape) > 2:
+            imgs.append(img)
 
     return np.array(imgs)
 
@@ -77,7 +73,7 @@ def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
             (train_x, train_y), (test_x, test_y)
             
     """
-    if (not os.path.exists(TEST_DIR_PATH)):
+    if (not os.path.exists(TEST_X_PATH)):
         print("test dir not found")
         return
 
@@ -103,9 +99,12 @@ def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
 #         return
 
 
+
+
 if __name__ == '__main__':
     (_x_test, _y_test) = load_lsun_test()
     print(_x_test.shape)
+    np.save(TEST_X_PATH, _x_test)
 
 
     # import matplotlib.pyplot as plt

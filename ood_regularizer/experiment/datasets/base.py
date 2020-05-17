@@ -7,7 +7,6 @@ __all__ = [
     'registry', 'ImageDataSet', 'StandardImageDataSet',
 ]
 
-
 registry = spt.utils.ClassRegistry()
 
 
@@ -151,36 +150,36 @@ class StandardImageDataSet(ImageDataSet):
         self._has_y = bool(has_y)
         self._valid_size = int(valid_size)
         random_state = random_state or \
-            np.random.RandomState(seed=spt.utils.generate_random_seed())
+                       np.random.RandomState(seed=spt.utils.generate_random_seed())
 
         # load data
         if has_y:
             loader_fn = partial(loader_fn, y_dtype=np.int32)
         data = loader_fn(x_shape=value_shape, x_dtype=np.uint8,
                          normalize_x=False)
-        assert(isinstance(data, tuple))
-        assert(len(data) == 2 or len(data) == 3)
+        assert (isinstance(data, tuple))
+        assert (len(data) == 2 or len(data) == 3)
         x_arrays = []
         y_arrays = [] if has_y else None
 
         def collect_x(x):
             if not from_file:
-                assert(isinstance(x, np.ndarray))
-                assert(x.dtype == np.uint8)
-                assert(len(x.shape) == 4)
-                assert(x.shape[-3:] == value_shape)
+                assert (isinstance(x, np.ndarray))
+                assert (x.dtype == np.uint8)
+                assert (len(x.shape) == 4)
+                assert (x.shape[-3:] == value_shape)
             x_arrays.append(x)
 
         def collect_y(y):
-            assert(isinstance(y, np.ndarray))
-            assert(y.dtype == np.int32)
-            assert(len(y.shape) == 1)
+            assert (isinstance(y, np.ndarray))
+            assert (y.dtype == np.int32)
+            assert (len(y.shape) == 1)
             y_arrays.append(y)
 
         if has_y:
             for t in data:
-                assert(isinstance(t, tuple))
-                assert(len(t) == 2)
+                assert (isinstance(t, tuple))
+                assert (len(t) == 2)
                 collect_x(t[0])
                 collect_y(t[1])
         else:
@@ -196,7 +195,7 @@ class StandardImageDataSet(ImageDataSet):
                     train_y = np.concatenate([y_arrays[0], y_arrays[1]], axis=0)
                     y_arrays = [train_y, y_arrays[-1]]
             else:
-                assert(valid_size == len(x_arrays[1]))
+                assert (valid_size == len(x_arrays[1]))
 
         else:
             if valid_size > 0:
