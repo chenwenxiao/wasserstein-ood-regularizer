@@ -19,7 +19,7 @@ def _fetch_array(path):
 
 
 def load_not_mnist(x_shape=(28, 28), x_dtype=np.float32, y_dtype=np.int32,
-               normalize_x=False):
+                   normalize_x=False):
     """
     Load the MNIST dataset as NumPy arrays.
 
@@ -57,6 +57,7 @@ def load_not_mnist(x_shape=(28, 28), x_dtype=np.float32, y_dtype=np.int32,
 
     return (train_x, train_y), (test_x, test_y)
 
+
 if __name__ == '__main__':
     (_x_train, _y_train), (_x_test, _y_test) = load_not_mnist()
     print(_x_train.shape)
@@ -66,6 +67,7 @@ if __name__ == '__main__':
     im = im.reshape(28, 28)
 
     import matplotlib.pyplot as plt
+
     fig = plt.figure()
     plotwindow = fig.add_subplot(111)
     plt.imshow(im, cmap='gray')

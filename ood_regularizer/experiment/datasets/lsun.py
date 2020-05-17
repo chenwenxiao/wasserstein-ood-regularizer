@@ -15,13 +15,13 @@ import os
 import tensorflow as tf
 import numpy as np
 
-
 # TRAIN_DIR_PATH = '/home/cwx17/data/lsun/train'
 # TRAIN_X_PATH = '/home/cwx17/data/lsun/train/img'
 # TRAIN_X_ARR_PATH = '/home/cwx17/data/lsun/train/imgarr.npy'
 
 TEST_DIR_PATH = '/home/cwx17/data/lsun/'
 TEST_X_PATH = '/home/cwx17/data/lsun/'
+
 
 def _fetch_array_x(path):
     file_names = os.listdir(path)
@@ -30,35 +30,37 @@ def _fetch_array_x(path):
     scale = 148 / float(64)
     sigma = np.sqrt(scale) / 2.0
     for name in file_names:
-        im = Image.open(os.path.join(path,name))
+        im = Image.open(os.path.join(path, name))
         wd = im.size[0]
         he = im.size[1]
-        side = min(wd,he)
-        dhe = he-side
-        dwd = wd-side
+        side = min(wd, he)
+        dhe = he - side
+        dwd = wd - side
 
-        im = im.crop((dwd/2,dhe/2,wd-dwd/2,he-dhe/2))
+        im = im.crop((dwd / 2, dhe / 2, wd - dwd / 2, he - dhe / 2))
         img = np.asarray(im)
         # img.setflags(write=True)
         # for dim in range(img.shape[2]):
-            # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
-        img = imresize(img,(32,32,3))
+        # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
+        img = imresize(img, (32, 32, 3))
         imgs.append(img)
-        
+
     return np.array(imgs)
+
 
 def _fetch_array_y(path):
     evalue = []
-    with open(path,'rb') as f:
+    with open(path, 'rb') as f:
         for line in f.readlines():
             q = line.decode('utf-8')
             q = q.strip()
             q = int(q.split(' ')[1])
             evalue.append(q)
     return np.array(evalue)
-            
+
+
 def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
-               normalize_x=False):
+                   normalize_x=False):
     """
     Load the lsun dataset as NumPy arrays.
     samilar to load_not_mnist
@@ -81,9 +83,10 @@ def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
 
     test_x = _fetch_array_x(TEST_X_PATH)
 
-    test_y = range(0,len(test_x))
+    test_y = range(0, len(test_x))
 
-    return  (test_x, test_y)
+    return (test_x, test_y)
+
 
 # def prepare_arr():
 #     if (not os.path.exists(TRAIN_X_ARR_PATH)):

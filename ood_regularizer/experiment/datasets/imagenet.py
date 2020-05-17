@@ -17,7 +17,6 @@ import os
 import tensorflow as tf
 import numpy as np
 
-
 # TRAIN_DIR_PATH = '/home/cwx17/data/imagenet/train'
 # TRAIN_X_PATH = '/home/cwx17/data/imagenet/train/img'
 # TRAIN_X_ARR_PATH = '/home/cwx17/data/imagenet/train/imgarr.npy'
@@ -34,7 +33,7 @@ def _fetch_array_x(path):
     # scale = 148 / float(64)
     # sigma = np.sqrt(scale) / 2.0
     for name in file_names:
-        im = Image.open(os.path.join(path,name))
+        im = Image.open(os.path.join(path, name))
         img = np.asarray(im)
         # print(img.shape)
         if img.shape[0] != 32:
@@ -45,21 +44,23 @@ def _fetch_array_x(path):
         # #     img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
         # img = imresize(img,(32,32,3))
         imgs.append(img)
-        
+
     return np.array(imgs)
+
 
 def _fetch_array_y(path):
     evalue = []
-    with open(path,'rb') as f:
+    with open(path, 'rb') as f:
         for line in f.readlines():
             q = line.decode('utf-8')
             q = q.strip()
             q = int(q.split(' ')[1])
             evalue.append(q)
     return np.array(evalue)
-            
+
+
 def load_imagenet_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
-               normalize_x=False):
+                       normalize_x=False):
     """
     Load the imagenet dataset as NumPy arrays.
     samilar to load_not_mnist
@@ -78,7 +79,7 @@ def load_imagenet_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
     """
 
     test_x = _fetch_array_x(TEST_X_PATH)
-    test_y = np.array(range(0,len(test_x)))
+    test_y = np.array(range(0, len(test_x)))
 
     return (test_x, test_y)
 
