@@ -23,7 +23,7 @@ import numpy as np
 
 TEST_DIR_PATH = '/home/cwx17/data/imagenet/test/valid_32x32'
 TEST_X_PATH = '/home/cwx17/data/imagenet/test/valid_32x32'
-TEST_X_ARR_PATH = '/home/cwx17/data/imagenet/test/imgarr.npy'
+TEST_X_ARR_PATH = '/home/cwx17/data/imagenet/test.npy'
 
 
 def _fetch_array_x(path):
@@ -79,7 +79,7 @@ def load_imagenet_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
             
     """
 
-    test_x = _fetch_array_x(TEST_X_PATH)
+    test_x = np.load(TEST_X_ARR_PATH)
     test_y = np.array(range(0, len(test_x)))
 
     return (test_x, test_y)

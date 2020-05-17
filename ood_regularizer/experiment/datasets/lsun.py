@@ -16,6 +16,7 @@ import tensorflow as tf
 import numpy as np
 
 TEST_X_PATH = '/home/cwx17/data/lsun'
+TEST_X_ARR_PATH = '/home/cwx17/data/lsun/test.npy'
 
 
 def _fetch_array_x(path):
@@ -77,7 +78,7 @@ def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
         print("test dir not found")
         return
 
-    test_x = _fetch_array_x(TEST_X_PATH)
+    test_x = np.load(TEST_X_ARR_PATH)
 
     test_y = range(0, len(test_x))
 
