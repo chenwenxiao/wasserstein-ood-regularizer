@@ -56,7 +56,7 @@ def _fetch_array_y(path):
     return np.array(evalue)
 
 
-def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
+def load_isun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
                    normalize_x=False):
     """
     Load the lsun dataset as NumPy arrays.
@@ -103,7 +103,7 @@ def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
 
 
 if __name__ == '__main__':
-    (_x_test, _y_test) = load_lsun_test()
+    (_x_test, _y_test) = load_isun_test()
     print(_x_test.shape)
     np.save(TEST_X_PATH, _x_test)
 
