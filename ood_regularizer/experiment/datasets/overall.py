@@ -20,23 +20,23 @@ def load_dataset(dataset_name):
     elif dataset_name == 'isun':
         x_test, y_test = load_isun_test()
     elif dataset_name == 'kmnist':
-        (_x_train, _y_train), (_x_test, _y_test) = load_kmnist()
+        (x_train, _y_train), (x_test, _y_test) = load_kmnist()
     elif dataset_name == 'lsun':
         x_test, y_test = load_lsun_test()
     elif dataset_name == 'not_mnist':
-        (_x_train, _y_train), (_x_test, _y_test) = load_not_mnist()
+        (x_train, _y_train), (x_test, _y_test) = load_not_mnist()
     elif dataset_name == 'omniglot':
-        (_x_train, _y_train), (_x_test, _y_test) = load_omniglot()
+        (x_train, _y_train), (x_test, _y_test) = load_omniglot()
     elif dataset_name == 'svhn':
-        (_x_train, _y_train), (_x_test, _y_test) = load_svhn()
+        (x_train, _y_train), (x_test, _y_test) = load_svhn()
     elif dataset_name == 'cifar10':
-        (_x_train, _y_train), (_x_test, _y_test) = load_cifar10()
+        (x_train, _y_train), (x_test, _y_test) = load_cifar10()
     elif dataset_name == 'cifar100':
-        (_x_train, _y_train), (_x_test, _y_test) = load_cifar100()
+        (x_train, _y_train), (x_test, _y_test) = load_cifar100()
     elif dataset_name == 'fashion_mnist':
-        (_x_train, _y_train), (_x_test, _y_test) = load_fashion_mnist()
+        (x_train, _y_train), (x_test, _y_test) = load_fashion_mnist()
     elif dataset_name == 'mnist':
-        (_x_train, _y_train), (_x_test, _y_test) = load_mnist()
+        (x_train, _y_train), (x_test, _y_test) = load_mnist()
     else:
         raise RuntimeError('dataset {} is not supported'.format(dataset_name))
     return x_train, x_test
