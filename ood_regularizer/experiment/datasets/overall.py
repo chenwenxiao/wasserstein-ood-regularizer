@@ -10,7 +10,7 @@ from ood_regularizer.experiment.datasets.omniglot import load_omniglot
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 
 
-def load_dataset(dataset_name):
+def load_overall(dataset_name):
     x_train = None
     x_test = None
     if dataset_name == 'celeba':
@@ -34,9 +34,9 @@ def load_dataset(dataset_name):
     elif dataset_name == 'cifar100':
         (x_train, _y_train), (x_test, _y_test) = load_cifar100()
     elif dataset_name == 'fashion_mnist':
-        (x_train, _y_train), (x_test, _y_test) = load_fashion_mnist()
+        (x_train, _y_train), (x_test, _y_test) = load_fashion_mnist(x_shape=(28, 28, 1))
     elif dataset_name == 'mnist':
-        (x_train, _y_train), (x_test, _y_test) = load_mnist()
+        (x_train, _y_train), (x_test, _y_test) = load_mnist(x_shape=(28, 28, 1))
     else:
         raise RuntimeError('dataset {} is not supported'.format(dataset_name))
     return x_train, x_test

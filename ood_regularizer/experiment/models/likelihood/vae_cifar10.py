@@ -22,7 +22,9 @@ import numpy as np
 from tfsnippet.preprocessing import UniformNoiseSampler
 
 from ood_regularizer.experiment.datasets.celeba import load_celeba
+from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
+from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram
 
 
@@ -49,6 +51,9 @@ class ExpConfig(spt.Config):
     mixed_radio = 1.0
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
+
+    in_dataset = 'cifar10'
+    out_dataset = 'svhn'
 
     max_step = None
     batch_size = 128
@@ -484,11 +489,11 @@ def main():
             print(e)
 
     # prepare for training and testing data
-    (_x_train, _y_train), (_x_test, _y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape)
+    (_x_train, _y_train), (_x_test, _y_test) = load_overall(config.in_dataset)
     x_train = (_x_train - 127.5) / 256.0 * 2
     x_test = (_x_test - 127.5) / 256.0 * 2
 
-    (svhn_train, _), (svhn_test, __) = load_svhn(x_shape=config.x_shape)
+    (svhn_train, _), (svhn_test, __) = load_overall(config.out_dataset)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
 
@@ -499,33 +504,7 @@ def main():
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
                                      skip_incomplete=True)
-    if config.self_ood:
-        if config.use_transductive:
-            cele_train, cele_validate, cele_test = load_celeba(img_size=32)
-            cele_test = (cele_test - 127.5) / 256.0 * 2
-            mixed_array = cele_test
-        else:
-            if config.noise_type == "mutation":
-                random_array = (np.random.randint(0, 256, size=x_train.shape) - 127.5) / 256 * 2.0
-                mixed_array = np.where(np.random.random(size=x_train.shape) < config.mutation_rate, random_array,
-                                       x_train)
-            elif config.noise_type == "gaussian":
-                random_array = np.reshape(np.random.randn(len(_x_train) * config.x_shape_multiple),
-                                          (-1,) + config.x_shape) * config.mutation_rate * 255
-                mixed_array = np.clip(np.round(random_array + _x_train), 0, 255)
-                mixed_array = (mixed_array - 127.5) / 256.0 * 2
-            elif config.noise_type == "unit":
-                random_array = np.reshape((np.random.rand(len(_x_train) * config.x_shape_multiple) * 2 - 1),
-                                          (-1,) + config.x_shape) * config.mutation_rate * 255
-                mixed_array = np.clip(np.round(random_array + _x_train), 0, 255)
-                mixed_array = (mixed_array - 127.5) / 256.0 * 2
-    else:
-        if config.use_transductive:
-            mixed_array = np.concatenate([x_test, svhn_test])
-        else:
-            mixed_array = svhn_train
-
-    np.random.shuffle(mixed_array)
+    mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_test_flow = spt.DataFlow.arrays([mixed_array[:int(config.mixed_radio * len(mixed_array))]], config.batch_size,
                                           shuffle=True,
                                           skip_incomplete=True)

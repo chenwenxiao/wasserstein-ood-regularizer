@@ -22,6 +22,7 @@ from tfsnippet.preprocessing import UniformNoiseSampler
 
 from ood_regularizer.experiment.datasets.celeba import load_celeba
 from ood_regularizer.experiment.datasets.svhn import load_svhn
+from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram
 
 
@@ -210,8 +211,16 @@ def get_all_loss(input_x, input_y):
             gradient_penalty = (tf.reduce_mean(gradient_penalty_fake) + tf.reduce_mean(gradient_penalty_real)) \
                                * config.gradient_penalty_weight / 2.0
 
-        adv_D_loss = -tf.reduce_mean(energy_fake) + tf.reduce_mean(energy_real) + gradient_penalty
-        adv_G_loss = tf.reduce_mean(energy_fake)
+        if config.use_gan:
+            adv_D_loss = -tf.nn.sigmoid_cross_entropy_with_logits(
+                labels=tf.concat([tf.ones_like(energy_real), tf.zeros_like(energy_fake)]),
+                logits=tf.concat([energy_real, energy_fake], axis=0))
+            adv_G_loss = tf.nn.sigmoid_cross_entropy_with_logits(
+                labels=tf.zeros_like(energy_fake),
+                logits=energy_fake)
+        else:
+            adv_D_loss = -tf.reduce_mean(energy_fake) + tf.reduce_mean(energy_real) + gradient_penalty
+            adv_G_loss = tf.reduce_mean(energy_fake)
     return adv_D_loss, adv_G_loss, tf.reduce_mean(energy_real)
 
 
@@ -380,21 +389,7 @@ def main():
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
                                      skip_incomplete=True)
-    if config.self_ood:
-        if config.use_transductive:
-            cele_train, cele_validate, cele_test = load_celeba(img_size=32)
-            cele_test = (cele_test - 127.5) / 256.0 * 2
-            mixed_array = cele_test
-        else:
-            random_array = (np.random.randint(0, 256, size=x_train.shape) - 127.5) / 256 * 2.0
-            mixed_array = np.where(np.random.random(size=x_train.shape) < config.mutation_rate, random_array, x_train)
-    else:
-        if config.use_transductive:
-            mixed_array = np.concatenate([x_test, svhn_test])
-        else:
-            mixed_array = svhn_train
-
-    np.random.shuffle(mixed_array)
+    mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_test_flow = spt.DataFlow.arrays([mixed_array[:int(config.mixed_radio * len(mixed_array))]], config.batch_size,
                                           shuffle=True,
                                           skip_incomplete=True)
@@ -426,48 +421,17 @@ def main():
             n_critical = config.n_critical
             # adversarial training
             for epoch in epoch_iterator:
-                if epoch > config.warm_up_start:
-                    if config.use_gan:
-                        for step, [x] in loop.iter_steps(mixed_test_flow):
-                            # spec-training discriminator with pre-train model
-                            [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
-                                [train_D_train_op, train_D_loss, train_G_loss, train_D_real], feed_dict={
-                                    input_x: x
-                                })
-                            loop.collect_metrics(G_loss=batch_G_loss)
-                            loop.collect_metrics(D_loss=batch_D_loss)
-                            loop.collect_metrics(D_real=batch_D_real)
-
-                    else:
-                        for step, [x] in loop.iter_steps(train_flow):
-                            for [y] in mixed_test_flow:
-                                # spec-training discriminator
-                                [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
-                                    [D_train_op, D_loss, G_loss, D_real], feed_dict={
-                                        input_x: x, input_y: y
-                                    })
-                                loop.collect_metrics(G_loss=batch_G_loss)
-                                loop.collect_metrics(D_loss=batch_D_loss)
-                                loop.collect_metrics(D_real=batch_D_real)
-                                break
-
-                else:
-                    step_iterator = MyIterator(train_flow)
-                    while step_iterator.has_next:
-                        for step, [x] in loop.iter_steps(limited(step_iterator, n_critical)):
-                            # pre-training discriminator
-                            [_, batch_D_loss, batch_D_real] = session.run(
-                                [train_D_train_op, train_D_loss, train_D_real], feed_dict={
-                                    input_x: x
-                                })
-                            loop.collect_metrics(D_loss=batch_D_loss)
-                            loop.collect_metrics(D_real=batch_D_real)
-
-                        # generator training
-                        [_, batch_G_loss] = session.run(
-                            [train_G_train_op, train_G_loss], feed_dict={
+                for step, [x] in loop.iter_steps(train_flow):
+                    for [y] in mixed_test_flow:
+                        # spec-training discriminator
+                        [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
+                            [D_train_op, D_loss, G_loss, D_real], feed_dict={
+                                input_x: x, input_y: y
                             })
                         loop.collect_metrics(G_loss=batch_G_loss)
+                        loop.collect_metrics(D_loss=batch_D_loss)
+                        loop.collect_metrics(D_real=batch_D_real)
+                        break
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()

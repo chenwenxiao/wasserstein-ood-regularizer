@@ -13,6 +13,7 @@ import tfsnippet as spt
 from tensorflow.contrib.framework import add_arg_scope
 from tensorflow.python.framework.errors_impl import ResourceExhaustedError
 
+from ood_regularizer.experiment.datasets.celeba import load_celeba
 from .global_config import global_config
 
 __all__ = [
@@ -219,7 +220,7 @@ def conv2d_with_output_shape(conv_fn,
              validate('input', input))
     input_shape = spt.utils.get_static_shape(input)[-3:]
     output_shape = tuple(output_shape)
-    assert(len(output_shape) == 3 and None not in output_shape)
+    assert (len(output_shape) == 3 and None not in output_shape)
 
     # compute the strides
     strides = [
@@ -273,7 +274,7 @@ def deconv2d_with_output_shape(deconv_fn,
              validate('input', input))
     input_shape = spt.utils.get_static_shape(input)[-3:]
     output_shape = tuple(output_shape)
-    assert(len(output_shape) == 3 and None not in output_shape)
+    assert (len(output_shape) == 3 and None not in output_shape)
 
     # compute the strides
     strides = [
@@ -336,14 +337,14 @@ class NetworkLogger(object):
                   fn: Callable[..., tf.Tensor],
                   input: TensorLike,
                   log_arg_names_: Iterable[str] = (
-                      'units',                   # for dense
-                      'strides', 'kernel_size',  # for conv & deconv
-                      'shortcut_kernel_size',    # for resnet
-                      'vertical_kernel_size',
-                      'horizontal_kernel_size',  # for pixelcnn
-                      'name', 'scope',           # for general layers
-                      'ndims', 'shape',          # for reshape_tail
-                      'rate',                    # for dropout
+                          'units',  # for dense
+                          'strides', 'kernel_size',  # for conv & deconv
+                          'shortcut_kernel_size',  # for resnet
+                          'vertical_kernel_size',
+                          'horizontal_kernel_size',  # for pixelcnn
+                          'name', 'scope',  # for general layers
+                          'ndims', 'shape',  # for reshape_tail
+                          'rate',  # for dropout
                   ),
                   *args, **kwargs) -> tf.Tensor:
         """
@@ -415,6 +416,7 @@ class NetworkLoggers(object):
         Returns:
             The formatted log.
         """
+
         def format_shape(t):
             if isinstance(t, spt.layers.PixelCNN2DOutput):
                 shape = spt.utils.get_static_shape(t.horizontal)
@@ -496,8 +498,8 @@ class Timer(object):
                     [
                         (tag, spt.utils.humanize_duration(stop - start))
                         for (_, start), (tag, stop) in zip(
-                            self._time_ticks[:-1], self._time_ticks[1:]
-                        )
+                        self._time_ticks[:-1], self._time_ticks[1:]
+                    )
                     ],
                     title='Time Consumption',
                 )
@@ -524,6 +526,7 @@ def save_images_collection(images: np.ndarray,
         border_size: Size of the border, for separating images.
             (default 0, no border)
     """
+
     # check the arguments
     def validate_image(img):
         if len(img.shape) == 2:
@@ -551,8 +554,8 @@ def save_images_collection(images: np.ndarray,
             if total_idx < len(images):
                 img = images[total_idx]
                 buf[j * (h + border_size): (j + 1) * h + j * border_size,
-                    i * (w + border_size): (i + 1) * w + i * border_size,
-                    :] = img[:, :, :]
+                i * (w + border_size): (i + 1) * w + i * border_size,
+                :] = img[:, :, :]
 
     # save the image
     if n_channels == 1:
@@ -584,6 +587,7 @@ def find_largest_batch_size(test_metrics: GraphNodes,
     Returns:
         The detected largest batch size.
     """
+
     def next_size():
         return low + int((high - low + 1) // 2)
 
@@ -591,7 +595,7 @@ def find_largest_batch_size(test_metrics: GraphNodes,
         raise ValueError(f'`len(test_x) < max_batch_size` is not allowed: '
                          f'len(test_x) = {len(test_x)}, max_batch_size = '
                          f'{max_batch_size}')
-    assert(max_batch_size > 0)
+    assert (max_batch_size > 0)
 
     low, high = 0, max_batch_size
     batch_feed_dict = dict(feed_dict or {})
@@ -615,3 +619,37 @@ def find_largest_batch_size(test_metrics: GraphNodes,
     print('<' * 79)
     print(f'Maximum batch size has been detected: {low}')
     return low
+
+
+def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test):
+    mixed_array = None
+    if config.self_ood:
+        if config.use_transductive:
+            cele_train, cele_validate, cele_test = load_celeba(img_size=32)
+            cele_test = (cele_test - 127.5) / 256.0 * 2
+            mixed_array = cele_test
+        else:
+            if config.noise_type == "mutation":
+                random_array = (np.random.randint(0, 256, size=cifar_train.shape) - 127.5) / 256 * 2.0
+                mixed_array = np.where(np.random.random(size=cifar_train.shape) < config.mutation_rate,
+                                       random_array, cifar_train)
+            elif config.noise_type == "gaussian":
+                cifar_train = cifar_train * 256.0 / 2 + 127.5
+                random_array = np.reshape(np.random.randn(len(cifar_train) * config.x_shape_multiple),
+                                          (-1,) + config.x_shape) * config.mutation_rate * 255
+                mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
+                mixed_array = (mixed_array - 127.5) / 256.0 * 2
+            elif config.noise_type == "unit":
+                cifar_train = cifar_train * 256.0 / 2 + 127.5
+                random_array = np.reshape((np.random.rand(len(cifar_train) * config.x_shape_multiple) * 2 - 1),
+                                          (-1,) + config.x_shape) * config.mutation_rate * 255
+                mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
+                mixed_array = (mixed_array - 127.5) / 256.0 * 2
+    else:
+        if config.use_transductive:
+            mixed_array = np.concatenate([cifar_test, svhn_test])
+        else:
+            mixed_array = svhn_train
+
+    np.random.shuffle(mixed_array)
+    return mixed_array
