@@ -70,7 +70,7 @@ class ExpConfig(spt.Config):
     def x_shape(self):
         return (32, 32, 3)
 
-    x_shape_multiple = 32 * 32 * 3
+
 
 
 config = ExpConfig()

@@ -70,7 +70,7 @@ class ExpConfig(spt.Config):
     def x_shape(self):
         return (32, 32, 3)
 
-    x_shape_multiple = 32 * 32 * 3
+
 
 
 config = ExpConfig()
@@ -234,18 +234,21 @@ def main():
         VAE_loss += tf.losses.get_regularization_loss()
         VAE_omega_loss += tf.losses.get_regularization_loss()
 
+    x_shape_multiple = 1
+    for x in config.x_shape:
+        x_shape_multiple *= x
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
         test_p_net = p_net(glow, observed={'x': input_x},
                            n_z=config.test_n_qz)
-        ele_test_ll = test_p_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
+        ele_test_ll = test_p_net['x'].log_prob() + x_shape_multiple * np.log(128)
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
 
         test_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
                                        n_z=config.test_n_qz)
-        ele_test_omega_ll = test_p_omega_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
+        ele_test_omega_ll = test_p_omega_net['x'].log_prob() + x_shape_multiple * np.log(128)
         test_omega_nll = -tf.reduce_mean(
             ele_test_omega_ll
         )

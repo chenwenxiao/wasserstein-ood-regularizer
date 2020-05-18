@@ -21,6 +21,7 @@ import numpy as np
 from tfsnippet.preprocessing import UniformNoiseSampler
 
 from ood_regularizer.experiment.datasets.celeba import load_celeba
+from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram
@@ -49,6 +50,10 @@ class ExpConfig(spt.Config):
     self_ood = False
     mixed_radio = 1.0
     mutation_rate = 0.1
+
+    in_dataset = 'cifar10'
+    out_dataset = 'svhn'
+
     max_step = None
     batch_size = 256
     initial_lr = 0.0001
@@ -76,7 +81,7 @@ class ExpConfig(spt.Config):
     def x_shape(self):
         return (32, 32, 3)
 
-    x_shape_multiple = 32 * 32 * 3
+
 
 
 config = ExpConfig()
@@ -152,6 +157,7 @@ def D_psi(x, y=None):
         h_x = spt.layers.dense(h_x, 64, scope='level_-2')
     # sample z ~ q(z|x)
     h_x = spt.layers.dense(h_x, 1, scope='level_-1')
+    h_x = tf.clip_by_value(h_x, -1000, 1000)
     return tf.squeeze(h_x, axis=-1)
 
 
@@ -212,12 +218,16 @@ def get_all_loss(input_x, input_y):
                                * config.gradient_penalty_weight / 2.0
 
         if config.use_gan:
+            energy_fake = tf.reshape(energy_fake, (-1,))
+            energy_real = tf.reshape(energy_real, (-1,))
             adv_D_loss = -tf.nn.sigmoid_cross_entropy_with_logits(
-                labels=tf.concat([tf.ones_like(energy_real), tf.zeros_like(energy_fake)]),
+                labels=tf.concat([tf.ones_like(energy_real), tf.zeros_like(energy_fake)], axis=0),
                 logits=tf.concat([energy_real, energy_fake], axis=0))
+            adv_D_loss = tf.reduce_mean(adv_D_loss)
             adv_G_loss = tf.nn.sigmoid_cross_entropy_with_logits(
                 labels=tf.zeros_like(energy_fake),
                 logits=energy_fake)
+            adv_G_loss = tf.reduce_mean(adv_G_loss)
         else:
             adv_D_loss = -tf.reduce_mean(energy_fake) + tf.reduce_mean(energy_real) + gradient_penalty
             adv_G_loss = tf.reduce_mean(energy_fake)
@@ -285,10 +295,6 @@ def main():
     spt.register_config_arguments(spt.settings, arg_parser, prefix='tfsnippet',
                                   title='TFSnippet options')
     arg_parser.parse_args(sys.argv[1:])
-
-    if config.use_gan:
-        config.warm_up_start = 500
-        config.max_epoch = 1000
 
     # print the config
     print_with_title('Configurations', pformat(config.to_dict()), after='\n')
@@ -375,15 +381,16 @@ def main():
                 return images
 
     # prepare for training and testing data
-    (_x_train, _y_train), (_x_test, _y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape)
+    (_x_train, _x_test) = load_overall(config.in_dataset)
     x_train = (_x_train - 127.5) / 256.0 * 2
     x_test = (_x_test - 127.5) / 256.0 * 2
-    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
-    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
 
-    (svhn_train, _y_train), (svhn_test, _y_test) = load_svhn(x_shape=config.x_shape)
+    (svhn_train, svhn_test) = load_overall(config.out_dataset)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
+    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
@@ -432,6 +439,7 @@ def main():
                         loop.collect_metrics(D_loss=batch_D_loss)
                         loop.collect_metrics(D_real=batch_D_real)
                         break
+                    loop.print_logs()
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
