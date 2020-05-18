@@ -45,6 +45,14 @@ class ExpConfig(spt.Config):
     warm_up_start = 100
     initial_beta = -3.0
     uniform_scale = True
+    use_transductive = True
+    self_ood = False
+    mixed_radio = 1.0
+    mutation_rate = 0.1
+    noise_type = "mutation"  # or unit
+
+    in_dataset = 'cifar10'
+    out_dataset = 'svhn'
 
     max_step = None
     batch_size = 32

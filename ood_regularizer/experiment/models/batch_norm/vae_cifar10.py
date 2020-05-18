@@ -47,6 +47,10 @@ class ExpConfig(spt.Config):
     use_transductive = True
     mixed_radio1 = 0.1
     mixed_radio2 = 0.9
+    self_ood = False
+
+    in_dataset = 'cifar10'
+    out_dataset = 'svhn'
 
     max_step = None
     batch_size = 64

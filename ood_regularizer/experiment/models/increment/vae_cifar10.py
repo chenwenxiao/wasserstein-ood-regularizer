@@ -49,6 +49,10 @@ class ExpConfig(spt.Config):
     mixed_train_skip = 1024
     initial_omega_with_theta = True
     dynamic_epochs = True
+    self_ood = False
+
+    in_dataset = 'cifar10'
+    out_dataset = 'svhn'
 
     max_step = None
     batch_size = 128
