@@ -74,14 +74,8 @@ class ExpConfig(spt.Config):
     plot_epoch_freq = 10
 
     sample_n_z = 100
-
     epsilon = -20
-
-    @property
-    def x_shape(self):
-        return (32, 32, 3)
-
-
+    x_shape = (32, 32, 3)
 
 
 config = ExpConfig()
@@ -110,16 +104,16 @@ def G_omega(z):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 512 * config.x_shape[0] // 8 * config.x_shape[1] // 8, scope='level_0',
+        h_z = spt.layers.dense(z, 512 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
                                normalizer_fn=None)
         h_z = spt.ops.reshape_tail(
             h_z,
             ndims=1,
-            shape=(config.x_shape[0] // 8, config.x_shape[1] // 8, 512)
+            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 512)
         )
         h_z = spt.layers.resnet_deconv2d_block(h_z, 512, strides=2, scope='level_2')  # output: (7, 7, 64)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 256, strides=2, scope='level_3')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_5')  # output: (14, 14, 32)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, scope='level_5')  # output: (14, 14, 32)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
@@ -149,7 +143,7 @@ def D_psi(x, y=None):
         h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
         h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_4')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_6')  # output: (7, 7, 64)
         h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2, scope='level_8')  # output: (7, 7, 64)
 
@@ -220,18 +214,20 @@ def get_all_loss(input_x, input_y):
         if config.use_gan:
             energy_fake = tf.reshape(energy_fake, (-1,))
             energy_real = tf.reshape(energy_real, (-1,))
-            adv_D_loss = -tf.nn.sigmoid_cross_entropy_with_logits(
-                labels=tf.concat([tf.ones_like(energy_real), tf.zeros_like(energy_fake)], axis=0),
-                logits=tf.concat([energy_real, energy_fake], axis=0))
-            adv_D_loss = tf.reduce_mean(adv_D_loss)
             adv_G_loss = tf.nn.sigmoid_cross_entropy_with_logits(
                 labels=tf.zeros_like(energy_fake),
                 logits=energy_fake)
             adv_G_loss = tf.reduce_mean(adv_G_loss)
+            adv_D_loss = -tf.nn.sigmoid_cross_entropy_with_logits(
+                labels=tf.ones_like(energy_real),
+                logits=energy_real)
+            adv_D_real = tf.reduce_mean(adv_D_loss)
+            adv_D_loss = adv_D_real - adv_G_loss
         else:
-            adv_D_loss = -tf.reduce_mean(energy_fake) + tf.reduce_mean(energy_real) + gradient_penalty
+            adv_D_real = tf.reduce_mean(energy_real)
             adv_G_loss = tf.reduce_mean(energy_fake)
-    return adv_D_loss, adv_G_loss, tf.reduce_mean(energy_real)
+            adv_D_loss = adv_D_real - adv_G_loss + gradient_penalty
+    return adv_D_loss, adv_G_loss, adv_D_real
 
 
 class MyIterator(object):
@@ -308,6 +304,17 @@ def main():
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
 
+    # prepare for training and testing data
+    (_x_train, _x_test) = load_overall(config.in_dataset)
+    x_train = (_x_train - 127.5) / 256.0 * 2
+    x_test = (_x_test - 127.5) / 256.0 * 2
+
+    (svhn_train, svhn_test) = load_overall(config.out_dataset)
+    svhn_train = (svhn_train - 127.5) / 256.0 * 2
+    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    config.x_shape = x_train.shape[1:]
+
     # input placeholders
     input_x = tf.placeholder(
         dtype=tf.float32, shape=(None,) + config.x_shape, name='input_x')
@@ -380,15 +387,6 @@ def main():
 
                 return images
 
-    # prepare for training and testing data
-    (_x_train, _x_test) = load_overall(config.in_dataset)
-    x_train = (_x_train - 127.5) / 256.0 * 2
-    x_test = (_x_test - 127.5) / 256.0 * 2
-
-    (svhn_train, svhn_test) = load_overall(config.out_dataset)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
-
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
@@ -439,7 +437,6 @@ def main():
                         loop.collect_metrics(D_loss=batch_D_loss)
                         loop.collect_metrics(D_real=batch_D_real)
                         break
-                    loop.print_logs()
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()

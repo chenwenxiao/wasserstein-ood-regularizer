@@ -21,6 +21,7 @@ import numpy as np
 
 from tfsnippet.preprocessing import UniformNoiseSampler
 
+from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.utils import make_diagram, plot_fig
 
@@ -70,11 +71,7 @@ class ExpConfig(spt.Config):
 
     sample_n_z = 100
 
-    @property
-    def x_shape(self):
-        return (32, 32, 3)
-
-
+    x_shape = (32, 32, 3)
 
 
 config = ExpConfig()
@@ -345,6 +342,17 @@ def main():
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
 
+    # prepare for training and testing data
+    (_x_train, _x_test) = load_overall(config.in_dataset)
+    x_train = (_x_train - 127.5) / 256.0 * 2
+    x_test = (_x_test - 127.5) / 256.0 * 2
+
+    (svhn_train, svhn_test) = load_overall(config.out_dataset)
+    svhn_train = (svhn_train - 127.5) / 256.0 * 2
+    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    config.x_shape = x_train.shape[1:]
+
     # input placeholders
     input_x = tf.placeholder(
         dtype=tf.float32, shape=(None,) + config.x_shape, name='input_x')
@@ -565,7 +573,8 @@ def main():
                         mixed_test_flow = spt.DataFlow.arrays([mixed_array[:i + config.mixed_train_skip]],
                                                               config.batch_size, shuffle=True)
                         if config.dynamic_epochs:
-                            repeat_epoch = int(config.mixed_train_epoch * len(mixed_array) / (mixed_test_flow.data_length))
+                            repeat_epoch = int(
+                                config.mixed_train_epoch * len(mixed_array) / (mixed_test_flow.data_length))
                         else:
                             repeat_epoch = config.mixed_train_epoch
                         for pse_epoch in range(repeat_epoch):

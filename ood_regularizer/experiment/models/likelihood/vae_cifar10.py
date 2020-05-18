@@ -76,11 +76,7 @@ class ExpConfig(spt.Config):
 
     sample_n_z = 100
 
-    @property
-    def x_shape(self):
-        return (32, 32, 3)
-
-
+    x_shape = (32, 32, 3)
 
 
 config = ExpConfig()
@@ -232,12 +228,12 @@ def p_omega_net(observed=None, n_z=None):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 8 * config.x_shape[1] // 8, scope='level_0',
+        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
                                normalizer_fn=None)
         h_z = spt.ops.reshape_tail(
             h_z,
             ndims=1,
-            shape=(config.x_shape[0] // 8, config.x_shape[1] // 8, 128)
+            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 128)
         )
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
@@ -350,6 +346,17 @@ def main():
     results.make_dirs('plotting/train.reconstruct', exist_ok=True)
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
+
+    # prepare for training and testing data
+    (_x_train, _x_test) = load_overall(config.in_dataset)
+    x_train = (_x_train - 127.5) / 256.0 * 2
+    x_test = (_x_test - 127.5) / 256.0 * 2
+
+    (svhn_train, svhn_test) = load_overall(config.out_dataset)
+    svhn_train = (svhn_train - 127.5) / 256.0 * 2
+    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    config.x_shape = x_train.shape[1:]
 
     # input placeholders
     input_x = tf.placeholder(
@@ -488,15 +495,6 @@ def main():
         except Exception as e:
             print(e)
 
-    # prepare for training and testing data
-    (_x_train, _x_test) = load_overall(config.in_dataset)
-    x_train = (_x_train - 127.5) / 256.0 * 2
-    x_test = (_x_test - 127.5) / 256.0 * 2
-
-    (svhn_train, svhn_test) = load_overall(config.out_dataset)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
-
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
@@ -579,12 +577,6 @@ def main():
                         -ele_test_kl,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         fig_name='kl_histogram_{}'.format(epoch)
-                    )
-
-                    make_diagram(
-                        tf.abs(ele_test_kl),
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        fig_name='abs_kl_histogram_{}'.format(epoch)
                     )
 
                 loop.collect_metrics(lr=learning_rate.get())

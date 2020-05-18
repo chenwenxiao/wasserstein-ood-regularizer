@@ -21,6 +21,7 @@ import numpy as np
 
 from tfsnippet.preprocessing import UniformNoiseSampler
 
+from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPConfig
 from ood_regularizer.experiment.utils import make_diagram
@@ -66,11 +67,7 @@ class ExpConfig(spt.Config):
 
     sample_n_z = 100
 
-    @property
-    def x_shape(self):
-        return (32, 32, 3)
-
-
+    x_shape = (32, 32, 3)
 
 
 config = ExpConfig()
@@ -106,7 +103,7 @@ def p_net(glow, observed=None, n_z=None):
     _ = glow.transform(z)
     x = net.add('x', spt.distributions.FlowDistribution(
         normal, glow
-    ),  n_samples=n_z)
+    ), n_samples=n_z)
 
     return net
 
@@ -122,7 +119,7 @@ def p_omega_net(glow_omega, observed=None, n_z=None):
     _ = glow_omega.transform(z)
     x = net.add('x', spt.distributions.FlowDistribution(
         normal, glow_omega
-    ),  n_samples=n_z)
+    ), n_samples=n_z)
 
     return net
 
@@ -206,6 +203,17 @@ def main():
     results.make_dirs('plotting/train.reconstruct', exist_ok=True)
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
+
+    # prepare for training and testing data
+    (_x_train, _x_test) = load_overall(config.in_dataset)
+    x_train = (_x_train - 127.5) / 256.0 * 2
+    x_test = (_x_test - 127.5) / 256.0 * 2
+
+    (svhn_train, svhn_test) = load_overall(config.out_dataset)
+    svhn_train = (svhn_train - 127.5) / 256.0 * 2
+    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    config.x_shape = x_train.shape[1:]
 
     # input placeholders
     input_x = tf.placeholder(
@@ -327,16 +335,8 @@ def main():
         except Exception as e:
             print(e)
 
-    # prepare for training and testing data
-    (_x_train, _y_train), (_x_test, _y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape)
-    x_train = (_x_train - 127.5) / 256.0 * 2
-    x_test = (_x_test - 127.5) / 256.0 * 2
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
-
-    (svhn_train, _y_train), (svhn_test, _y_test) = load_svhn(x_shape=config.x_shape)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
