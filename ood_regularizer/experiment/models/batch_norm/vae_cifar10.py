@@ -45,6 +45,7 @@ class ExpConfig(spt.Config):
     initial_beta = -3.0
     uniform_scale = True
     use_transductive = True
+    mixed_train = False
     mixed_radio1 = 0.1
     mixed_radio2 = 0.9
     self_ood = False
@@ -453,10 +454,11 @@ def main():
                              ['red', 'salmon', 'green', 'lightgreen'],
                              ['CIFAR-10 r1', 'CIFAR-10 r2', 'SVHN r1', 'SVHN r2'], 'log(bit/dims)',
                              'batch_norm_log_pro_histogram', auc_pair=(0, 2))
-                    plot_fig([cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
-                             ['red', 'green'],
-                             ['CIFAR-10 r1-r2', 'SVHN r1-r2'], 'log(bit/dims)',
-                             'batch_norm_r1-r2_log_pro_histogram', auc_pair=(0, 1))
+                    AUC = plot_fig([cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
+                                   ['red', 'green'],
+                                   ['CIFAR-10 r1-r2', 'SVHN r1-r2'], 'log(bit/dims)',
+                                   'batch_norm_r1-r2_log_pro_histogram', auc_pair=(0, 1))
+                    loop.collect_metrics(AUC=AUC)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

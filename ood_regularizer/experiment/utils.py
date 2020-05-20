@@ -30,8 +30,10 @@ def draw_curve(cifar_test, svhn_test, fig_name):
     precision, recall, thresholds = precision_recall_curve(label, score)
     pyplot.plot(recall, precision)
     pyplot.plot(fpr, tpr)
-    print('%s auc: %4f, ap: %4f' % (
-        fig_name, auc(fpr, tpr), average_precision_score(label, score)))
+    print('%s auc: %4f, aupr: %4f, ap: %4f, FPR@TPR95: %4f' % (
+        fig_name, auc(fpr, tpr), auc(recall, precision), average_precision_score(label, score),
+        np.min(fpr[tpr > 0.95])))
+    return auc(fpr, tpr)
 
 
 def draw_metric(metric, color, label):
@@ -50,7 +52,7 @@ def draw_metric(metric, color, label):
     n[2:-2] = smooth(n)
     pyplot.plot(index, n, color=color)
     pyplot.legend()
-    print('%s done.' % label)
+    print('{} done. Mean is {}, Variance is {}'.format(label, np.mean(metric), np.var(metric)))
 
 
 def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, -1)):
@@ -68,16 +70,16 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, 
 
     pyplot.cla()
     pyplot.plot()
-    draw_curve(data_list[auc_pair[0]], data_list[auc_pair[1]], fig_name)
+    tmp = draw_curve(data_list[auc_pair[0]], data_list[auc_pair[1]], fig_name)
     pyplot.savefig('plotting/%s_curve.jpg' % fig_name)
+    return tmp
 
 
 def make_diagram(op, flows, input_x, colors=['red', 'salmon', 'green', 'lightgreen'],
                  names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
                  x_label='log(bit/dims)', fig_name='log_pro_histogram'):
     packs = [get_ele(op, flow, input_x) for flow in flows]
-    plot_fig(packs, colors, names, x_label, fig_name)
-    return packs
+    return plot_fig(packs, colors, names, x_label, fig_name)
 
 
 if __name__ == '__main__':

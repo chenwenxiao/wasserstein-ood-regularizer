@@ -45,6 +45,7 @@ class ExpConfig(spt.Config):
     initial_beta = -3.0
     uniform_scale = True
     use_transductive = True
+    mixed_train = False
     mixed_train_epoch = 10
     mixed_train_skip = 1024
     initial_omega_with_theta = True
@@ -597,10 +598,12 @@ def main():
                     mixed_kl = np.asarray(mixed_kl)
                     cifar_kl = mixed_kl[:len(x_test)]
                     svhn_kl = mixed_kl[len(x_test):]
-                    plot_fig([-cifar_kl, -svhn_kl],
-                             ['red', 'green'],
-                             ['CIFAR-10 kl', 'SVHN kl'], 'log(bit/dims)',
-                             'kl_histogram', auc_pair=(0, 1))
+                    AUC = plot_fig([-cifar_kl, -svhn_kl],
+                                   ['red', 'green'],
+                                   ['CIFAR-10 kl', 'SVHN kl'], 'log(bit/dims)',
+                                   'kl_histogram', auc_pair=(0, 1))
+
+                    loop.collect_metrics(AUC=AUC)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

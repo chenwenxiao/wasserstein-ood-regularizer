@@ -46,6 +46,7 @@ class ExpConfig(spt.Config):
     initial_beta = -3.0
     uniform_scale = True
     use_transductive = True
+    mixed_train = False
     self_ood = False
     mixed_radio = 1.0
     mutation_rate = 0.1
@@ -356,11 +357,12 @@ def main():
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
 
-                    make_diagram(
+                    AUC = make_diagram(
                         -ele_test_kl,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         fig_name='kl_histogram_{}'.format(epoch)
                     )
+                    loop.collect_metrics(AUC=AUC)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

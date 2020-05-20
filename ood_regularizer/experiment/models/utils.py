@@ -648,6 +648,8 @@ def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test):
     else:
         if config.use_transductive:
             mixed_array = np.concatenate([cifar_test, svhn_test])
+            if config.mixed_train:
+                mixed_array = np.concatenate([cifar_train, mixed_array])
         else:
             mixed_array = svhn_train
 

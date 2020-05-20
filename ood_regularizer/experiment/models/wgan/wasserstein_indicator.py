@@ -46,6 +46,7 @@ class ExpConfig(spt.Config):
 
     min_distance = 0.2
     use_transductive = True  # can model use the data in SVHN's and CIFAR's testing set
+    mixed_train = False
     use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
     self_ood = False
     mixed_radio = 1.0
@@ -448,11 +449,12 @@ def main():
                     plot_samples(loop)
 
                 if epoch % config.test_epoch_freq == 0:
-                    make_diagram(
+                    AUC = make_diagram(
                         ele_test_energy,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
+                    loop.collect_metrics(AUC=AUC)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()
