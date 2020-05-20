@@ -85,21 +85,30 @@ def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
     return (test_x, test_y)
 
 
-# def prepare_arr():
-#     if (not os.path.exists(TRAIN_X_ARR_PATH)):
-#         print('train arr not found')
-#         train_x = _fetch_array_x(TRAIN_X_PATH)
-#         train_x /= np.asarray(255., dtype=np.int32)
-#         np.save(train_x,TRAIN_X_ARR_PATH)
-#     elif (not os.path.exists(TEST_X_ARR_PATH)):
-#         print("test arr not found")
-#         test_x = _fetch_array_x(TEST_X_PATH)
-#         test_x /= np.asarray(255., dtype=np.int32)
-#         np.save(test_x,TEST_X_ARR_PATH)
-#     else:
-#         return
+def prepare_numpy(path):
+    file_names = os.listdir(path)
+    file_names.sort()
+    imgs = []
+    scale = 148 / float(64)
+    sigma = np.sqrt(scale) / 2.0
+    for name in file_names:
+        im = Image.open(os.path.join(path, name))
+        wd = im.size[0]
+        he = im.size[1]
+        side = min(wd, he)
+        dhe = he - side
+        dwd = wd - side
 
+        im = im.crop((dwd / 2, dhe / 2, wd - dwd / 2, he - dhe / 2))
+        img = np.asarray(im)
+        # img.setflags(write=True)
+        # for dim in range(img.shape[2]):
+        # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
+        img = imresize(img, (32, 32, 3))
+        if len(img.shape) > 2:
+            imgs.append(img)
 
+    return np.array(imgs)
 
 
 if __name__ == '__main__':
