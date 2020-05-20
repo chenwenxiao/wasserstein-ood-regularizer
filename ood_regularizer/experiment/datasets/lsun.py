@@ -109,11 +109,13 @@ def prepare_numpy(path):
                     # for dim in range(img.shape[2]):
                     # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
                     img = imresize(img, (32, 32, 3))
-                    if len(img.shape) > 2:
+                    if img.shape == (32, 32, 3):
                         imgs.append(img)
+                    else:
+                        print(img.shape)
             except Exception as e:
                 print(e)
-    imgs = np.array(imgs)
+    imgs = np.asarray(imgs)
     np.random.shuffle(imgs)
     return imgs
 

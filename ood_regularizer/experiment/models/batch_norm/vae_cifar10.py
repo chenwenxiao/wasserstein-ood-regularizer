@@ -154,7 +154,7 @@ def p_net(observed=None, n_z=None):
         h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
         x_mean = spt.layers.conv2d(
             h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_mean',
-            kernel_initializer=tf.zeros_initializer(), activation_fn=tf.nn.tanh
+            kernel_initializer=tf.zeros_initializer(),
         )
         x_logstd = spt.layers.conv2d(
             h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_logstd',
