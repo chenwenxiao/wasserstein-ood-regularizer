@@ -600,7 +600,7 @@ def main():
                     svhn_kl = mixed_kl[len(x_test):]
                     AUC = plot_fig([-cifar_kl, -svhn_kl],
                                    ['red', 'green'],
-                                   ['CIFAR-10 kl', 'SVHN kl'], 'log(bit/dims)',
+                                   [config.in_dataset + ' Test', config.out_dataset + ' Test'], 'log(bit/dims)',
                                    'kl_histogram', auc_pair=(0, 1))
 
                     loop.collect_metrics(AUC=AUC)

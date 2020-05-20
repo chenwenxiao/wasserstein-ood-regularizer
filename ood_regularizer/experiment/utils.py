@@ -52,7 +52,7 @@ def draw_metric(metric, color, label):
     n[2:-2] = smooth(n)
     pyplot.plot(index, n, color=color)
     pyplot.legend()
-    print('{} done. Mean is {}, Variance is {}'.format(label, np.mean(metric), np.var(metric)))
+    print('{} done. Value is {}±{}'.format(label, np.mean(metric), np.std(metric)))
 
 
 def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, -1)):

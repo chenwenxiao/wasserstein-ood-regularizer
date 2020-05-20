@@ -7,6 +7,7 @@ from ood_regularizer.experiment.datasets.not_mnist import load_not_mnist
 from tfsnippet.datasets import load_cifar10, load_cifar100, load_fashion_mnist, load_mnist
 
 from ood_regularizer.experiment.datasets.omniglot import load_omniglot
+from ood_regularizer.experiment.datasets.sun import load_sun
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 
 import numpy as np
@@ -21,6 +22,8 @@ def load_overall(dataset_name, dtype=np.float):
         x_test, y_test = load_imagenet_test()
     elif dataset_name == 'isun':
         x_test, y_test = load_isun_test()
+    elif dataset_name == 'sun':
+        (x_train, _y_train), (x_test, _y_test) = load_sun()
     elif dataset_name == 'lsun':
         x_test, y_test = load_lsun_test()
     elif dataset_name == 'svhn':

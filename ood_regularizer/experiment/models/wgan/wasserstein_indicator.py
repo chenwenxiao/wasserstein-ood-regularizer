@@ -452,6 +452,8 @@ def main():
                     AUC = make_diagram(
                         ele_test_energy,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
                     loop.collect_metrics(AUC=AUC)

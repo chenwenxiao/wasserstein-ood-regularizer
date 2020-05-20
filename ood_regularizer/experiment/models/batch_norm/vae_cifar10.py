@@ -298,6 +298,20 @@ def main():
         )
         test_lb = tf.reduce_mean(test_chain.vi.lower_bound.elbo())
 
+    # derive the nll and logits output for testing
+    with tf.name_scope('evaluating'), \
+         arg_scope([batch_norm], training=False):
+        eval_q_net = q_net(input_x, n_z=config.test_n_qz)
+        eval_chain = eval_q_net.chain(p_net, observed={'x': input_x}, n_z=config.test_n_qz, latent_axis=0)
+        eval_recon = tf.reduce_mean(
+            eval_chain.model['x'].log_prob()
+        )
+        ele_eval_ll = eval_chain.vi.evaluation.is_loglikelihood()
+        eval_nll = -tf.reduce_mean(
+            ele_eval_ll
+        )
+        eval_lb = tf.reduce_mean(eval_chain.vi.lower_bound.elbo())
+
     # derive the optimizer
     with tf.name_scope('optimizing'):
         VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('p_net')
@@ -456,9 +470,25 @@ def main():
                              'batch_norm_log_pro_histogram', auc_pair=(0, 2))
                     AUC = plot_fig([cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
                                    ['red', 'green'],
-                                   ['CIFAR-10 r1-r2', 'SVHN r1-r2'], 'log(bit/dims)',
+                                   [config.in_dataset + ' test', config.out_dataset + ' test'], 'log(bit/dims)',
                                    'batch_norm_r1-r2_log_pro_histogram', auc_pair=(0, 1))
                     loop.collect_metrics(AUC=AUC)
+
+                    make_diagram(
+                        ele_test_ll,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='log_prob_histogram_with_batch_norm_{}'.format(epoch)
+                    )
+
+                    make_diagram(
+                        ele_eval_ll,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='log_prob_histogram_without_batch_norm{}'.format(epoch)
+                    )
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()
