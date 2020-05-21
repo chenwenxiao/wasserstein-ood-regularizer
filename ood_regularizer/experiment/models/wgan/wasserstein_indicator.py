@@ -24,7 +24,7 @@ from ood_regularizer.experiment.datasets.celeba import load_celeba
 from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.utils import get_mixed_array
-from ood_regularizer.experiment.utils import make_diagram
+from ood_regularizer.experiment.utils import make_diagram, get_ele
 
 
 class ExpConfig(spt.Config):
@@ -460,6 +460,16 @@ def main():
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
                     loop.collect_metrics(AUC=AUC)
+
+                if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
+                    # Distill
+                    mixed_array_kl = get_ele(ele_test_energy, spt.DataFlow.arrays([mixed_array], config.batch_size),
+                                             input_x)
+                    ascent_index = np.argsort(mixed_array_kl, axis=0)
+                    mixed_array = mixed_array[ascent_index[:int(config.distill_ratio * len(mixed_array))]]
+                    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
+                                                          shuffle=True,
+                                                          skip_incomplete=True)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

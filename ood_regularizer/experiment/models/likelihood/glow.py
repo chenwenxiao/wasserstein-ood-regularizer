@@ -24,7 +24,8 @@ from tfsnippet.preprocessing import UniformNoiseSampler
 from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPConfig
-from ood_regularizer.experiment.utils import make_diagram
+from ood_regularizer.experiment.models.utils import get_mixed_array
+from ood_regularizer.experiment.utils import make_diagram, get_ele
 
 
 class ExpConfig(spt.Config):
@@ -353,7 +354,10 @@ def main():
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
-    mixed_test_flow = spt.DataFlow.arrays([np.concatenate([x_test, svhn_test])], config.batch_size, shuffle=True,
+    mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
+    mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
+    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
+                                          shuffle=True,
                                           skip_incomplete=True)
 
     with spt.utils.create_session().as_default() as session, \
@@ -413,6 +417,14 @@ def main():
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
 
+                    make_diagram(
+                        ele_test_omega_ll,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
+                    )
+
                     AUC = make_diagram(
                         -ele_test_kl,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
@@ -421,6 +433,16 @@ def main():
                         fig_name='kl_histogram_{}'.format(epoch)
                     )
                     loop.collect_metrics(AUC=AUC)
+
+                if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
+                    # Distill
+                    mixed_array_kl = get_ele(-ele_test_kl, spt.DataFlow.arrays([mixed_array], config.batch_size),
+                                             input_x)
+                    ascent_index = np.argsort(mixed_array_kl, axis=0)
+                    mixed_array = mixed_array[ascent_index[:int(config.distill_ratio * len(mixed_array))]]
+                    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
+                                                          shuffle=True,
+                                                          skip_incomplete=True)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

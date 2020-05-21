@@ -24,7 +24,8 @@ from tfsnippet.preprocessing import UniformNoiseSampler
 
 from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
-from ood_regularizer.experiment.utils import make_diagram
+from ood_regularizer.experiment.models.utils import get_mixed_array
+from ood_regularizer.experiment.utils import make_diagram, get_ele
 
 
 class ExpConfig(spt.Config):
@@ -241,9 +242,9 @@ def main():
     # It is important: the `x_shape` must have channel dimension, even it is 1! (i.e. (28, 28, 1) for MNIST)
     # And the value of images should not be normalized, ranged from 0 to 255.
     # prepare for training and testing data
-    (_x_train, _x_test) = load_overall(config.in_dataset, dtype=np.int)
+    (x_train, x_test) = load_overall(config.in_dataset, dtype=np.int)
     (svhn_train, svhn_test) = load_overall(config.out_dataset, dtype=np.int)
-    config.x_shape = _x_train.shape[1:]
+    config.x_shape = x_train.shape[1:]
 
     # input placeholders
     input_x = tf.placeholder(
@@ -299,13 +300,16 @@ def main():
             theta_train_op = theta_optimizer.apply_gradients(theta_grads)
             omega_train_op = omega_optimizer.apply_gradients(omega_grads)
 
-    cifar_train_flow = spt.DataFlow.arrays([_x_train], config.test_batch_size)
-    cifar_test_flow = spt.DataFlow.arrays([_x_test], config.test_batch_size)
+    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
+    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
-    train_flow = spt.DataFlow.arrays([_x_train], config.batch_size, shuffle=True, skip_incomplete=True)
-    mixed_test_flow = spt.DataFlow.arrays([np.concatenate([_x_test, svhn_test])], config.batch_size, shuffle=True,
+    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
+    mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
+    mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
+    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
+                                          shuffle=True,
                                           skip_incomplete=True)
 
     with spt.utils.create_session().as_default() as session, \
@@ -362,6 +366,14 @@ def main():
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
 
+                    make_diagram(
+                        ele_test_omega_ll,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
+                    )
+
                     AUC = make_diagram(
                         -ele_test_kl,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
@@ -370,6 +382,16 @@ def main():
                         fig_name='kl_histogram_{}'.format(epoch)
                     )
                     loop.collect_metrics(AUC=AUC)
+
+                if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
+                    # Distill
+                    mixed_array_kl = get_ele(-ele_test_kl, spt.DataFlow.arrays([mixed_array], config.batch_size),
+                                             input_x)
+                    ascent_index = np.argsort(mixed_array_kl, axis=0)
+                    mixed_array = mixed_array[ascent_index[:int(config.distill_ratio * len(mixed_array))]]
+                    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
+                                                          shuffle=True,
+                                                          skip_incomplete=True)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()
