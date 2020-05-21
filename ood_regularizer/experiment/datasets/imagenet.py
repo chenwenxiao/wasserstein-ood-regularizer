@@ -23,7 +23,7 @@ import numpy as np
 
 TEST_DIR_PATH = '/home/cwx17/data/imagenet/test/valid_32x32'
 TEST_X_PATH = '/home/cwx17/data/imagenet/test/valid_32x32'
-TRAIN_X_ARR_PATH = '/home/cwx17/data/imagenet/train.npy'
+TRAIN_X_ARR_PATH = '/home/cwx17/data/imagenet/test.npy'
 TEST_X_ARR_PATH = '/home/cwx17/data/imagenet/test.npy'
 
 

@@ -49,6 +49,7 @@ class ExpConfig(spt.Config):
     mixed_ratio1 = 0.1
     mixed_ratio2 = 0.9
     self_ood = False
+    in_dataset_test_ratio = 1.0
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'

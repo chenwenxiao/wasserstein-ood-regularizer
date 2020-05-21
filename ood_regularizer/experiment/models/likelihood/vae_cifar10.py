@@ -45,13 +45,14 @@ class ExpConfig(spt.Config):
     max_epoch = 200
     warm_up_start = 100
     initial_beta = -3.0
-    uniform_scale = True
+    uniform_scale = False
     use_transductive = True
     mixed_train = False
     self_ood = False
     mixed_ratio = 1.0
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
+    in_dataset_test_ratio = 1.0
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -80,6 +81,7 @@ class ExpConfig(spt.Config):
     sample_n_z = 100
 
     x_shape = (32, 32, 3)
+    extra_stride = 2
 
 
 config = ExpConfig()
@@ -113,7 +115,8 @@ def q_net(x, observed=None, n_z=None):
         h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
         h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=config.extra_stride,
+                                             scope='level_4')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
 
@@ -146,16 +149,18 @@ def p_net(observed=None, n_z=None):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
+        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[
+            1] // 4 // config.extra_stride // config.extra_stride, scope='level_0',
                                normalizer_fn=None)
         h_z = spt.ops.reshape_tail(
             h_z,
             ndims=1,
-            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 128)
+            shape=(config.x_shape[0] // 4 // config.extra_stride, config.x_shape[1] // 4 // config.extra_stride, 128)
         )
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, scope='level_5')  # output: (14, 14, 32)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=config.extra_stride,
+                                               scope='level_5')  # output: (14, 14, 32)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
@@ -198,7 +203,8 @@ def q_omega_net(x, observed=None, n_z=None):
         h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
         h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=config.extra_stride,
+                                             scope='level_4')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
 
@@ -231,16 +237,18 @@ def p_omega_net(observed=None, n_z=None):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
+        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[
+            1] // 4 // config.extra_stride // config.extra_stride, scope='level_0',
                                normalizer_fn=None)
         h_z = spt.ops.reshape_tail(
             h_z,
             ndims=1,
-            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 128)
+            shape=(config.x_shape[0] // 4 // config.extra_stride, config.x_shape[1] // 4 // config.extra_stride, 128)
         )
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, scope='level_5')  # output: (14, 14, 32)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=config.extra_stride,
+                                               scope='level_5')  # output: (14, 14, 32)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
@@ -360,6 +368,8 @@ def main():
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
 
     config.x_shape = x_train.shape[1:]
+    if config.x_shape == (28, 28, 1):
+        config.extra_stride = 1
 
     # input placeholders
     input_x = tf.placeholder(

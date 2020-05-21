@@ -647,7 +647,7 @@ def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test):
                 mixed_array = (mixed_array - 127.5) / 256.0 * 2
     else:
         if config.use_transductive:
-            mixed_array = np.concatenate([cifar_test, svhn_test])
+            mixed_array = np.concatenate([cifar_test[:len(cifar_test) * config.in_dataset_test_ratio], svhn_test])
             if config.mixed_train:
                 mixed_array = np.concatenate([cifar_train, mixed_array])
         else:

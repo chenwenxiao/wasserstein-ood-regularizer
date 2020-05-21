@@ -51,6 +51,7 @@ class ExpConfig(spt.Config):
     self_ood = False
     mixed_ratio = 1.0
     mutation_rate = 0.1
+    in_dataset_test_ratio = 1.0
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'

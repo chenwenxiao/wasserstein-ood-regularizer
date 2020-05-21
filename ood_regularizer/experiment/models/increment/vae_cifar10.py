@@ -51,6 +51,7 @@ class ExpConfig(spt.Config):
     initial_omega_with_theta = True
     dynamic_epochs = True
     self_ood = False
+    in_dataset_test_ratio = 1.0
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
