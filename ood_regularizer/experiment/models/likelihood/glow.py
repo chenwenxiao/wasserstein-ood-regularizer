@@ -48,7 +48,7 @@ class ExpConfig(spt.Config):
     use_transductive = True
     mixed_train = False
     self_ood = False
-    mixed_radio = 1.0
+    mixed_ratio = 1.0
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
 

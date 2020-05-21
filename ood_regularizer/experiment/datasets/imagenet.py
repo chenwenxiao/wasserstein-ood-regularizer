@@ -23,7 +23,7 @@ import numpy as np
 
 TEST_DIR_PATH = '/home/cwx17/data/imagenet/test/valid_32x32'
 TEST_X_PATH = '/home/cwx17/data/imagenet/test/valid_32x32'
-TRAIN_X_ARR_PATH = '/home/cwx17/data/imagenet/test.npy'
+TRAIN_X_ARR_PATH = '/home/cwx17/data/imagenet/train.npy'
 TEST_X_ARR_PATH = '/home/cwx17/data/imagenet/test.npy'
 
 
@@ -90,7 +90,7 @@ def load_imagenet(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
 
 if __name__ == '__main__':
     print('pre load')
-    (_x_test, _y_test) = load_imagenet_test()
+    (_x_test, _y_test) = load_imagenet()
     print(_x_test.shape)
 
     np.save(TEST_X_PATH, _x_test)

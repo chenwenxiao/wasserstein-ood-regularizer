@@ -46,8 +46,8 @@ class ExpConfig(spt.Config):
     uniform_scale = True
     use_transductive = True
     mixed_train = False
-    mixed_radio1 = 0.1
-    mixed_radio2 = 0.9
+    mixed_ratio1 = 0.1
+    mixed_ratio2 = 0.9
     self_ood = False
 
     in_dataset = 'cifar10'
@@ -433,8 +433,8 @@ def main():
                     plot_samples(loop)
 
                 if epoch % config.test_epoch_freq == 0:
-                    def permutation_test(flow, radio):
-                        R = min(max(1, int(radio * config.test_batch_size - 1)), config.test_batch_size - 1)
+                    def permutation_test(flow, ratio):
+                        R = min(max(1, int(ratio * config.test_batch_size - 1)), config.test_batch_size - 1)
                         print('R={}'.format(R))
                         packs = []
                         for [batch_x] in flow:
@@ -457,12 +457,12 @@ def main():
                         return packs
 
                     def delta_test(flow):
-                        return permutation_test(flow, config.mixed_radio1) - permutation_test(flow, config.mixed_radio2)
+                        return permutation_test(flow, config.mixed_ratio1) - permutation_test(flow, config.mixed_ratio2)
 
-                    cifar_r1 = permutation_test(cifar_test_flow, config.mixed_radio1)
-                    cifar_r2 = permutation_test(cifar_test_flow, config.mixed_radio2)
-                    svhn_r1 = permutation_test(svhn_test_flow, config.mixed_radio1)
-                    svhn_r2 = permutation_test(svhn_test_flow, config.mixed_radio2)
+                    cifar_r1 = permutation_test(cifar_test_flow, config.mixed_ratio1)
+                    cifar_r2 = permutation_test(cifar_test_flow, config.mixed_ratio2)
+                    svhn_r1 = permutation_test(svhn_test_flow, config.mixed_ratio1)
+                    svhn_r2 = permutation_test(svhn_test_flow, config.mixed_ratio2)
 
                     plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
                              ['red', 'salmon', 'green', 'lightgreen'],

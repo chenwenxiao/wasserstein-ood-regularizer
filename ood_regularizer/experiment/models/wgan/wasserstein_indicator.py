@@ -49,7 +49,7 @@ class ExpConfig(spt.Config):
     mixed_train = False
     use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
     self_ood = False
-    mixed_radio = 1.0
+    mixed_ratio = 1.0
     mutation_rate = 0.1
 
     in_dataset = 'cifar10'
@@ -396,7 +396,7 @@ def main():
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
                                      skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
-    mixed_test_flow = spt.DataFlow.arrays([mixed_array[:int(config.mixed_radio * len(mixed_array))]], config.batch_size,
+    mixed_test_flow = spt.DataFlow.arrays([mixed_array[:int(config.mixed_ratio * len(mixed_array))]], config.batch_size,
                                           shuffle=True,
                                           skip_incomplete=True)
 

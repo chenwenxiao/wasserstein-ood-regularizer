@@ -62,8 +62,8 @@ def _fetch_array_y(path):
     return np.array(evalue)
 
 
-def load_lsun(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
-              normalize_x=False):
+def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
+                   normalize_x=False):
     """
     Load the lsun dataset as NumPy arrays.
     samilar to load_not_mnist
@@ -81,12 +81,12 @@ def load_lsun(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
             
     """
 
-    train_x = np.load(TRAIN_X_ARR_PATH)
+    # train_x = np.load(TRAIN_X_ARR_PATH)
     test_x = np.load(TEST_X_ARR_PATH)
-    train_y = range(0, len(train_x))
+    # train_y = range(0, len(train_x))
     test_y = range(0, len(test_x))
 
-    return (train_x, train_y), (test_x, test_y)
+    return (test_x, test_y)
 
 
 def export_images(db_path, limit=-1):
@@ -145,9 +145,9 @@ def prepare_numpy(path):
                 # img.setflags(write=True)
                 # for dim in range(img.shape[2]):
                 # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
-                img = imresize(img, (32, 32, 3))
-                if img.shape == (32, 32, 3):
-                    imgs.append(img)
+                img_ = imresize(img, (32, 32, 3))
+                if img_.shape == (32, 32, 3):
+                    imgs.append(img_)
                 else:
                     print(img.shape)
             except Exception as e:
@@ -158,18 +158,21 @@ def prepare_numpy(path):
 
 
 if __name__ == '__main__':
-    # arr = prepare_numpy('/home/cwx17/data/lsun/SUN397/')
-    # np.save('/home/cwx17/data/lsun/train_0', arr)
-    # (_x_test, _y_test) = load_lsun_test()
-    # print(_x_test.shape)
-    # np.save(TEST_X_PATH, _x_test)
-    export_images('/home/cwx17/data/lsungit/bedroom_train_lmdb')
-    export_images('/home/cwx17/data/lsungit/classroom_train_lmdb')
-    export_images('/home/cwx17/data/lsungit/kitchen_train_lmdb')
-    export_images('/home/cwx17/data/lsungit/bridge_train_lmdb')
-    export_images('/home/cwx17/data/lsungit/conference_room_train_lmdb')
-    export_images('/home/cwx17/data/lsungit/living_room_train_lmdb')
-    export_images('/home/cwx17/data/lsungit/tower_train_lmdb')
-    export_images('/home/cwx17/data/lsungit/church_outdoor_train_lmdb')
-    export_images('/home/cwx17/data/lsungit/dining_room_train_lmdb')
-    export_images('/home/cwx17/data/lsungit/restaurant_train_lmdb')
+    load_lsun_test()
+# arr = prepare_numpy('/home/cwx17/data/tinyimagenet/tiny-imagenet-200/train/')
+# np.save('/home/cwx17/data/tinyimagenet/train', arr)
+# arr = prepare_numpy('/home/cwx17/data/tinyimagenet/tiny-imagenet-200/test/')
+# np.save('/home/cwx17/data/tinyimagenet/test', arr)
+# (_x_test, _y_test) = load_lsun_test()
+# print(_x_test.shape)
+# np.save(TEST_X_PATH, _x_test)
+# export_images('/home/cwx17/data/lsungit/bedroom_train_lmdb')
+# export_images('/home/cwx17/data/lsungit/classroom_train_lmdb')
+# export_images('/home/cwx17/data/lsungit/kitchen_train_lmdb')
+# export_images('/home/cwx17/data/lsungit/bridge_train_lmdb')
+# export_images('/home/cwx17/data/lsungit/conference_room_train_lmdb')
+# export_images('/home/cwx17/data/lsungit/living_room_train_lmdb')
+# export_images('/home/cwx17/data/lsungit/tower_train_lmdb')
+# export_images('/home/cwx17/data/lsungit/church_outdoor_train_lmdb')
+# export_images('/home/cwx17/data/lsungit/dining_room_train_lmdb')
+# export_images('/home/cwx17/data/lsungit/restaurant_train_lmdb')
