@@ -69,9 +69,10 @@ class ExpConfig(spt.Config):
     train_n_qz = 1
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 25
+    test_epoch_freq = 200
     plot_epoch_freq = 20
     distill_ratio = 1.0
+    distill_epoch = 25
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -563,7 +564,7 @@ def main():
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
 
-                if epoch % config.test_epoch_freq == 0 and epoch > config.warm_up_start:
+                if epoch % config.test_epoch_freq == 0:
                     make_diagram(
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
@@ -589,6 +590,7 @@ def main():
                     )
                     loop.collect_metrics(AUC=AUC)
 
+                if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
                     # Distill
                     mixed_array_kl = get_ele(-ele_test_kl, spt.DataFlow.arrays([mixed_array], config.batch_size),
                                              input_x)

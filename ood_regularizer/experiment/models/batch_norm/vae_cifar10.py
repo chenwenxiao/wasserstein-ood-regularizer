@@ -40,7 +40,7 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 300
+    max_epoch = 100
     warm_up_start = 300
     initial_beta = -3.0
     uniform_scale = True
@@ -66,7 +66,7 @@ class ExpConfig(spt.Config):
     train_n_qz = 1
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 300
+    test_epoch_freq = 100
     plot_epoch_freq = 20
 
     epsilon = -20.0
