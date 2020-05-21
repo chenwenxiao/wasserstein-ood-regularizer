@@ -1,8 +1,8 @@
 from ood_regularizer.experiment.datasets.celeba import load_celeba
-from ood_regularizer.experiment.datasets.imagenet import load_imagenet_test
+from ood_regularizer.experiment.datasets.imagenet import load_imagenet
 from ood_regularizer.experiment.datasets.isun import load_isun_test
 from ood_regularizer.experiment.datasets.kmnist import load_kmnist
-from ood_regularizer.experiment.datasets.lsun import load_lsun_test
+from ood_regularizer.experiment.datasets.lsun import load_lsun
 from ood_regularizer.experiment.datasets.not_mnist import load_not_mnist
 from tfsnippet.datasets import load_cifar10, load_cifar100, load_fashion_mnist, load_mnist
 
@@ -19,13 +19,13 @@ def load_overall(dataset_name, dtype=np.float):
     if dataset_name == 'celeba':
         x_train, x_validate, x_test = load_celeba(img_size=32)
     elif dataset_name == 'imagenet':
-        x_test, y_test = load_imagenet_test()
+        (x_train, _y_train), (x_test, _y_test) = load_imagenet()
     elif dataset_name == 'isun':
         x_test, y_test = load_isun_test()
     elif dataset_name == 'sun':
         (x_train, _y_train), (x_test, _y_test) = load_sun()
     elif dataset_name == 'lsun':
-        x_test, y_test = load_lsun_test()
+        (x_train, _y_train), (x_test, _y_test) = load_lsun()
     elif dataset_name == 'svhn':
         (x_train, _y_train), (x_test, _y_test) = load_svhn()
     elif dataset_name == 'cifar10':

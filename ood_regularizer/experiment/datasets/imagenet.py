@@ -23,6 +23,7 @@ import numpy as np
 
 TEST_DIR_PATH = '/home/cwx17/data/imagenet/test/valid_32x32'
 TEST_X_PATH = '/home/cwx17/data/imagenet/test/valid_32x32'
+TRAIN_X_ARR_PATH = '/home/cwx17/data/imagenet/test.npy'
 TEST_X_ARR_PATH = '/home/cwx17/data/imagenet/test.npy'
 
 
@@ -60,7 +61,7 @@ def _fetch_array_y(path):
     return np.array(evalue)
 
 
-def load_imagenet_test(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
+def load_imagenet(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
                        normalize_x=False):
     """
     Load the imagenet dataset as NumPy arrays.
@@ -79,10 +80,12 @@ def load_imagenet_test(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32
             
     """
 
+    train_x = np.load(TRAIN_X_ARR_PATH)
+    train_y = np.array(range(0, len(train_x)))
     test_x = np.load(TEST_X_ARR_PATH)
     test_y = np.array(range(0, len(test_x)))
 
-    return (test_x, test_y)
+    return (train_x, train_y), (test_x, test_y)
 
 
 if __name__ == '__main__':
