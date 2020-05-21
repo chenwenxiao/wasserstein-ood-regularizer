@@ -73,6 +73,8 @@ class ExpConfig(spt.Config):
     test_batch_size = 64
     test_epoch_freq = 100
     plot_epoch_freq = 10
+    distill_ratio = 1.0
+    distill_epoch = 25
 
     sample_n_z = 100
     epsilon = -20
