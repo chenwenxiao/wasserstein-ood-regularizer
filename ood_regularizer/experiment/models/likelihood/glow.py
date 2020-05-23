@@ -88,8 +88,8 @@ config = ExpConfig()
 
 
 class MyRNVPConfig(RealNVPConfig):
-    flow_depth = 9
-    conv_coupling_squeeze_before_first_block = True
+    flow_depth = 18
+    conv_coupling_n_blocks = 3
 
 
 myRNVPConfig = MyRNVPConfig()
@@ -246,20 +246,6 @@ def main():
         glow_omega = make_real_nvp(
             rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, scope=tf.get_variable_scope())
 
-    # derive the loss for initializing
-    with tf.name_scope('initialization'), \
-         arg_scope([p_net, p_omega_net], is_initializing=True), \
-         spt.utils.scoped_set_config(spt.settings, auto_histogram=False):
-        init_p_net = p_net(glow, observed={'x': input_x},
-                           n_z=config.train_n_qz)
-        init_VAE_loss = get_all_loss(init_p_net)
-        init_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
-                                       n_z=config.train_n_qz)
-        init_VAE_omega_loss = get_all_loss(init_p_omega_net)
-
-        init_VAE_loss += tf.losses.get_regularization_loss()
-        init_VAE_omega_loss += tf.losses.get_regularization_loss()
-
     # derive the loss and lower-bound for training
     with tf.name_scope('training'), \
          arg_scope([batch_norm], training=True):
@@ -397,17 +383,6 @@ def main():
 
             loop.print_training_summary()
             spt.utils.ensure_variables_initialized()
-
-            # initialize the network
-            for [x] in train_flow:
-                print('Network initialized, first-batch loss is {:.6g}.\n'.
-                      format(session.run(init_VAE_loss, feed_dict={input_x: x})))
-                break
-
-            for [x] in mixed_test_flow:
-                print('Network initialized, first-batch loss is {:.6g}.\n'.
-                      format(session.run(init_VAE_omega_loss, feed_dict={input_x: x})))
-                break
 
             epoch_iterator = loop.iter_epochs()
             # adversarial training
