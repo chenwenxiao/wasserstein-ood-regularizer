@@ -90,6 +90,7 @@ config = ExpConfig()
 class MyRNVPConfig(RealNVPConfig):
     flow_depth = 18
     conv_coupling_n_blocks = 3
+    use_invertible_flow = False
 
 
 myRNVPConfig = MyRNVPConfig()
