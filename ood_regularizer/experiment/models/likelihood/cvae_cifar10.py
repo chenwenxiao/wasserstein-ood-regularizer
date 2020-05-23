@@ -408,6 +408,7 @@ def main():
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
 
+    config.class_num = np.max(_y_train) + 1
     config.x_shape = x_train.shape[1:]
     if config.x_shape == (28, 28, 1):
         config.extra_stride = 1

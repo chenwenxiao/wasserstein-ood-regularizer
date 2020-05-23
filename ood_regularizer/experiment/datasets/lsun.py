@@ -157,13 +157,13 @@ def prepare_numpy(path):
     np_arr = []
     label_arr = []
     class_num = 0
-    for list in imgs:
+    for key, list in imgs.items():
         if len(list) > 0:
             np_arr.append(list)
             label_arr.append(np.ones(len(list)) * class_num)
             class_num += 1
-            print(class_num, len(list))
-    return np.concatenate(np_arr, dtype=np.int), np.asarray(label_arr, dtype=np.int)
+            print(class_num, len(list), key)
+    return np.concatenate(np_arr), np.concatenate(label_arr)
 
 
 if __name__ == '__main__':
@@ -171,6 +171,8 @@ if __name__ == '__main__':
     arr, label = prepare_numpy('/home/cwx17/data/tinyimagenet/tiny-imagenet-200/train/')
     np.save('/home/cwx17/data/tinyimagenet/train', arr)
     np.save('/home/cwx17/data/tinyimagenet/train_label', label)
+    print(arr.shape)
+    print(label.shape)
 # arr = prepare_numpy('/home/cwx17/data/tinyimagenet/tiny-imagenet-200/test/')
 # np.save('/home/cwx17/data/tinyimagenet/test', arr)
 # (_x_test, _y_test) = load_lsun_test()
