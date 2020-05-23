@@ -84,7 +84,7 @@ def load_lsun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
     # train_x = np.load(TRAIN_X_ARR_PATH)
     test_x = np.load(TEST_X_ARR_PATH)
     # train_y = range(0, len(train_x))
-    test_y = range(0, len(test_x))
+    test_y = None
 
     return (test_x, test_y)
 
@@ -126,10 +126,11 @@ def export_images(db_path, limit=-1):
 
 
 def prepare_numpy(path):
-    imgs = []
+    imgs = {}
     scale = 148 / float(64)
     sigma = np.sqrt(scale) / 2.0
     for root, dirs, files in os.walk(path):
+        imgs[root] = []
         for name in files:
             try:
                 im = Image.open(os.path.join(root, name))
@@ -147,20 +148,29 @@ def prepare_numpy(path):
                 # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
                 img_ = imresize(img, (32, 32, 3))
                 if img_.shape == (32, 32, 3):
-                    imgs.append(img_)
+                    imgs[root].append(img_)
                 else:
                     print(img.shape)
             except Exception as e:
                 print(e)
-    imgs = np.asarray(imgs)
-    np.random.shuffle(imgs)
-    return imgs
+
+    np_arr = []
+    label_arr = []
+    class_num = 0
+    for list in imgs:
+        if len(list) > 0:
+            np_arr.append(list)
+            label_arr.append(np.ones(len(list)) * class_num)
+            class_num += 1
+            print(class_num, len(list))
+    return np.concatenate(np_arr, dtype=np.int), np.asarray(label_arr, dtype=np.int)
 
 
 if __name__ == '__main__':
     load_lsun_test()
-# arr = prepare_numpy('/home/cwx17/data/tinyimagenet/tiny-imagenet-200/train/')
-# np.save('/home/cwx17/data/tinyimagenet/train', arr)
+    arr, label = prepare_numpy('/home/cwx17/data/tinyimagenet/tiny-imagenet-200/train/')
+    np.save('/home/cwx17/data/tinyimagenet/train', arr)
+    np.save('/home/cwx17/data/tinyimagenet/train_label', label)
 # arr = prepare_numpy('/home/cwx17/data/tinyimagenet/tiny-imagenet-200/test/')
 # np.save('/home/cwx17/data/tinyimagenet/test', arr)
 # (_x_test, _y_test) = load_lsun_test()

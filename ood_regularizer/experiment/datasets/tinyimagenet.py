@@ -24,6 +24,7 @@ import numpy as np
 TEST_DIR_PATH = '/home/cwx17/data/tinyimagenet/test/valid_32x32'
 TEST_X_PATH = '/home/cwx17/data/tinyimagenet/test/valid_32x32'
 TRAIN_X_ARR_PATH = '/home/cwx17/data/tinyimagenet/train.npy'
+TRAIN_Y_ARR_PATH = '/home/cwx17/data/tinyimagenet/train_label.npy'
 TEST_X_ARR_PATH = '/home/cwx17/data/tinyimagenet/test.npy'
 
 
@@ -81,9 +82,9 @@ def load_tinyimagenet(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
     """
 
     train_x = np.load(TRAIN_X_ARR_PATH)
-    train_y = np.array(range(0, len(train_x)))
+    train_y = np.load(TRAIN_Y_ARR_PATH)
     test_x = np.load(TEST_X_ARR_PATH)
-    test_y = np.array(range(0, len(test_x)))
+    test_y = None
 
     return (train_x, train_y), (test_x, test_y)
 

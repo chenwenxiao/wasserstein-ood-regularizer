@@ -80,7 +80,7 @@ def load_isun_test(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
 
     test_x = np.load(TEST_X_ARR_PATH)
 
-    test_y = range(0, len(test_x))
+    test_y = None
 
     return (test_x, test_y)
 

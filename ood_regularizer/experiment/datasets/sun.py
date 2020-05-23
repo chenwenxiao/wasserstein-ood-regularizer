@@ -60,7 +60,7 @@ def _fetch_array_y(path):
 def load_sun(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
              normalize_x=False):
     """
-    Load the lsun dataset as NumPy arrays.
+    Load the sun dataset as NumPy arrays.
     samilar to load_not_mnist
 
     Args:
@@ -82,8 +82,8 @@ def load_sun(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
     train_x = np.load(TRAIN_X_ARR_PATH)
     test_x = np.load(TEST_X_ARR_PATH)
 
-    train_y = range(0, len(train_x))
-    test_y = range(0, len(test_x))
+    train_y = None
+    test_y = None
 
     return (train_x, train_y), (test_x, test_y)
 

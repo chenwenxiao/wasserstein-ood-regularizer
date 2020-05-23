@@ -53,4 +53,8 @@ def load_overall(dataset_name, dtype=np.float):
         x_train = x_test
     x_train = x_train.astype(dtype)
     x_test = x_test.astype(dtype)
+    if y_train is None:
+        y_train = np.random.randint(0, 10, x_train.shape)
+    if y_test is None:
+        y_train = np.random.randint(0, 10, x_test.shape)
     return x_train, y_train, x_test, y_test
