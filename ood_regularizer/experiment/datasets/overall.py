@@ -17,38 +17,40 @@ import numpy as np
 def load_overall(dataset_name, dtype=np.float):
     x_train = None
     x_test = None
+    y_train = None
+    y_test = None
     if dataset_name == 'celeba':
         x_train, x_validate, x_test = load_celeba(img_size=32)
     elif dataset_name == 'imagenet':
-        (x_train, _y_train), (x_test, _y_test) = load_imagenet()
+        (x_train, y_train), (x_test, y_test) = load_imagenet()
     elif dataset_name == 'tinyimagenet':
-        (x_train, _y_train), (x_test, _y_test) = load_tinyimagenet()
+        (x_train, y_train), (x_test, y_test) = load_tinyimagenet()
     elif dataset_name == 'isun':
         x_test, y_test = load_isun_test()
     elif dataset_name == 'sun':
-        (x_train, _y_train), (x_test, _y_test) = load_sun()
+        (x_train, y_train), (x_test, y_test) = load_sun()
     elif dataset_name == 'lsun':
-        x_test, _y_test = load_lsun_test()
+        x_test, y_test = load_lsun_test()
     elif dataset_name == 'svhn':
-        (x_train, _y_train), (x_test, _y_test) = load_svhn()
+        (x_train, y_train), (x_test, y_test) = load_svhn()
     elif dataset_name == 'cifar10':
-        (x_train, _y_train), (x_test, _y_test) = load_cifar10()
+        (x_train, y_train), (x_test, y_test) = load_cifar10()
     elif dataset_name == 'cifar100':
-        (x_train, _y_train), (x_test, _y_test) = load_cifar100()
+        (x_train, y_train), (x_test, y_test) = load_cifar100()
     elif dataset_name == 'kmnist':
-        (x_train, _y_train), (x_test, _y_test) = load_kmnist()
+        (x_train, y_train), (x_test, y_test) = load_kmnist()
     elif dataset_name == 'not_mnist':
-        (x_train, _y_train), (x_test, _y_test) = load_not_mnist()
+        (x_train, y_train), (x_test, y_test) = load_not_mnist()
     elif dataset_name == 'omniglot':
-        (x_train, _y_train), (x_test, _y_test) = load_omniglot()
+        (x_train, y_train), (x_test, y_test) = load_omniglot()
     elif dataset_name == 'fashion_mnist':
-        (x_train, _y_train), (x_test, _y_test) = load_fashion_mnist(x_shape=(28, 28, 1))
+        (x_train, y_train), (x_test, y_test) = load_fashion_mnist(x_shape=(28, 28, 1))
     elif dataset_name == 'mnist':
-        (x_train, _y_train), (x_test, _y_test) = load_mnist(x_shape=(28, 28, 1))
+        (x_train, y_train), (x_test, y_test) = load_mnist(x_shape=(28, 28, 1))
     else:
         raise RuntimeError('dataset {} is not supported'.format(dataset_name))
     if x_train is None:
         x_train = x_test
     x_train = x_train.astype(dtype)
     x_test = x_test.astype(dtype)
-    return x_train, x_test
+    return x_train, y_train, x_test, y_test

@@ -25,7 +25,7 @@ from ood_regularizer.experiment.datasets.celeba import load_celeba
 from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.utils import get_mixed_array
-from ood_regularizer.experiment.utils import make_diagram, get_ele
+from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
 
 
 class ExpConfig(spt.Config):
@@ -43,7 +43,7 @@ class ExpConfig(spt.Config):
     result_dir = None
     write_summary = True
     max_epoch = 200
-    warm_up_start = 100
+    warm_up_start = 200
     initial_beta = -3.0
     uniform_scale = False
     use_transductive = True
@@ -70,7 +70,7 @@ class ExpConfig(spt.Config):
     train_n_qz = 1
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 200
+    test_epoch_freq = 100
     plot_epoch_freq = 20
     distill_ratio = 1.0
     distill_epoch = 25
@@ -82,6 +82,7 @@ class ExpConfig(spt.Config):
 
     x_shape = (32, 32, 3)
     extra_stride = 2
+    class_num = 10
 
 
 config = ExpConfig()
@@ -274,6 +275,46 @@ def p_omega_net(observed=None, n_z=None):
     return net
 
 
+@add_arg_scope
+@spt.global_reuse
+def resnet34(input_x):
+    h_x = spt.layers.conv2d(input_x, 64, kernel_size=7, strides=2, padding='valid')
+    h_x = batch_norm(h_x)
+    h_x = spt.layers.max_pool2d(h_x, pool_size=3)
+
+    normalizer_fn = None
+    with arg_scope([spt.layers.resnet_conv2d_block],
+                   kernel_size=config.kernel_size,
+                   shortcut_kernel_size=config.shortcut_kernel_size,
+                   activation_fn=tf.nn.leaky_relu,
+                   normalizer_fn=normalizer_fn,
+                   kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
+        h_x = spt.layers.resnet_conv2d_block(h_x, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 64)
+
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128)
+
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 256)
+
+        h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 512)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 512)
+
+        h_x = spt.layers.avg_pool2d(h_x, pool_size=2, strides=2)
+        h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
+        h_x = spt.layers.dense(h_x, config.class_num)  # (batch_size, class_num)
+    return h_x
+
+
 def get_all_loss(q_net, p_net):
     with tf.name_scope('adv_prior_loss'):
         train_recon = p_net['x'].log_prob()
@@ -370,10 +411,13 @@ def main():
     config.x_shape = x_train.shape[1:]
     if config.x_shape == (28, 28, 1):
         config.extra_stride = 1
+    config.max_epoch = config.warm_up_start + config.test_epoch_freq * config.class_num
 
     # input placeholders
     input_x = tf.placeholder(
         dtype=tf.float32, shape=(None,) + config.x_shape, name='input_x')
+    input_y = tf.placeholder(
+        dtype=tf.int32, shape=(None,), name='input_y')
     learning_rate = spt.AnnealingVariable(
         'learning_rate', config.initial_lr, config.lr_anneal_factor)
 
@@ -389,8 +433,12 @@ def main():
                                         n_z=config.train_n_qz)
         VAE_omega_loss = get_all_loss(train_q_omega_net, train_p_omega_net)
 
+        predict = resnet34(input_x)
+        classify_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=predict, labels=input_y)
+
         VAE_loss += tf.losses.get_regularization_loss()
         VAE_omega_loss += tf.losses.get_regularization_loss()
+        classify_loss += tf.losses.get_regularization_loss()
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
@@ -419,21 +467,27 @@ def main():
         test_omega_lb = tf.reduce_mean(test_omega_chain.vi.lower_bound.elbo())
 
         ele_test_kl = ele_test_omega_ll - ele_test_ll
+        predict = tf.argmax(resnet34(input_x), axis=-1)
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
         VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('p_net')
         VAE_omega_params = tf.trainable_variables('q_omega_net') + tf.trainable_variables('p_omega_net')
+        classify_params = tf.trainable_variables('resnet34')
         with tf.variable_scope('theta_optimizer'):
             VAE_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)
         with tf.variable_scope('omega_optimizer'):
             VAE_omega_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_omega_grads = VAE_omega_optimizer.compute_gradients(VAE_omega_loss, VAE_omega_params)
+        with tf.variable_scope('classify_optimizer'):
+            classify_optimizer = tf.train.AdamOptimizer(learning_rate)
+            classify_grads = classify_optimizer.compute_gradients(classify_loss, classify_params)
 
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             VAE_train_op = VAE_optimizer.apply_gradients(VAE_grads)
             VAE_omega_train_op = VAE_omega_optimizer.apply_gradients(VAE_omega_grads)
+            classify_train_op = classify_optimizer.apply_gradients(classify_grads)
 
     # derive the plotting function
     with tf.name_scope('plotting'):
@@ -514,7 +568,7 @@ def main():
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
-    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
+    train_flow = spt.DataFlow.arrays([x_train, _y_train], config.batch_size, shuffle=True,
                                      skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
@@ -527,6 +581,14 @@ def main():
     reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True)
     reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True)
 
+    final_cifar_test_ll = np.zeros(len(x_test))
+    final_svhn_test_ll = np.zeros(len(svhn_test))
+    final_cifar_test_omega_ll = np.zeros(len(x_test))
+    final_svhn_test_omega_ll = np.zeros(len(svhn_test))
+    final_cifar_test_recon = np.zeros(len(x_test))
+    final_svhn_test_recon = np.zeros(len(svhn_test))
+
+    current_class = 0
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
@@ -553,71 +615,97 @@ def main():
             epoch_iterator = loop.iter_epochs()
             # adversarial training
             for epoch in epoch_iterator:
-                if epoch <= config.warm_up_start:
+                if epoch > config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
                         _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
                             input_x: x
                         })
                         loop.collect_metrics(VAE_loss=batch_VAE_loss)
-                else:
                     for step, [x] in loop.iter_steps(mixed_test_flow):
                         _, batch_VAE_omega_loss = session.run([VAE_omega_train_op, VAE_omega_loss], feed_dict={
                             input_x: x
                         })
                         loop.collect_metrics(VAE_omega_loss=batch_VAE_omega_loss)
+                else:
+                    for step, [x, y] in loop.iter_steps(train_flow):
+                        _, batch_classify_loss = session.run([classify_train_op, classify_loss], feed_dict={
+                            input_x: x, input_y: y
+                        })
+                        loop.collect_metrics(classify_loss=batch_classify_loss)
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
 
+                def update_training_data():
+                    train_flow = spt.DataFlow.arrays([x_train[_y_train == current_class]],
+                                                     config.batch_size, shuffle=True,
+                                                     skip_incomplete=True)
+                    mixed_test_flow = spt.DataFlow.arrays([mixed_array[mixed_array_predict == current_class]],
+                                                          config.batch_size,
+                                                          shuffle=True,
+                                                          skip_incomplete=True)
+                    return train_flow, mixed_test_flow
+
                 if epoch == config.warm_up_start:
+                    cifar_test_predict = get_ele(predict, cifar_test_flow, input_x)
+                    print('Correct number in cifar test is {}'.format(
+                        np.sum(cifar_test_predict == _y_test)))
+                    svhn_test_predict = get_ele(predict, svhn_test_flow, input_x)
+                    mixed_array_predict = get_ele(
+                        predict, spt.DataFlow.arrays([mixed_array], config.batch_size), input_x)
+                    train_flow, mixed_test_flow = update_training_data()
                     learning_rate.set(config.initial_lr)
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
 
-                if epoch % config.test_epoch_freq == 0:
-                    make_diagram(
-                        ele_test_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_{}'.format(epoch)
-                    )
+                if epoch % config.test_epoch_freq == 0 and epoch > config.warm_up_start:
+                    cifar_test_ll = get_ele(ele_test_ll, cifar_test_flow, input_x)
+                    svhn_test_ll = get_ele(ele_test_ll, svhn_test_flow, input_x)
+                    cifar_test_omega_ll = get_ele(ele_test_omega_ll, cifar_test_flow, input_x)
+                    svhn_test_omega_ll = get_ele(ele_test_omega_ll, svhn_test_flow, input_x)
+                    cifar_test_recon = get_ele(ele_test_recon, cifar_test_flow, input_x)
+                    svhn_test_recon = get_ele(ele_test_recon, svhn_test_flow, input_x)
 
-                    make_diagram(
-                        ele_test_omega_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
-                    )
+                    mask = cifar_test_predict == current_class
+                    final_cifar_test_ll[mask] = cifar_test_ll[mask]
+                    final_cifar_test_omega_ll[mask] = cifar_test_omega_ll[mask]
+                    final_cifar_test_recon[mask] = cifar_test_recon[mask]
+                    mask = svhn_test_predict == current_class
+                    final_svhn_test_ll[mask] = svhn_test_ll[mask]
+                    final_svhn_test_omega_ll[mask] = svhn_test_omega_ll[mask]
+                    final_svhn_test_recon[mask] = svhn_test_recon[mask]
 
-                    make_diagram(
-                        ele_test_recon,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
-                    )
+                    current_class = current_class + 1
+                    train_flow, mixed_test_flow = update_training_data()
 
-                    AUC = make_diagram(
-                        -ele_test_kl,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='kl_histogram_{}'.format(epoch)
+                if epoch == config.max_epoch:
+                    plot_fig(
+                        [final_cifar_test_ll, final_svhn_test_ll],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
+                        fig_name='log_prob_histogram', auc_pair=(0, 1)
+                    )
+                    plot_fig(
+                        [final_cifar_test_omega_ll, final_svhn_test_omega_ll],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
+                        fig_name='log_prob_mixed_histogram_', auc_pair=(0, 1)
+                    )
+                    plot_fig(
+                        [final_cifar_test_recon, final_svhn_test_recon],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
+                        fig_name='log_prob_mixed_histogram_', auc_pair=(0, 1)
+                    )
+                    AUC = plot_fig(
+                        [final_cifar_test_ll - final_cifar_test_omega_ll,
+                         final_svhn_test_ll - final_svhn_test_omega_ll],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
+                        fig_name='kl_histogram', auc_pair=(0, 1)
                     )
                     loop.collect_metrics(AUC=AUC)
-
-                if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
-                    # Distill
-                    mixed_array_kl = get_ele(-ele_test_kl, spt.DataFlow.arrays([mixed_array], config.batch_size),
-                                             input_x)
-                    ascent_index = np.argsort(mixed_array_kl, axis=0)
-                    mixed_array = mixed_array[ascent_index[:int(config.distill_ratio * len(mixed_array))]]
-                    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
-                                                          shuffle=True,
-                                                          skip_incomplete=True)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

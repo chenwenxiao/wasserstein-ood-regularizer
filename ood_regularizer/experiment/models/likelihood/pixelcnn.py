@@ -243,7 +243,7 @@ def main():
     # And the value of images should not be normalized, ranged from 0 to 255.
     # prepare for training and testing data
     (x_train, x_test) = load_overall(config.in_dataset, dtype=np.int)
-    (svhn_train, svhn_test) = load_overall(config.out_dataset, dtype=np.int)
+    (svhn_train, _svhn_train_y, svhn_test,  svhn_test_y) = load_overall(config.out_dataset, dtype=np.int)
     config.x_shape = x_train.shape[1:]
 
     # input placeholders
