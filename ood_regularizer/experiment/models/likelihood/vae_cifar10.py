@@ -575,7 +575,7 @@ def main():
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
 
-                if epoch % config.test_epoch_freq == 0:
+                if epoch % config.max_epoch == 0:
                     make_diagram(
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,

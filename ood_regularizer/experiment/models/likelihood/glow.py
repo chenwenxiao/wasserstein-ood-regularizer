@@ -42,8 +42,8 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 1000
-    warm_up_start = 500
+    max_epoch = 400
+    warm_up_start = 200
     initial_beta = -3.0
     uniform_scale = True
     use_transductive = True
@@ -60,10 +60,11 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 128
     smallest_step = 5e-5
-    initial_lr = 0.0001
+    initial_lr = 0.00001
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
+    clip_norm = 5
 
     n_critical = 5
     # evaluation parameters
@@ -88,9 +89,10 @@ config = ExpConfig()
 
 
 class MyRNVPConfig(RealNVPConfig):
-    flow_depth = 18
-    conv_coupling_n_blocks = 3
-    use_invertible_flow = False
+    flow_depth = 10
+    conv_coupling_n_blocks = 1
+    strict_invertible = True
+    conv_coupling_squeeze_before_first_block = True
 
 
 myRNVPConfig = MyRNVPConfig()
@@ -109,15 +111,15 @@ def dropout(inputs, training=False, scope=None):
 
 @add_arg_scope
 @spt.global_reuse
-def p_net(glow, observed=None, n_z=None):
+def p_net(glow_theta, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
     # sample z ~ p(z)
     normal = spt.Normal(mean=tf.zeros(config.x_shape),
                         logstd=tf.zeros(config.x_shape))
     z = net.add('z', normal, n_samples=n_z, group_ndims=len(config.x_shape))
-    _ = glow.transform(z)
+    _ = glow_theta.transform(z)
     x = net.add('x', spt.distributions.FlowDistribution(
-        normal, glow
+        normal, glow_theta
     ), n_samples=n_z)
 
     return net
@@ -239,8 +241,8 @@ def main():
     learning_rate = spt.AnnealingVariable(
         'learning_rate', config.initial_lr, config.lr_anneal_factor)
 
-    with tf.variable_scope('glow'):
-        glow = make_real_nvp(
+    with tf.variable_scope('glow_theta'):
+        glow_theta = make_real_nvp(
             rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, scope=tf.get_variable_scope())
 
     with tf.variable_scope('glow_omega'):
@@ -250,7 +252,7 @@ def main():
     # derive the loss and lower-bound for training
     with tf.name_scope('training'), \
          arg_scope([batch_norm], training=True):
-        train_p_net = p_net(glow, observed={'x': input_x},
+        train_p_net = p_net(glow_theta, observed={'x': input_x},
                             n_z=config.train_n_qz)
         VAE_loss = get_all_loss(train_p_net)
         train_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
@@ -262,16 +264,16 @@ def main():
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
-        test_p_net = p_net(glow, observed={'x': input_x},
+        test_p_net = p_net(glow_theta, observed={'x': input_x},
                            n_z=config.test_n_qz)
-        ele_test_ll = test_p_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
+        ele_test_ll = test_p_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
 
         test_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
                                        n_z=config.test_n_qz)
-        ele_test_omega_ll = test_p_omega_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
+        ele_test_omega_ll = test_p_omega_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
         test_omega_nll = -tf.reduce_mean(
             ele_test_omega_ll
         )
@@ -280,22 +282,35 @@ def main():
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
-        VAE_params = tf.trainable_variables('glow') + tf.trainable_variables('p_net')
-        VAE_omega_params = tf.trainable_variables('glow_omega') + tf.trainable_variables('p_omega_net')
+        VAE_params = tf.trainable_variables('glow_theta')
+        VAE_omega_params = tf.trainable_variables('glow_omega')
         with tf.variable_scope('theta_optimizer'):
             VAE_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)
+            grads, vars_ = zip(*VAE_grads)
+            grads, gradient_norm = tf.clip_by_global_norm(grads, clip_norm=config.clip_norm)
+            gradient_norm = tf.check_numerics(gradient_norm, "Gradient norm is NaN or Inf.")
+            VAE_grads = zip(grads, vars_)
         with tf.variable_scope('omega_optimizer'):
             VAE_omega_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_omega_grads = VAE_omega_optimizer.compute_gradients(VAE_omega_loss, VAE_omega_params)
+            grads, vars_ = zip(*VAE_omega_grads)
+            grads, gradient_norm = tf.clip_by_global_norm(grads, clip_norm=config.clip_norm)
+            gradient_norm = tf.check_numerics(gradient_norm, "Gradient norm is NaN or Inf.")
+            VAE_omega_grads = zip(grads, vars_)
 
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             VAE_train_op = VAE_optimizer.apply_gradients(VAE_grads)
             VAE_omega_train_op = VAE_omega_optimizer.apply_gradients(VAE_omega_grads)
+        copy_op = []
+        for i in range(len(VAE_params)):
+            print(VAE_omega_params[i], VAE_params[i])
+            copy_op.append(tf.assign(VAE_omega_params[i], VAE_params[i]))
+        copy_op = tf.group(*copy_op)
 
     # derive the plotting function
     with tf.name_scope('plotting'):
-        plot_net = p_net(glow, n_z=config.sample_n_z)
+        plot_net = p_net(glow_theta, n_z=config.sample_n_z)
         vae_plots = tf.reshape(plot_net['x'], (-1,) + config.x_shape)
         vae_plots = 256.0 * vae_plots / 2 + 127.5
         vae_plots = tf.clip_by_value(vae_plots, 0, 255)
@@ -390,27 +405,34 @@ def main():
             for epoch in epoch_iterator:
                 if epoch <= config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
-                        _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
-                            input_x: x
-                        })
-                        loop.collect_metrics(VAE_loss=batch_VAE_loss)
+                        try:
+                            _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
+                                input_x: x
+                            })
+                            loop.collect_metrics(VAE_loss=batch_VAE_loss)
+                        except Exception as e:
+                            print(e)
                 else:
                     for step, [x] in loop.iter_steps(mixed_test_flow):
-                        _, batch_VAE_omega_loss = session.run([VAE_omega_train_op, VAE_omega_loss], feed_dict={
-                            input_x: x
-                        })
-                        loop.collect_metrics(VAE_omega_loss=batch_VAE_omega_loss)
+                        try:
+                            _, batch_VAE_omega_loss = session.run([VAE_omega_train_op, VAE_omega_loss], feed_dict={
+                                input_x: x
+                            })
+                            loop.collect_metrics(VAE_omega_loss=batch_VAE_omega_loss)
+                        except Exception as e:
+                            print(e)
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
 
                 if epoch == config.warm_up_start:
                     learning_rate.set(config.initial_lr)
+                    session.run(copy_op)
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
 
-                if epoch % config.test_epoch_freq == 0:
+                if epoch % config.max_epoch == 0:
                     make_diagram(
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,

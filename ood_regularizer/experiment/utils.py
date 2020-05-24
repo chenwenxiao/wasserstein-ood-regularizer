@@ -18,7 +18,7 @@ def get_ele(op, flow, input_x):
         # print(pack.shape)
         packs.append(pack)
     packs = np.concatenate(packs, axis=0)  # [len_of_flow]
-    print(packs.shape)
+    print(packs.shape, np.min(packs), np.max(packs))
     return packs
 
 
@@ -36,9 +36,9 @@ def draw_curve(cifar_test, svhn_test, fig_name):
     return auc(fpr, tpr)
 
 
-def draw_metric(metric, color, label):
+def draw_metric(metric, color, label, fig_name):
+    np.save(fig_name + label, metric)
     metric = list(metric)
-
     n, bins, patches = pyplot.hist(metric, 40, normed=True, facecolor=color, alpha=0.4, label=label)
 
     index = []
@@ -54,7 +54,6 @@ def draw_metric(metric, color, label):
     pyplot.legend()
     print('{} done. Value is {:.4f}±{:.4f}'.format(label, np.mean(metric), np.std(metric)))
 
-
 def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, -1)):
     pyplot.cla()
     pyplot.plot()
@@ -65,7 +64,7 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, 
         spines[sp].set_color('silver')
 
     for i in range(len(data_list)):
-        draw_metric(data_list[i], color_list[i], label_list[i])
+        draw_metric(data_list[i], color_list[i], label_list[i], fig_name)
     pyplot.savefig('plotting/%s.jpg' % fig_name)
 
     pyplot.cla()

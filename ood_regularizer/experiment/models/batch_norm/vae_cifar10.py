@@ -433,7 +433,7 @@ def main():
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
 
-                if epoch % config.test_epoch_freq == 0:
+                if epoch % config.max_epoch == 0:
                     def permutation_test(flow, ratio):
                         R = min(max(1, int(ratio * config.test_batch_size - 1)), config.test_batch_size - 1)
                         print('R={}'.format(R))

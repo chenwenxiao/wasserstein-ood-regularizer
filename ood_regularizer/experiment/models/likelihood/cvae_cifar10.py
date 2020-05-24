@@ -680,7 +680,7 @@ def main():
                     current_class = current_class + 1
                     train_flow, mixed_test_flow = update_training_data()
 
-                if epoch == config.max_epoch:
+                if epoch % config.max_epoch == 0:
                     plot_fig(
                         [final_cifar_test_ll, final_svhn_test_ll],
                         color_list=['red', 'green'],
