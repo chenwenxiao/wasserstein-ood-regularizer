@@ -13,7 +13,6 @@ __all__ = ['RealNVPConfig', 'DepthToSpaceFlow', 'make_real_nvp']
 
 
 class RealNVPConfig(mltk.Config):
-
     ############################################
     # general configurations for RealNVP flows #
     ############################################
@@ -179,7 +178,6 @@ class DepthToSpaceFlow(spt.layers.BaseFlow):
 
 
 class FeatureReversingFlow(spt.layers.FeatureMappingFlow):
-
     def __init__(self, axis=-1, value_ndims=1, name=None, scope=None):
         super(FeatureReversingFlow, self).__init__(
             axis=int(axis), value_ndims=value_ndims, name=name, scope=scope)
@@ -222,6 +220,7 @@ class FeatureReversingFlow(spt.layers.FeatureMappingFlow):
 
 def _conv_real_nvp(config: RealNVPConfig,
                    is_prior_flow: bool,
+                   normalizer_fn,
                    scope: str) -> spt.layers.BaseFlow:
     def shift_and_scale(x1, n2):
         logger = get_network_logger(tf.get_variable_scope().name)
@@ -230,10 +229,10 @@ def _conv_real_nvp(config: RealNVPConfig,
         kernel_sizes = config.conv_coupling_hidden_kernel_size \
             if isinstance(config.conv_coupling_hidden_kernel_size, (list, tuple)) \
             else [config.conv_coupling_hidden_kernel_size] * n_layers
-
         with arg_scope([spt.layers.resnet_conv2d_block],
                        activation_fn=get_activation_fn(),
-                       kernel_regularizer=get_kernel_regularizer()):
+                       kernel_regularizer=get_kernel_regularizer(),
+                       normalizer_fn=normalizer_fn):
             h = x1
             for j, (out_channels, kernel_size) in enumerate(
                     zip(config.conv_coupling_hidden_channels, kernel_sizes)):
@@ -332,13 +331,15 @@ def _conv_real_nvp(config: RealNVPConfig,
 
 def _dense_real_nvp(config: RealNVPConfig,
                     is_prior_flow: bool,
+                    normalizer_fn,
                     scope: str) -> spt.layers.BaseFlow:
     def shift_and_scale(x1, n2):
         logger = get_network_logger(tf.get_variable_scope().name)
 
         with arg_scope([spt.layers.dense],
                        activation_fn=get_activation_fn(),
-                       kernel_regularizer=get_kernel_regularizer()):
+                       kernel_regularizer=get_kernel_regularizer(),
+                       normalizer_fn=normalizer_fn):
             h = x1
             for j in range(config.dense_coupling_n_hidden_layers):
                 h = logger.log_apply(
@@ -399,6 +400,7 @@ def _dense_real_nvp(config: RealNVPConfig,
 def make_real_nvp(rnvp_config: RealNVPConfig,
                   is_conv: bool,
                   is_prior_flow: bool,
+                  normalizer_fn,
                   scope: str) -> spt.layers.BaseFlow:
     """
     Construct a RealNVP flow.
@@ -410,6 +412,6 @@ def make_real_nvp(rnvp_config: RealNVPConfig,
         scope: TensorFlow variable scope.
     """
     if is_conv:
-        return _conv_real_nvp(rnvp_config, is_prior_flow, scope)
+        return _conv_real_nvp(rnvp_config, is_prior_flow, normalizer_fn, scope)
     else:
-        return _dense_real_nvp(rnvp_config, is_prior_flow, scope)
+        return _dense_real_nvp(rnvp_config, is_prior_flow, normalizer_fn, scope)

@@ -60,7 +60,7 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 128
     smallest_step = 5e-5
-    initial_lr = 0.00001
+    initial_lr = 0.0001
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
@@ -89,8 +89,7 @@ config = ExpConfig()
 
 
 class MyRNVPConfig(RealNVPConfig):
-    flow_depth = 10
-    conv_coupling_n_blocks = 1
+    flow_depth = 15
     strict_invertible = True
     conv_coupling_squeeze_before_first_block = True
 
@@ -243,11 +242,13 @@ def main():
 
     with tf.variable_scope('glow_theta'):
         glow_theta = make_real_nvp(
-            rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, scope=tf.get_variable_scope())
+            rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, normalizer_fn=None,
+            scope=tf.get_variable_scope())
 
     with tf.variable_scope('glow_omega'):
         glow_omega = make_real_nvp(
-            rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, scope=tf.get_variable_scope())
+            rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, normalizer_fn=None,
+            scope=tf.get_variable_scope())
 
     # derive the loss and lower-bound for training
     with tf.name_scope('training'), \
@@ -411,7 +412,7 @@ def main():
                             })
                             loop.collect_metrics(VAE_loss=batch_VAE_loss)
                         except Exception as e:
-                            print(e)
+                            pass
                 else:
                     for step, [x] in loop.iter_steps(mixed_test_flow):
                         try:
@@ -420,14 +421,13 @@ def main():
                             })
                             loop.collect_metrics(VAE_omega_loss=batch_VAE_omega_loss)
                         except Exception as e:
-                            print(e)
+                            pass
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
 
                 if epoch == config.warm_up_start:
                     learning_rate.set(config.initial_lr)
-                    session.run(copy_op)
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
