@@ -304,11 +304,6 @@ def main():
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             VAE_train_op = VAE_optimizer.apply_gradients(VAE_grads)
             VAE_omega_train_op = VAE_omega_optimizer.apply_gradients(VAE_omega_grads)
-        copy_op = []
-        for i in range(len(VAE_params)):
-            print(VAE_omega_params[i], VAE_params[i])
-            copy_op.append(tf.assign(VAE_omega_params[i], VAE_params[i]))
-        copy_op = tf.group(*copy_op)
 
     # derive the plotting function
     with tf.name_scope('plotting'):
@@ -328,25 +323,6 @@ def main():
 
         try:
             with loop.timeit('plot_time'):
-                # plot reconstructs
-                def plot_reconnstruct(flow, name, plots):
-                    for [x] in flow:
-                        x_samples = x
-                        images = np.zeros((300,) + config.x_shape, dtype=np.uint8)
-                        images[::3, ...] = np.round(256.0 * x / 2 + 127.5)
-                        images[1::3, ...] = np.round(256.0 * x_samples / 2 + 127.5)
-                        batch_reconstruct_plots = session.run(
-                            plots, feed_dict={input_x: x_samples})
-                        images[2::3, ...] = np.round(batch_reconstruct_plots)
-                        # print(np.mean(batch_reconstruct_z ** 2, axis=-1))
-                        save_images_collection(
-                            images=images,
-                            filename='plotting/{}-{}.png'.format(name, extra_index),
-                            grid_size=(20, 15),
-                            results=results,
-                        )
-                        break
-
                 # plot samples
                 images = session.run(vae_plots)
                 print(images.shape)

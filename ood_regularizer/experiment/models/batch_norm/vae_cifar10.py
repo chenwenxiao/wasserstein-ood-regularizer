@@ -75,9 +75,7 @@ class ExpConfig(spt.Config):
 
     sample_n_z = 100
 
-    @property
-    def x_shape(self):
-        return (32, 32, 3)
+    x_shape = (32, 32, 3)
 
 
 config = ExpConfig()
@@ -379,12 +377,12 @@ def main():
 
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
-    tmp_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
 
+    tmp_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size, shuffle=True)
     mixed_array = np.concatenate([x_test, svhn_test])
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size, shuffle=True,
                                           skip_incomplete=True)
@@ -433,7 +431,7 @@ def main():
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
 
-                if epoch % config.max_epoch == 0:
+                if epoch % config.test_epoch_freq == 0:
                     def permutation_test(flow, ratio):
                         R = min(max(1, int(ratio * config.test_batch_size - 1)), config.test_batch_size - 1)
                         print('R={}'.format(R))
