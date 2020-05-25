@@ -123,8 +123,8 @@ def p_net(glow_theta, observed=None, n_z=None):
 
 def get_all_loss(p_net):
     with tf.name_scope('adv_prior_loss'):
-        VAE_loss = -p_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
-    return VAE_loss
+        glow_loss = -p_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
+    return glow_loss
 
 
 class MyIterator(object):
@@ -231,9 +231,9 @@ def main():
          arg_scope([batch_norm], training=True):
         train_p_net = p_net(glow_theta, observed={'x': input_x},
                             n_z=config.train_n_qz)
-        VAE_loss = get_all_loss(train_p_net)
+        glow_loss = get_all_loss(train_p_net)
 
-        VAE_loss += tf.losses.get_regularization_loss()
+        glow_loss += tf.losses.get_regularization_loss()
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'), \
@@ -257,17 +257,17 @@ def main():
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
-        VAE_params = tf.trainable_variables('glow_theta')
+        glow_params = tf.trainable_variables('glow_theta')
         with tf.variable_scope('theta_optimizer'):
-            VAE_optimizer = tf.train.AdamOptimizer(learning_rate)
-            VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)
-            grads, vars_ = zip(*VAE_grads)
+            glow_optimizer = tf.train.AdamOptimizer(learning_rate)
+            glow_grads = glow_optimizer.compute_gradients(glow_loss, glow_params)
+            grads, vars_ = zip(*glow_grads)
             grads, gradient_norm = tf.clip_by_global_norm(grads, clip_norm=config.clip_norm)
             gradient_norm = tf.check_numerics(gradient_norm, "Gradient norm is NaN or Inf.")
-            VAE_grads = zip(grads, vars_)
+            glow_grads = zip(grads, vars_)
 
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            VAE_train_op = VAE_optimizer.apply_gradients(VAE_grads)
+            glow_train_op = glow_optimizer.apply_gradients(glow_grads)
 
     # derive the plotting function
     with tf.name_scope('plotting'), \
@@ -338,10 +338,10 @@ def main():
             for epoch in epoch_iterator:
                 for step, [x] in loop.iter_steps(train_flow):
                     try:
-                        _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
+                        _, batch_glow_loss = session.run([glow_train_op, glow_loss], feed_dict={
                             input_x: x
                         })
-                        loop.collect_metrics(VAE_loss=batch_VAE_loss)
+                        loop.collect_metrics(glow_loss=batch_glow_loss)
                     except Exception as e:
                         pass
 
