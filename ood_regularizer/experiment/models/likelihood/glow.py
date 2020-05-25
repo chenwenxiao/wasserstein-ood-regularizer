@@ -74,7 +74,7 @@ class ExpConfig(spt.Config):
     test_epoch_freq = 200
     plot_epoch_freq = 20
     distill_ratio = 1.0
-    distill_epoch = 25
+    distill_epoch = 50
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -99,6 +99,7 @@ myRNVPConfig = MyRNVPConfig()
 
 @add_arg_scope
 def batch_norm(inputs, training=False, scope=None):
+    print(inputs, training)
     return tf.layers.batch_normalization(inputs, training=training, name=scope)
 
 

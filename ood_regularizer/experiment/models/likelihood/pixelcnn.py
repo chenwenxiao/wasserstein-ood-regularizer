@@ -38,12 +38,13 @@ class ExpConfig(spt.Config):
     kernel_size = 3
     shortcut_kernel_size = 1
     nf_layers = 20
+    pixelcnn_level = 5
 
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 200
-    warm_up_start = 100
+    max_epoch = 80
+    warm_up_start = 40
     initial_beta = -3.0
     uniform_scale = True
     use_transductive = True
@@ -73,7 +74,7 @@ class ExpConfig(spt.Config):
     test_epoch_freq = 200
     plot_epoch_freq = 20
     distill_ratio = 1.0
-    distill_epoch = 25
+    distill_epoch = 10
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -104,27 +105,28 @@ def p_net(input):
     output = spt.layers.pixelcnn_2d_input(input)
 
     # apply the PixelCNN 2D layers.
-    for i in range(5):
+    for i in range(config.pixelcnn_level):
         output = spt.layers.pixelcnn_conv2d_resnet(
             output,
             out_channels=64,
             vertical_kernel_size=(2, 3),
             horizontal_kernel_size=(2, 2),
             activation_fn=tf.nn.leaky_relu,
-            normalizer_fn=batch_norm,
+            normalizer_fn=None,
             dropout_fn=dropout
         )
-    output = spt.layers.pixelcnn_conv2d_resnet(
+    output_list = [spt.layers.pixelcnn_conv2d_resnet(
         output,
-        out_channels=256 * config.x_shape[-1],
+        out_channels=256,
         vertical_kernel_size=(2, 3),
         horizontal_kernel_size=(2, 2),
         activation_fn=tf.nn.leaky_relu,
-        normalizer_fn=batch_norm,
+        normalizer_fn=None,
         dropout_fn=dropout
-    )
+    ) for i in range(config.x_shape[-1])]
     # get the final output of the PixelCNN 2D network.
-    output = pixelcnn_2d_output(output)
+    output_list = [pixelcnn_2d_output(output) for output in output_list]
+    output = tf.stack(output_list, axis=-2)
     print(output)
     output = tf.reshape(output, (-1,) + config.x_shape + (256,))  # [batch, height, weight, channel, 256]
     return output
@@ -138,27 +140,28 @@ def p_omega_net(input):
     output = spt.layers.pixelcnn_2d_input(input)
 
     # apply the PixelCNN 2D layers.
-    for i in range(5):
+    for i in range(config.pixelcnn_level):
         output = spt.layers.pixelcnn_conv2d_resnet(
             output,
             out_channels=64,
             vertical_kernel_size=(2, 3),
             horizontal_kernel_size=(2, 2),
             activation_fn=tf.nn.leaky_relu,
-            normalizer_fn=batch_norm,
+            normalizer_fn=None,
             dropout_fn=dropout
         )
-    output = spt.layers.pixelcnn_conv2d_resnet(
+    output_list = [spt.layers.pixelcnn_conv2d_resnet(
         output,
-        out_channels=256 * config.x_shape[-1],
+        out_channels=256,
         vertical_kernel_size=(2, 3),
         horizontal_kernel_size=(2, 2),
         activation_fn=tf.nn.leaky_relu,
-        normalizer_fn=batch_norm,
+        normalizer_fn=None,
         dropout_fn=dropout
-    )
+    ) for i in range(config.x_shape[-1])]
     # get the final output of the PixelCNN 2D network.
-    output = pixelcnn_2d_output(output)
+    output_list = [pixelcnn_2d_output(output) for output in output_list]
+    output = tf.stack(output_list, axis=-2)
     print(output)
     output = tf.reshape(output, (-1,) + config.x_shape + (256,))  # [batch, height, weight, channel, 256]
     return output
@@ -242,7 +245,7 @@ def main():
     # It is important: the `x_shape` must have channel dimension, even it is 1! (i.e. (28, 28, 1) for MNIST)
     # And the value of images should not be normalized, ranged from 0 to 255.
     # prepare for training and testing data
-    (x_train, x_test) = load_overall(config.in_dataset, dtype=np.int)
+    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset, dtype=np.int)
     (svhn_train, _svhn_train_y, svhn_test,  svhn_test_y) = load_overall(config.out_dataset, dtype=np.int)
     config.x_shape = x_train.shape[1:]
 
@@ -254,7 +257,7 @@ def main():
 
     # derive the loss and lower-bound for training
     with tf.name_scope('training'), \
-         arg_scope([batch_norm], training=True):
+         arg_scope([batch_norm, dropout], training=True):
         train_p_net = p_net(input_x)
         train_p_omega_net = p_omega_net(input_x)
         theta_loss = tf.reduce_sum(
