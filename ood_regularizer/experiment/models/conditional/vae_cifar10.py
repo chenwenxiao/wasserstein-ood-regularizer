@@ -697,7 +697,7 @@ def main():
                         [final_cifar_test_recon, final_svhn_test_recon],
                         color_list=['red', 'green'],
                         label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
-                        fig_name='log_prob_mixed_histogram_', auc_pair=(0, 1)
+                        fig_name='recon_histogram_', auc_pair=(0, 1)
                     )
                     AUC = plot_fig(
                         [final_cifar_test_ll - final_cifar_test_omega_ll,

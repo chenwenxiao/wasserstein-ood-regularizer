@@ -229,6 +229,7 @@ def main():
             axis=np.arange(-len(config.x_shape), 0)
         )
         theta_loss = tf.reduce_mean(theta_loss)
+        theta_loss += tf.losses.get_regularization_loss()
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'), \
@@ -243,7 +244,7 @@ def main():
     with tf.name_scope('evaluating'), \
          arg_scope([batch_norm], training=False):
         eval_p_net = p_net(input_x)
-        ele_eval_ll = tf.reduce_sum(
+        ele_eval_ll = -tf.reduce_sum(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=input_x, logits=eval_p_net),
             axis=np.arange(-len(config.x_shape), 0)
         )

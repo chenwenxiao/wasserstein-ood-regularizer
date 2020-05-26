@@ -271,6 +271,8 @@ def main():
             axis=np.arange(-len(config.x_shape), 0)
         )
         omega_loss = tf.reduce_mean(omega_loss)
+        theta_loss += tf.losses.get_regularization_loss()
+        omega_loss += tf.losses.get_regularization_loss()
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
