@@ -60,7 +60,7 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 128
     smallest_step = 5e-5
-    initial_lr = 0.0001
+    initial_lr = 0.001
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
@@ -400,15 +400,15 @@ def main():
     results.make_dirs('train_summary', exist_ok=True)
 
     # prepare for training and testing data
-    (_x_train, _y_train, _x_test, _y_test) = load_overall(config.in_dataset)
-    x_train = (_x_train - 127.5) / 256.0 * 2
-    x_test = (_x_test - 127.5) / 256.0 * 2
+    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
+    x_train = (x_train - 127.5) / 256.0 * 2
+    x_test = (x_test - 127.5) / 256.0 * 2
 
     (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
 
-    config.class_num = np.max(_y_train) + 1
+    config.class_num = np.max(y_train) + 1
     config.x_shape = x_train.shape[1:]
     if config.x_shape == (28, 28, 1):
         config.extra_stride = 1
@@ -433,12 +433,11 @@ def main():
         train_p_omega_net = p_omega_net(observed={'x': input_x, 'z': train_q_omega_net['z']},
                                         n_z=config.train_n_qz)
         VAE_omega_loss = get_all_loss(train_q_omega_net, train_p_omega_net)
+        VAE_loss += tf.losses.get_regularization_loss()
+        VAE_omega_loss += tf.losses.get_regularization_loss()
 
         predict = resnet34(input_x)
         classify_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=predict, labels=input_y)
-
-        VAE_loss += tf.losses.get_regularization_loss()
-        VAE_omega_loss += tf.losses.get_regularization_loss()
         classify_loss += tf.losses.get_regularization_loss()
 
     # derive the nll and logits output for testing
@@ -482,7 +481,7 @@ def main():
             VAE_omega_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_omega_grads = VAE_omega_optimizer.compute_gradients(VAE_omega_loss, VAE_omega_params)
         with tf.variable_scope('classify_optimizer'):
-            classify_optimizer = tf.train.AdamOptimizer(learning_rate)
+            classify_optimizer = tf.train.AdamOptimizer(1e-4)
             classify_grads = classify_optimizer.compute_gradients(classify_loss, classify_params)
 
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
@@ -569,7 +568,7 @@ def main():
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
-    train_flow = spt.DataFlow.arrays([x_train, _y_train], config.batch_size, shuffle=True,
+    train_flow = spt.DataFlow.arrays([x_train, y_train], config.batch_size, shuffle=True,
                                      skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
@@ -638,7 +637,7 @@ def main():
                     learning_rate.anneal()
 
                 def update_training_data():
-                    train_flow = spt.DataFlow.arrays([x_train[_y_train == current_class]],
+                    train_flow = spt.DataFlow.arrays([x_train[y_train == current_class]],
                                                      config.batch_size, shuffle=True,
                                                      skip_incomplete=True)
                     mixed_test_flow = spt.DataFlow.arrays([mixed_array[mixed_array_predict == current_class]],
@@ -650,7 +649,7 @@ def main():
                 if epoch == config.warm_up_start:
                     cifar_test_predict = get_ele(predict, cifar_test_flow, input_x)
                     print('Correct number in cifar test is {}'.format(
-                        np.sum(cifar_test_predict == _y_test)))
+                        np.sum(cifar_test_predict == y_test)))
                     svhn_test_predict = get_ele(predict, svhn_test_flow, input_x)
                     mixed_array_predict = get_ele(
                         predict, spt.DataFlow.arrays([mixed_array], config.batch_size), input_x)
@@ -660,7 +659,7 @@ def main():
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
 
-                if epoch % config.test_epoch_freq == 0 and epoch > config.warm_up_start:
+                if (epoch - config.warm_up_start) % config.test_epoch_freq == 0 and epoch > config.warm_up_start:
                     cifar_test_ll = get_ele(ele_test_ll, cifar_test_flow, input_x)
                     svhn_test_ll = get_ele(ele_test_ll, svhn_test_flow, input_x)
                     cifar_test_omega_ll = get_ele(ele_test_omega_ll, cifar_test_flow, input_x)
@@ -679,6 +678,7 @@ def main():
 
                     current_class = current_class + 1
                     train_flow, mixed_test_flow = update_training_data()
+                    session.run(tf.global_variables_initializer())  # Initialize all variables
 
                 if epoch % config.max_epoch == 0:
                     plot_fig(
