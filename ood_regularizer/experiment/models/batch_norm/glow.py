@@ -45,7 +45,7 @@ class ExpConfig(spt.Config):
     max_epoch = 100
     warm_up_start = 100
     initial_beta = -3.0
-    uniform_scale = True
+    uniform_scale = False
     use_transductive = True
     mixed_train = False
     mixed_ratio1 = 0.1
@@ -59,7 +59,7 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 64
     smallest_step = 5e-5
-    initial_lr = 0.001
+    initial_lr = 0.0005
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
@@ -203,9 +203,9 @@ def main():
     results.make_dirs('train_summary', exist_ok=True)
 
     # prepare for training and testing data
-    (_x_train, _y_train, _x_test, _y_test) = load_overall(config.in_dataset)
-    x_train = (_x_train - 127.5) / 256.0 * 2
-    x_test = (_x_test - 127.5) / 256.0 * 2
+    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
+    x_train = (x_train - 127.5) / 256.0 * 2
+    x_test = (x_test - 127.5) / 256.0 * 2
 
     (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2

@@ -90,7 +90,7 @@ def load_imagenet(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
 
 if __name__ == '__main__':
     print('pre load')
-    (_x_test, _y_test) = load_imagenet()
-    print(_x_test.shape)
+    (x_test, y_test) = load_imagenet()
+    print(x_test.shape)
 
-    np.save(TEST_X_PATH, _x_test)
+    np.save(TEST_X_PATH, x_test)

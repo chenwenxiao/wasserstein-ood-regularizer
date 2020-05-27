@@ -48,7 +48,7 @@ class ExpConfig(spt.Config):
     max_epoch = 40
     warm_up_start = 40
     initial_beta = -3.0
-    uniform_scale = True
+    uniform_scale = False
     use_transductive = True
     mixed_train = False
     mixed_ratio1 = 0.1

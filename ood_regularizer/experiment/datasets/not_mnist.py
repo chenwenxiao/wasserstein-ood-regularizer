@@ -59,11 +59,11 @@ def load_not_mnist(x_shape=(28, 28, 1), x_dtype=np.float32, y_dtype=np.int32,
 
 
 if __name__ == '__main__':
-    (_x_train, _y_train), (_x_test, _y_test) = load_not_mnist()
-    print(_x_train.shape)
-    print(_x_test.shape)
+    (x_train, y_train), (x_test, y_test) = load_not_mnist()
+    print(x_train.shape)
+    print(x_test.shape)
 
-    im = np.array(_x_train[19])
+    im = np.array(x_train[19])
     im = im.reshape(28, 28)
 
     import matplotlib.pyplot as plt

@@ -174,9 +174,9 @@ if __name__ == '__main__':
     # print(arr.shape)
     # print(label.shape)
 
-    # (_x_test, _y_test) = load_lsun_test()
-    # print(_x_test.shape)
-    # np.save(TEST_X_PATH, _x_test)
+    # (x_test, y_test) = load_lsun_test()
+    # print(x_test.shape)
+    # np.save(TEST_X_PATH, x_test)
     # export_images('/home/cwx17/data/lsungit/bedroom_train_lmdb')
     # export_images('/home/cwx17/data/lsungit/classroom_train_lmdb')
     # export_images('/home/cwx17/data/lsungit/kitchen_train_lmdb')

@@ -104,10 +104,10 @@ def load_sun(x_shape=(32, 32), x_dtype=np.float32, y_dtype=np.int32,
 
 
 if __name__ == '__main__':
-    (x_train, _y_train), (x_test, _y_test) = load_sun()
+    (x_train, y_train), (x_test, y_test) = load_sun()
     print(x_train.shape)
     print(x_test.shape)
-    # np.save(TEST_X_PATH, _x_test)
+    # np.save(TEST_X_PATH, x_test)
 
 
     # import matplotlib.pyplot as plt

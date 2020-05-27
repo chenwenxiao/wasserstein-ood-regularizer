@@ -43,7 +43,7 @@ class ExpConfig(spt.Config):
     max_epoch = 100
     warm_up_start = 300
     initial_beta = -3.0
-    uniform_scale = True
+    uniform_scale = False
     use_transductive = True
     mixed_train = False
     mixed_train_epoch = 10
@@ -349,9 +349,9 @@ def main():
     results.make_dirs('train_summary', exist_ok=True)
 
     # prepare for training and testing data
-    (_x_train, _y_train, _x_test, _y_test) = load_overall(config.in_dataset)
-    x_train = (_x_train - 127.5) / 256.0 * 2
-    x_test = (_x_test - 127.5) / 256.0 * 2
+    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
+    x_train = (x_train - 127.5) / 256.0 * 2
+    x_test = (x_test - 127.5) / 256.0 * 2
 
     (svhn_train, _svhn_train_y, svhn_test,  svhn_test_y) = load_overall(config.out_dataset)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
@@ -505,13 +505,13 @@ def main():
             print(e)
 
     # prepare for training and testing data
-    (_x_train, _y_train), (_x_test, _y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape)
-    x_train = (_x_train - 127.5) / 256.0 * 2
-    x_test = (_x_test - 127.5) / 256.0 * 2
+    (x_train, y_train), (x_test, y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape)
+    x_train = (x_train - 127.5) / 256.0 * 2
+    x_test = (x_test - 127.5) / 256.0 * 2
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
 
-    (svhn_train, _y_train), (svhn_test, _y_test) = load_svhn(x_shape=config.x_shape)
+    (svhn_train, y_train), (svhn_test, y_test) = load_svhn(x_shape=config.x_shape)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)

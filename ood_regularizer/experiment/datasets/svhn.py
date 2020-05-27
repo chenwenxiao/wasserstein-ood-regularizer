@@ -53,11 +53,11 @@ def load_svhn(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
 
 
 if __name__ == '__main__':
-    (_x_train, _y_train), (_x_test, _y_test) = load_svhn()
-    print(_x_train.shape)
-    print(_x_test.shape)
+    (x_train, y_train), (x_test, y_test) = load_svhn()
+    print(x_train.shape)
+    print(x_test.shape)
 
-    im = np.array(_x_train[19])
+    im = np.array(x_train[19])
     im = im.reshape(32, 32)
 
     import matplotlib.pyplot as plt
