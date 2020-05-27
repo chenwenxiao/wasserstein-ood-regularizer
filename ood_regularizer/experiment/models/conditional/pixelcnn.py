@@ -72,7 +72,7 @@ class ExpConfig(spt.Config):
     train_n_qz = 1
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 100
+    test_epoch_freq = 40
     plot_epoch_freq = 20
     distill_ratio = 1.0
     distill_epoch = 10
