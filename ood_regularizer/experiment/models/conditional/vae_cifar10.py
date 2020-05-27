@@ -60,7 +60,7 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 128
     smallest_step = 5e-5
-    initial_lr = 0.0005
+    initial_lr = 0.0002
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
@@ -70,7 +70,7 @@ class ExpConfig(spt.Config):
     train_n_qz = 1
     test_n_qz = 10
     test_batch_size = 64
-    test_epoch_freq = 100
+    test_epoch_freq = 200
     plot_epoch_freq = 20
     distill_ratio = 1.0
     distill_epoch = 25
@@ -313,16 +313,6 @@ def resnet34(input_x):
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
         h_x = spt.layers.dense(h_x, config.class_num)  # (batch_size, class_num)
     return h_x
-
-
-def get_all_loss(q_net, p_net):
-    with tf.name_scope('adv_prior_loss'):
-        train_recon = p_net['x'].log_prob()
-        train_kl = tf.reduce_mean(
-            -p_net['z'].log_prob() + q_net['z'].log_prob()
-        )
-        VAE_loss = -train_recon + train_kl
-    return VAE_loss
 
 
 class MyIterator(object):

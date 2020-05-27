@@ -59,7 +59,7 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 64
     smallest_step = 5e-5
-    initial_lr = 0.0001
+    initial_lr = 0.001
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None

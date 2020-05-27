@@ -43,7 +43,7 @@ class ExpConfig(spt.Config):
     max_epoch = 100
     warm_up_start = 300
     initial_beta = -3.0
-    uniform_scale = True
+    uniform_scale = False
     use_transductive = True
     mixed_train = False
     mixed_ratio1 = 0.1
@@ -57,7 +57,7 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 64
     smallest_step = 5e-5
-    initial_lr = 0.0005
+    initial_lr = 0.0002
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
@@ -76,6 +76,7 @@ class ExpConfig(spt.Config):
     sample_n_z = 100
 
     x_shape = (32, 32, 3)
+    extra_stride = 2
 
 
 config = ExpConfig()
@@ -96,7 +97,7 @@ def dropout(inputs, training=False, scope=None):
 @spt.global_reuse
 def q_net(x, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
-    normalizer_fn = batch_norm
+    normalizer_fn = None
 
     # compute the hidden features
     with arg_scope([spt.layers.resnet_conv2d_block],
@@ -107,8 +108,11 @@ def q_net(x, observed=None, n_z=None):
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg), ):
         h_x = tf.to_float(x)
         h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_4')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 64, strides=2, scope='level_6')  # output: (7, 7, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=config.extra_stride,
+                                             scope='level_4')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
 
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
@@ -131,7 +135,7 @@ def p_net(observed=None, n_z=None):
                         logstd=tf.zeros([1, config.z_dim]))
     z = net.add('z', normal, n_samples=n_z, group_ndims=1)
 
-    normalizer_fn = batch_norm
+    normalizer_fn = None
 
     # compute the hidden features
     with arg_scope([spt.layers.resnet_deconv2d_block],
@@ -140,20 +144,24 @@ def p_net(observed=None, n_z=None):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
+        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[
+            1] // 4 // config.extra_stride // config.extra_stride, scope='level_0',
                                normalizer_fn=None)
         h_z = spt.ops.reshape_tail(
             h_z,
             ndims=1,
-            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 128)
+            shape=(config.x_shape[0] // 4 // config.extra_stride, config.x_shape[1] // 4 // config.extra_stride, 128)
         )
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 64, strides=2, scope='level_3')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_5')  # output: (14, 14, 32)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=config.extra_stride,
+                                               scope='level_5')  # output: (14, 14, 32)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
         x_mean = spt.layers.conv2d(
             h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_mean',
-            kernel_initializer=tf.zeros_initializer(),
+            kernel_initializer=tf.zeros_initializer(),  # activation_fn=tf.nn.tanh
         )
         x_logstd = spt.layers.conv2d(
             h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_logstd',
@@ -265,6 +273,10 @@ def main():
     (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    config.x_shape = x_train.shape[1:]
+    if config.x_shape == (28, 28, 1):
+        config.extra_stride = 1
 
     config.x_shape = x_train.shape[1:]
     # input placeholders
