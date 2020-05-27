@@ -61,10 +61,11 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 128
     smallest_step = 5e-5
-    initial_lr = 0.0002
+    initial_lr = 0.001
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
+    clip_norm = 5
 
     n_critical = 5
     # evaluation parameters
@@ -82,12 +83,20 @@ class ExpConfig(spt.Config):
     sample_n_z = 100
 
     x_shape = (32, 32, 3)
-    extra_stride = 2
     x_shape_multiple = 3072
     class_num = 10
 
 
 config = ExpConfig()
+
+
+class MyRNVPConfig(RealNVPConfig):
+    flow_depth = 15
+    strict_invertible = True
+    conv_coupling_squeeze_before_first_block = True
+
+
+myRNVPConfig = MyRNVPConfig()
 
 
 @add_arg_scope
@@ -103,188 +112,40 @@ def dropout(inputs, training=False, scope=None):
 
 @add_arg_scope
 @spt.global_reuse
-def q_net(x, observed=None, n_z=None):
-    net = spt.BayesianNet(observed=observed)
-    normalizer_fn = None
-
-    # compute the hidden features
-    with arg_scope([spt.layers.resnet_conv2d_block],
-                   kernel_size=config.kernel_size,
-                   shortcut_kernel_size=config.shortcut_kernel_size,
-                   activation_fn=tf.nn.leaky_relu,
-                   normalizer_fn=normalizer_fn,
-                   kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg), ):
-        h_x = tf.to_float(x)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=config.extra_stride,
-                                             scope='level_4')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
-
-        h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
-        z_mean = spt.layers.dense(h_x, config.z_dim, scope='z_mean')
-        z_logstd = spt.layers.dense(h_x, config.z_dim, scope='z_logstd')
-
-    # sample z ~ q(z|x)
-    z = net.add('z', spt.Normal(mean=z_mean, logstd=spt.ops.maybe_clip_value(z_logstd, min_val=config.min_logstd_of_q)),
-                n_samples=n_z, group_ndims=1)
-
-    return net
-
-
-@add_arg_scope
-@spt.global_reuse
-def p_net(observed=None, n_z=None):
+def p_net(glow_theta, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
     # sample z ~ p(z)
-    normal = spt.Normal(mean=tf.zeros([1, config.z_dim]),
-                        logstd=tf.zeros([1, config.z_dim]))
-    z = net.add('z', normal, n_samples=n_z, group_ndims=1)
-
-    normalizer_fn = None
-
-    # compute the hidden features
-    with arg_scope([spt.layers.resnet_deconv2d_block],
-                   kernel_size=config.kernel_size,
-                   shortcut_kernel_size=config.shortcut_kernel_size,
-                   activation_fn=tf.nn.leaky_relu,
-                   normalizer_fn=normalizer_fn,
-                   kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[
-            1] // 4 // config.extra_stride // config.extra_stride, scope='level_0',
-                               normalizer_fn=None)
-        h_z = spt.ops.reshape_tail(
-            h_z,
-            ndims=1,
-            shape=(config.x_shape[0] // 4 // config.extra_stride, config.x_shape[1] // 4 // config.extra_stride, 128)
-        )
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=config.extra_stride,
-                                               scope='level_5')  # output: (14, 14, 32)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
-        x_mean = spt.layers.conv2d(
-            h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_mean',
-            kernel_initializer=tf.zeros_initializer(),  # activation_fn=tf.nn.tanh
-        )
-        x_logstd = spt.layers.conv2d(
-            h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_logstd',
-            kernel_initializer=tf.zeros_initializer(),
-        )
-
-    beta = tf.get_variable(name='beta', shape=(), initializer=tf.constant_initializer(config.initial_beta),
-                           dtype=tf.float32, trainable=True)
-    x = net.add('x', DiscretizedLogistic(
-        mean=x_mean,
-        log_scale=spt.ops.maybe_clip_value(beta if config.uniform_scale else x_logstd, min_val=config.epsilon),
-        bin_size=2.0 / 256.0,
-        min_val=-1.0 + 1.0 / 256.0,
-        max_val=1.0 - 1.0 / 256.0,
-        epsilon=1e-10
-    ), group_ndims=3)
-    return net
-
-
-@add_arg_scope
-@spt.global_reuse
-def q_omega_net(x, observed=None, n_z=None):
-    net = spt.BayesianNet(observed=observed)
-    normalizer_fn = None
-
-    # compute the hidden features
-    with arg_scope([spt.layers.resnet_conv2d_block],
-                   kernel_size=config.kernel_size,
-                   shortcut_kernel_size=config.shortcut_kernel_size,
-                   activation_fn=tf.nn.leaky_relu,
-                   normalizer_fn=normalizer_fn,
-                   kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg), ):
-        h_x = tf.to_float(x)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=config.extra_stride,
-                                             scope='level_4')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
-
-        h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
-        z_mean = spt.layers.dense(h_x, config.z_dim, scope='z_mean')
-        z_logstd = spt.layers.dense(h_x, config.z_dim, scope='z_logstd')
-
-    # sample z ~ q(z|x)
-    z = net.add('z', spt.Normal(mean=z_mean, logstd=spt.ops.maybe_clip_value(z_logstd, min_val=config.min_logstd_of_q)),
-                n_samples=n_z, group_ndims=1)
+    normal = spt.Normal(mean=tf.zeros(config.x_shape),
+                        logstd=tf.zeros(config.x_shape))
+    z = net.add('z', normal, n_samples=n_z, group_ndims=len(config.x_shape))
+    _ = glow_theta.transform(z)
+    x = net.add('x', spt.distributions.FlowDistribution(
+        normal, glow_theta
+    ), n_samples=n_z)
 
     return net
 
 
 @add_arg_scope
 @spt.global_reuse
-def p_omega_net(observed=None, n_z=None):
+def p_omega_net(glow_omega, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
     # sample z ~ p(z)
-    normal = spt.Normal(mean=tf.zeros([1, config.z_dim]),
-                        logstd=tf.zeros([1, config.z_dim]))
-    z = net.add('z', normal, n_samples=n_z, group_ndims=1)
+    normal = spt.Normal(mean=tf.zeros(config.x_shape),
+                        logstd=tf.zeros(config.x_shape))
+    z = net.add('z', normal, n_samples=n_z, group_ndims=len(config.x_shape))
+    _ = glow_omega.transform(z)
+    x = net.add('x', spt.distributions.FlowDistribution(
+        normal, glow_omega
+    ), n_samples=n_z)
 
-    normalizer_fn = None
-
-    # compute the hidden features
-    with arg_scope([spt.layers.resnet_deconv2d_block],
-                   kernel_size=config.kernel_size,
-                   shortcut_kernel_size=config.shortcut_kernel_size,
-                   activation_fn=tf.nn.leaky_relu,
-                   normalizer_fn=normalizer_fn,
-                   kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[
-            1] // 4 // config.extra_stride // config.extra_stride, scope='level_0',
-                               normalizer_fn=None)
-        h_z = spt.ops.reshape_tail(
-            h_z,
-            ndims=1,
-            shape=(config.x_shape[0] // 4 // config.extra_stride, config.x_shape[1] // 4 // config.extra_stride, 128)
-        )
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=config.extra_stride,
-                                               scope='level_5')  # output: (14, 14, 32)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
-        x_mean = spt.layers.conv2d(
-            h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_mean',
-            kernel_initializer=tf.zeros_initializer(),  # activation_fn=tf.nn.tanh
-        )
-        x_logstd = spt.layers.conv2d(
-            h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_logstd',
-            kernel_initializer=tf.zeros_initializer(),
-        )
-
-    beta = tf.get_variable(name='beta', shape=(), initializer=tf.constant_initializer(config.initial_beta),
-                           dtype=tf.float32, trainable=True)
-    x = net.add('x', DiscretizedLogistic(
-        mean=x_mean,
-        log_scale=spt.ops.maybe_clip_value(beta if config.uniform_scale else x_logstd, min_val=config.epsilon),
-        bin_size=2.0 / 256.0,
-        min_val=-1.0 + 1.0 / 256.0,
-        max_val=1.0 - 1.0 / 256.0,
-        epsilon=1e-10
-    ), group_ndims=3)
     return net
 
 
-def get_all_loss(q_net, p_net):
+def get_all_loss(p_net):
     with tf.name_scope('adv_prior_loss'):
-        train_recon = p_net['x'].log_prob()
-        train_kl = tf.reduce_mean(
-            -p_net['z'].log_prob() + q_net['z'].log_prob()
-        )
-        VAE_loss = -train_recon + train_kl
-    return VAE_loss
+        glow_loss = -p_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
+    return glow_loss
 
 
 @add_arg_scope
@@ -426,20 +287,28 @@ def main():
     learning_rate = spt.AnnealingVariable(
         'learning_rate', config.initial_lr, config.lr_anneal_factor)
 
+    with tf.variable_scope('glow_theta'):
+        glow_theta = make_real_nvp(
+            rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, normalizer_fn=None,
+            scope=tf.get_variable_scope())
+
+    with tf.variable_scope('glow_omega'):
+        glow_omega = make_real_nvp(
+            rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, normalizer_fn=None,
+            scope=tf.get_variable_scope())
+
     # derive the loss and lower-bound for training
     with tf.name_scope('training'), \
          arg_scope([batch_norm], training=True):
-        train_q_net = q_net(input_x, n_z=config.train_n_qz)
-        train_p_net = p_net(observed={'x': input_x, 'z': train_q_net['z']},
+        train_p_net = p_net(glow_theta, observed={'x': input_x},
                             n_z=config.train_n_qz)
-        VAE_loss = get_all_loss(train_q_net, train_p_net)
-        train_q_omega_net = q_omega_net(input_x, n_z=config.train_n_qz)
-        train_p_omega_net = p_omega_net(observed={'x': input_x, 'z': train_q_omega_net['z']},
+        glow_loss = get_all_loss(train_p_net)
+        train_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
                                         n_z=config.train_n_qz)
-        VAE_omega_loss = get_all_loss(train_q_omega_net, train_p_omega_net)
+        glow_omega_loss = get_all_loss(train_p_omega_net)
 
-        VAE_loss += tf.losses.get_regularization_loss()
-        VAE_omega_loss += tf.losses.get_regularization_loss()
+        glow_loss += tf.losses.get_regularization_loss()
+        glow_omega_loss += tf.losses.get_regularization_loss()
 
         predict = resnet34(input_x)
         classify_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=predict, labels=input_y)
@@ -447,77 +316,61 @@ def main():
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
-        test_q_net = q_net(input_x, n_z=config.test_n_qz)
-        test_chain = test_q_net.chain(p_net, observed={'x': input_x}, n_z=config.test_n_qz, latent_axis=0)
-        ele_test_recon = tf.reduce_mean(test_chain.model['x'].log_prob(), axis=0)
-        test_recon = tf.reduce_mean(
-            ele_test_recon
-        )
-        ele_test_ll = test_chain.vi.evaluation.is_loglikelihood()
+        test_p_net = p_net(glow_theta, observed={'x': input_x},
+                           n_z=config.test_n_qz)
+        ele_test_ll = test_p_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
-        test_lb = tf.reduce_mean(test_chain.vi.lower_bound.elbo())
 
-        test_q_omega_net = q_omega_net(input_x, n_z=config.test_n_qz)
-        test_omega_chain = test_q_omega_net.chain(p_omega_net, observed={'x': input_x}, n_z=config.test_n_qz,
-                                                  latent_axis=0)
-        test_omega_recon = tf.reduce_mean(
-            test_omega_chain.model['x'].log_prob()
-        )
-        ele_test_omega_ll = test_omega_chain.vi.evaluation.is_loglikelihood()
+        test_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
+                                       n_z=config.test_n_qz)
+        ele_test_omega_ll = test_p_omega_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
         test_omega_nll = -tf.reduce_mean(
             ele_test_omega_ll
         )
-        test_omega_lb = tf.reduce_mean(test_omega_chain.vi.lower_bound.elbo())
 
         ele_test_kl = ele_test_omega_ll - ele_test_ll
         predict = tf.argmax(resnet34(input_x), axis=-1)
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
-        VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('p_net')
-        VAE_omega_params = tf.trainable_variables('q_omega_net') + tf.trainable_variables('p_omega_net')
+        glow_params = tf.trainable_variables('glow_theta')
+        glow_omega_params = tf.trainable_variables('glow_omega')
         classify_params = tf.trainable_variables('resnet34')
         with tf.variable_scope('theta_optimizer'):
-            VAE_optimizer = tf.train.AdamOptimizer(learning_rate)
-            VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)
+            glow_optimizer = tf.train.AdamOptimizer(learning_rate)
+            glow_grads = glow_optimizer.compute_gradients(glow_loss, glow_params)
+            grads, vars_ = zip(*glow_grads)
+            grads, gradient_norm = tf.clip_by_global_norm(grads, clip_norm=config.clip_norm)
+            gradient_norm = tf.check_numerics(gradient_norm, "Gradient norm is NaN or Inf.")
+            glow_grads = zip(grads, vars_)
         with tf.variable_scope('omega_optimizer'):
-            VAE_omega_optimizer = tf.train.AdamOptimizer(learning_rate)
-            VAE_omega_grads = VAE_omega_optimizer.compute_gradients(VAE_omega_loss, VAE_omega_params)
+            glow_omega_optimizer = tf.train.AdamOptimizer(learning_rate)
+            glow_omega_grads = glow_omega_optimizer.compute_gradients(glow_omega_loss, glow_omega_params)
+            grads, vars_ = zip(*glow_omega_grads)
+            grads, gradient_norm = tf.clip_by_global_norm(grads, clip_norm=config.clip_norm)
+            gradient_norm = tf.check_numerics(gradient_norm, "Gradient norm is NaN or Inf.")
+            glow_omega_grads = zip(grads, vars_)
         with tf.variable_scope('classify_optimizer'):
             classify_optimizer = tf.train.AdamOptimizer(1e-4)
             classify_grads = classify_optimizer.compute_gradients(classify_loss, classify_params)
 
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            VAE_train_op = VAE_optimizer.apply_gradients(VAE_grads)
-            VAE_omega_train_op = VAE_omega_optimizer.apply_gradients(VAE_omega_grads)
+            glow_train_op = glow_optimizer.apply_gradients(glow_grads)
+            glow_omega_train_op = glow_omega_optimizer.apply_gradients(glow_omega_grads)
             classify_train_op = classify_optimizer.apply_gradients(classify_grads)
 
     # derive the plotting function
     with tf.name_scope('plotting'):
-        plot_net = p_net(n_z=config.sample_n_z)
-        vae_plots = tf.reshape(plot_net['x'].distribution.mean, (-1,) + config.x_shape)
+        plot_net = p_net(glow_theta, n_z=config.sample_n_z)
+        vae_plots = tf.reshape(plot_net['x'], (-1,) + config.x_shape)
         vae_plots = 256.0 * vae_plots / 2 + 127.5
-        reconstruct_q_net = q_net(input_x)
-        reconstruct_z = reconstruct_q_net['z']
-        reconstruct_plots = 256.0 * tf.reshape(
-            p_net(observed={'z': reconstruct_z})['x'].distribution.mean,
-            (-1,) + config.x_shape
-        ) / 2 + 127.5
-        reconstruct_plots = tf.clip_by_value(reconstruct_plots, 0, 255)
         vae_plots = tf.clip_by_value(vae_plots, 0, 255)
 
-        plot_omega_net = p_omega_net(n_z=config.sample_n_z)
-        vae_omega_plots = tf.reshape(plot_omega_net['x'].distribution.mean, (-1,) + config.x_shape)
+        plot_omega_net = p_omega_net(glow_omega, n_z=config.sample_n_z)
+        vae_omega_plots = tf.reshape(plot_omega_net['x'], (-1,) + config.x_shape)
         vae_omega_plots = 256.0 * vae_omega_plots / 2 + 127.5
-        reconstruct_q_omega_net = q_omega_net(input_x)
-        reconstruct_omega_z = reconstruct_q_omega_net['z']
-        reconstruct_omega_plots = 256.0 * tf.reshape(
-            p_omega_net(observed={'z': reconstruct_omega_z})['x'].distribution.mean,
-            (-1,) + config.x_shape
-        ) / 2 + 127.5
-        reconstruct_omega_plots = tf.clip_by_value(reconstruct_omega_plots, 0, 255)
         vae_omega_plots = tf.clip_by_value(vae_omega_plots, 0, 255)
 
     def plot_samples(loop, extra_index=None):
@@ -526,32 +379,9 @@ def main():
 
         try:
             with loop.timeit('plot_time'):
-                # plot reconstructs
-                def plot_reconnstruct(flow, name, plots):
-                    for [x] in flow:
-                        x_samples = x
-                        images = np.zeros((300,) + config.x_shape, dtype=np.uint8)
-                        images[::3, ...] = np.round(256.0 * x / 2 + 127.5)
-                        images[1::3, ...] = np.round(256.0 * x_samples / 2 + 127.5)
-                        batch_reconstruct_plots = session.run(
-                            plots, feed_dict={input_x: x_samples})
-                        images[2::3, ...] = np.round(batch_reconstruct_plots)
-                        # print(np.mean(batch_reconstruct_z ** 2, axis=-1))
-                        save_images_collection(
-                            images=images,
-                            filename='plotting/{}-{}.png'.format(name, extra_index),
-                            grid_size=(20, 15),
-                            results=results,
-                        )
-                        break
-
-                plot_reconnstruct(reconstruct_test_flow, 'test.reconstruct/theta', reconstruct_plots)
-                plot_reconnstruct(reconstruct_train_flow, 'train.reconstruct/theta', reconstruct_plots)
-                plot_reconnstruct(reconstruct_omega_test_flow, 'test.reconstruct/omega', reconstruct_omega_plots)
-                plot_reconnstruct(reconstruct_omega_train_flow, 'train.reconstruct/omega', reconstruct_omega_plots)
-
                 # plot samples
                 images = session.run(vae_plots)
+                print(images.shape)
                 save_images_collection(
                     images=np.round(images),
                     filename='plotting/sample/{}-{}.png'.format('theta', extra_index),
@@ -559,6 +389,7 @@ def main():
                     results=results,
                 )
                 images = session.run(vae_omega_plots)
+                print(images.shape)
                 save_images_collection(
                     images=np.round(images),
                     filename='plotting/sample/{}-{}.png'.format('omega', extra_index),
@@ -620,15 +451,21 @@ def main():
             for epoch in epoch_iterator:
                 if epoch > config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
-                        _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
-                            input_x: x
-                        })
-                        loop.collect_metrics(VAE_loss=batch_VAE_loss)
+                        try:
+                            _, batch_glow_loss = session.run([glow_train_op, glow_loss], feed_dict={
+                                input_x: x
+                            })
+                            loop.collect_metrics(glow_loss=batch_glow_loss)
+                        except Exception as e:
+                            pass
                     for step, [x] in loop.iter_steps(mixed_test_flow):
-                        _, batch_VAE_omega_loss = session.run([VAE_omega_train_op, VAE_omega_loss], feed_dict={
-                            input_x: x
-                        })
-                        loop.collect_metrics(VAE_omega_loss=batch_VAE_omega_loss)
+                        try:
+                            _, batch_glow_omega_loss = session.run([glow_omega_train_op, glow_omega_loss], feed_dict={
+                                input_x: x
+                            })
+                            loop.collect_metrics(glow_omega_loss=batch_glow_omega_loss)
+                        except Exception as e:
+                            pass
                 else:
                     for step, [x, y] in loop.iter_steps(train_flow):
                         _, batch_classify_loss = session.run([classify_train_op, classify_loss], feed_dict={
