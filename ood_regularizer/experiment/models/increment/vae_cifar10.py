@@ -539,7 +539,7 @@ def main():
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
                            var_groups=['q_net', 'p_net', 'posterior_flow', 'G_theta', 'D_psi', 'G_omega', 'D_kappa'],
-                           max_epoch=config.max_epoch,
+                           max_epoch=config.max_epoch + 1,
                            max_step=config.max_step,
                            summary_dir=(results.system_path('train_summary')
                                         if config.write_summary else None),
@@ -556,26 +556,12 @@ def main():
             epoch_iterator = loop.iter_epochs()
             # adversarial training
             for epoch in epoch_iterator:
-                for step, [x] in loop.iter_steps(train_flow):
-                    _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
-                        input_x: x
-                    })
-                    loop.collect_metrics(VAE_loss=batch_VAE_loss)
 
-                if epoch in config.lr_anneal_epoch_freq:
-                    learning_rate.anneal()
-
-                if epoch == config.warm_up_start:
-                    learning_rate.set(config.initial_lr)
-
-                if epoch % config.plot_epoch_freq == 0:
-                    plot_samples(loop)
-
-                if epoch == config.max_epoch:
-                    if config.initial_omega_with_theta:
-                        session.run(copy_op)
+                if epoch == config.max_epoch + 1:
                     mixed_kl = []
                     for i in range(0, len(mixed_array), config.mixed_train_skip):
+                        if config.initial_omega_with_theta:
+                            session.run(copy_op)
                         mixed_test_flow = spt.DataFlow.arrays([mixed_array[:i + config.mixed_train_skip]],
                                                               config.batch_size, shuffle=True)
                         if config.dynamic_epochs:
@@ -605,6 +591,23 @@ def main():
                                    'kl_histogram', auc_pair=(0, 1))
 
                     loop.collect_metrics(AUC=AUC)
+                    loop.print_logs()
+                    break
+
+                for step, [x] in loop.iter_steps(train_flow):
+                    _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
+                        input_x: x
+                    })
+                    loop.collect_metrics(VAE_loss=batch_VAE_loss)
+
+                if epoch in config.lr_anneal_epoch_freq:
+                    learning_rate.anneal()
+
+                if epoch == config.warm_up_start:
+                    learning_rate.set(config.initial_lr)
+
+                if epoch % config.plot_epoch_freq == 0:
+                    plot_samples(loop)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

@@ -6,14 +6,17 @@ import numpy as np
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
 
 
-def get_ele(op, flow, input_x):
+def get_ele(op, flow, inputs):
+    if not isinstance(inputs, list):
+        inputs = [inputs]
     packs = []
     session = tf.get_default_session()
     for [batch_x] in flow:
+        feed_dict = {}
+        for i in range(len(inputs)):
+            feed_dict[inputs[i]] = batch_x[i]
         pack = session.run(
-            op, feed_dict={
-                input_x: batch_x,
-            })  # [batch_size]
+            op, feed_dict=feed_dict)  # [batch_size]
         pack = np.asarray(pack)
         # print(pack.shape)
         packs.append(pack)

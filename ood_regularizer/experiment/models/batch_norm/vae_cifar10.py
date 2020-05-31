@@ -411,7 +411,7 @@ def main():
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
                            var_groups=['q_net', 'p_net', 'posterior_flow', 'G_theta', 'D_psi', 'G_omega', 'D_kappa'],
-                           max_epoch=config.max_epoch,
+                           max_epoch=config.max_epoch + 1,
                            max_step=config.max_step,
                            summary_dir=(results.system_path('train_summary')
                                         if config.write_summary else None),
@@ -428,22 +428,8 @@ def main():
             epoch_iterator = loop.iter_epochs()
             # adversarial training
             for epoch in epoch_iterator:
-                for step, [x] in loop.iter_steps(train_flow):
-                    _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
-                        input_x: x
-                    })
-                    loop.collect_metrics(VAE_loss=batch_VAE_loss)
 
-                if epoch in config.lr_anneal_epoch_freq:
-                    learning_rate.anneal()
-
-                if epoch == config.warm_up_start:
-                    learning_rate.set(config.initial_lr)
-
-                if epoch % config.plot_epoch_freq == 0:
-                    plot_samples(loop)
-
-                if epoch % config.test_epoch_freq == 0:
+                if epoch == config.max_epoch + 1:
                     def permutation_test(flow, ratio):
                         R = min(max(1, int(ratio * config.test_batch_size - 1)), config.test_batch_size - 1)
                         print('R={}'.format(R))
@@ -500,6 +486,21 @@ def main():
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='log_prob_histogram_without_batch_norm{}'.format(epoch)
                     )
+
+                for step, [x] in loop.iter_steps(train_flow):
+                    _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
+                        input_x: x
+                    })
+                    loop.collect_metrics(VAE_loss=batch_VAE_loss)
+
+                if epoch in config.lr_anneal_epoch_freq:
+                    learning_rate.anneal()
+
+                if epoch == config.warm_up_start:
+                    learning_rate.set(config.initial_lr)
+
+                if epoch % config.plot_epoch_freq == 0:
+                    plot_samples(loop)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

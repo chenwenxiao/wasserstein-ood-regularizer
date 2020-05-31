@@ -12,6 +12,7 @@ from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.datasets.tinyimagenet import load_tinyimagenet
 
 import numpy as np
+import os
 
 
 def load_overall(dataset_name, dtype=np.float):
@@ -58,3 +59,17 @@ def load_overall(dataset_name, dtype=np.float):
     if y_test is None:
         y_train = np.random.randint(0, 10, x_test.shape)
     return x_train, y_train, x_test, y_test
+
+
+def load_complexity(dataset_name, compressor):
+    train_complexity_path = '/home/cwx17/new_data/' + dataset_name + '/' + 'train.npy'
+    test_complexity_path = '/home/cwx17/new_data/' + dataset_name + '/' + 'test.npy'
+    x_train_complexity = None
+    x_test_complexity = None
+    if os.path.exists(train_complexity_path):
+        x_train_complexity = np.load(train_complexity_path)
+    if os.path.exists(test_complexity_path):
+        x_test_complexity = np.load(test_complexity_path)
+    if x_train_complexity is None:
+        x_train_complexity = x_test_complexity
+    return x_train_complexity[..., compressor], x_test_complexity[..., compressor]

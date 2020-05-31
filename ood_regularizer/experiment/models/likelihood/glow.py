@@ -21,7 +21,7 @@ import numpy as np
 
 from tfsnippet.preprocessing import UniformNoiseSampler
 
-from ood_regularizer.experiment.datasets.overall import load_overall
+from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPConfig
 from ood_regularizer.experiment.models.utils import get_mixed_array
@@ -238,6 +238,8 @@ def main():
     # input placeholders
     input_x = tf.placeholder(
         dtype=tf.float32, shape=(None,) + config.x_shape, name='input_x')
+    input_complexity = tf.placeholder(
+        dtype=tf.float32, shape=(None,), name='input_complexity')
     learning_rate = spt.AnnealingVariable(
         'learning_rate', config.initial_lr, config.lr_anneal_factor)
 
@@ -268,7 +270,12 @@ def main():
     with tf.name_scope('testing'):
         test_p_net = p_net(glow_theta, observed={'x': input_x},
                            n_z=config.test_n_qz)
+        print(test_p_net['x'].log_prob().flow_origin.log_prob().shape)
+        print(test_p_net['x'].log_prob().log_prob().shape)
+
+        ele_test_origin_ll = test_p_net['x'].log_prob().flow_origin.log_prob() - config.x_shape_multiple * np.log(128)
         ele_test_ll = test_p_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
+        ele_test_log_det = ele_test_ll - ele_test_origin_ll
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
@@ -348,6 +355,17 @@ def main():
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
+    x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
+    svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
+
+    cifar_train_flow_with_complexity = spt.DataFlow.arrays([x_train, x_train_complexity],
+                                                           config.test_batch_size)
+    cifar_test_flow_with_complexity = spt.DataFlow.arrays([x_test, x_test_complexity], config.test_batch_size)
+    svhn_train_flow_with_complexity = spt.DataFlow.arrays([svhn_train, svhn_train_complexity],
+                                                          config.test_batch_size)
+    svhn_test_flow_with_complexity = spt.DataFlow.arrays([svhn_test, svhn_test_complexity],
+                                                         config.test_batch_size)
+
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
@@ -381,6 +399,61 @@ def main():
             epoch_iterator = loop.iter_epochs()
             # adversarial training
             for epoch in epoch_iterator:
+
+                if epoch == config.max_epoch + 1:
+                    make_diagram(
+                        ele_test_ll,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='log_prob_histogram_{}'.format(epoch)
+                    )
+
+                    make_diagram(
+                        ele_test_omega_ll,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
+                    )
+
+                    make_diagram(
+                        ele_test_ll + input_complexity,
+                        [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
+                         svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
+                        [input_x, input_complexity],
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='ll_with_complexity_histogram_{}'.format(epoch)
+                    )
+
+                    make_diagram(
+                        ele_test_origin_ll,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='origin_log_prob_histogram_{}'.format(epoch)
+                    )
+
+                    make_diagram(
+                        ele_test_log_det,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='log_det_histogram_{}'.format(epoch)
+                    )
+
+                    AUC = make_diagram(
+                        -ele_test_kl,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='kl_histogram_{}'.format(epoch)
+                    )
+                    loop.collect_metrics(AUC=AUC)
+                    loop.print_logs()
+                    break
+
                 if epoch <= config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
                         try:
@@ -408,32 +481,6 @@ def main():
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
-
-                if epoch % config.max_epoch == 0:
-                    make_diagram(
-                        ele_test_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_{}'.format(epoch)
-                    )
-
-                    make_diagram(
-                        ele_test_omega_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
-                    )
-
-                    AUC = make_diagram(
-                        -ele_test_kl,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='kl_histogram_{}'.format(epoch)
-                    )
-                    loop.collect_metrics(AUC=AUC)
 
                 if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
                     # Distill

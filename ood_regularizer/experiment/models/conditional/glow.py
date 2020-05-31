@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import functools
 import sys
+import os
 from argparse import ArgumentParser
 from contextlib import contextmanager
 import tensorflow as tf
@@ -121,22 +122,6 @@ def p_net(glow_theta, observed=None, n_z=None):
     _ = glow_theta.transform(z)
     x = net.add('x', spt.distributions.FlowDistribution(
         normal, glow_theta
-    ), n_samples=n_z)
-
-    return net
-
-
-@add_arg_scope
-@spt.global_reuse
-def p_omega_net(glow_omega, observed=None, n_z=None):
-    net = spt.BayesianNet(observed=observed)
-    # sample z ~ p(z)
-    normal = spt.Normal(mean=tf.zeros(config.x_shape),
-                        logstd=tf.zeros(config.x_shape))
-    z = net.add('z', normal, n_samples=n_z, group_ndims=len(config.x_shape))
-    _ = glow_omega.transform(z)
-    x = net.add('x', spt.distributions.FlowDistribution(
-        normal, glow_omega
     ), n_samples=n_z)
 
     return net
@@ -304,12 +289,7 @@ def main():
         train_p_net = p_net(glow_theta, observed={'x': input_x},
                             n_z=config.train_n_qz)
         glow_loss = get_all_loss(train_p_net)
-        train_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
-                                        n_z=config.train_n_qz)
-        glow_omega_loss = get_all_loss(train_p_omega_net)
-
         glow_loss += tf.losses.get_regularization_loss()
-        glow_omega_loss += tf.losses.get_regularization_loss()
 
         predict = resnet34(input_x)
         classify_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=predict, labels=input_y)
@@ -323,21 +303,11 @@ def main():
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
-
-        test_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
-                                       n_z=config.test_n_qz)
-        ele_test_omega_ll = test_p_omega_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
-        test_omega_nll = -tf.reduce_mean(
-            ele_test_omega_ll
-        )
-
-        ele_test_kl = ele_test_omega_ll - ele_test_ll
         predict = tf.argmax(resnet34(input_x), axis=-1)
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
         glow_params = tf.trainable_variables('glow_theta')
-        glow_omega_params = tf.trainable_variables('glow_omega')
         classify_params = tf.trainable_variables('resnet34')
         with tf.variable_scope('theta_optimizer'):
             glow_optimizer = tf.train.AdamOptimizer(learning_rate)
@@ -346,20 +316,12 @@ def main():
             grads, gradient_norm = tf.clip_by_global_norm(grads, clip_norm=config.clip_norm)
             gradient_norm = tf.check_numerics(gradient_norm, "Gradient norm is NaN or Inf.")
             glow_grads = zip(grads, vars_)
-        with tf.variable_scope('omega_optimizer'):
-            glow_omega_optimizer = tf.train.AdamOptimizer(learning_rate)
-            glow_omega_grads = glow_omega_optimizer.compute_gradients(glow_omega_loss, glow_omega_params)
-            grads, vars_ = zip(*glow_omega_grads)
-            grads, gradient_norm = tf.clip_by_global_norm(grads, clip_norm=config.clip_norm)
-            gradient_norm = tf.check_numerics(gradient_norm, "Gradient norm is NaN or Inf.")
-            glow_omega_grads = zip(grads, vars_)
         with tf.variable_scope('classify_optimizer'):
             classify_optimizer = tf.train.AdamOptimizer(1e-4)
             classify_grads = classify_optimizer.compute_gradients(classify_loss, classify_params)
 
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             glow_train_op = glow_optimizer.apply_gradients(glow_grads)
-            glow_omega_train_op = glow_omega_optimizer.apply_gradients(glow_omega_grads)
             classify_train_op = classify_optimizer.apply_gradients(classify_grads)
 
     # derive the plotting function
@@ -368,11 +330,6 @@ def main():
         vae_plots = tf.reshape(plot_net['x'], (-1,) + config.x_shape)
         vae_plots = 256.0 * vae_plots / 2 + 127.5
         vae_plots = tf.clip_by_value(vae_plots, 0, 255)
-
-        plot_omega_net = p_omega_net(glow_omega, n_z=config.sample_n_z)
-        vae_omega_plots = tf.reshape(plot_omega_net['x'], (-1,) + config.x_shape)
-        vae_omega_plots = 256.0 * vae_omega_plots / 2 + 127.5
-        vae_omega_plots = tf.clip_by_value(vae_omega_plots, 0, 255)
 
     def plot_samples(loop, extra_index=None):
         if extra_index is None:
@@ -386,14 +343,6 @@ def main():
                 save_images_collection(
                     images=np.round(images),
                     filename='plotting/sample/{}-{}.png'.format('theta', extra_index),
-                    grid_size=(10, 10),
-                    results=results,
-                )
-                images = session.run(vae_omega_plots)
-                print(images.shape)
-                save_images_collection(
-                    images=np.round(images),
-                    filename='plotting/sample/{}-{}.png'.format('omega', extra_index),
                     grid_size=(10, 10),
                     results=results,
                 )
@@ -418,29 +367,27 @@ def main():
     reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True)
     reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True)
 
-    final_cifar_test_ll = np.zeros(len(x_test))
-    final_svhn_test_ll = np.zeros(len(svhn_test))
-    final_cifar_test_omega_ll = np.zeros(len(x_test))
-    final_svhn_test_omega_ll = np.zeros(len(svhn_test))
 
-    current_class = 0
+    cifar_test_predict = None
+
+    current_class = -1
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
         restore_checkpoint = None
+        restore_dir = None
 
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
                            var_groups=['q_net', 'p_net', 'posterior_flow', 'G_theta', 'D_psi', 'G_omega', 'D_kappa'],
-                           max_epoch=config.max_epoch,
+                           max_epoch=config.max_epoch + 1,
                            max_step=config.max_step,
                            summary_dir=(results.system_path('train_summary')
                                         if config.write_summary else None),
                            summary_graph=tf.get_default_graph(),
                            early_stopping=False,
                            checkpoint_dir=results.system_path('checkpoint'),
-                           checkpoint_epoch_freq=100,
                            restore_checkpoint=restore_checkpoint
                            ) as loop:
 
@@ -450,6 +397,58 @@ def main():
             epoch_iterator = loop.iter_epochs()
             # adversarial training
             for epoch in epoch_iterator:
+
+                if epoch > config.warm_up_start and cifar_test_predict is None:
+                    cifar_test_predict = get_ele(predict, cifar_test_flow, input_x)
+                    print('Correct number in cifar test is {}'.format(
+                        np.sum(cifar_test_predict == y_test)))
+                    svhn_test_predict = get_ele(predict, svhn_test_flow, input_x)
+                    mixed_array_predict = get_ele(
+                        predict, spt.DataFlow.arrays([mixed_array], config.batch_size), input_x)
+
+                if epoch == config.max_epoch + 1:
+                    final_cifar_test_ll = np.zeros(len(x_test))
+                    final_svhn_test_ll = np.zeros(len(svhn_test))
+                    if restore_dir is None:
+                        restore_dir = results.system_path('checkpoint')
+                    for current_class in range(0, config.class_num):
+                        cifar_mask = cifar_test_predict == current_class
+                        svhn_mask = svhn_test_predict == current_class
+                        loop._checkpoint_saver.restore(os.path.join(
+                            restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(epoch)))
+                        cifar_test_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([
+                            x_test[cifar_mask]
+                        ], config.test_batch_size), input_x)
+                        svhn_test_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([
+                            svhn_test[svhn_mask]
+                        ], config.test_batch_size), input_x)
+
+                        final_cifar_test_ll[cifar_mask] = cifar_test_ll[cifar_mask]
+                        final_svhn_test_ll[svhn_mask] = svhn_test_ll[svhn_mask]
+
+                    plot_fig(
+                        [final_cifar_test_ll, final_svhn_test_ll],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
+                        fig_name='log_prob_histogram', auc_pair=(0, 1)
+                    )
+                    break
+
+                def update_training_data():
+                    train_flow = spt.DataFlow.arrays([x_train[y_train == current_class]],
+                                                     config.batch_size, shuffle=True,
+                                                     skip_incomplete=True)
+                    mixed_test_flow = spt.DataFlow.arrays([mixed_array[mixed_array_predict == current_class]],
+                                                          config.batch_size,
+                                                          shuffle=True,
+                                                          skip_incomplete=True)
+                    return train_flow, mixed_test_flow
+
+                if (epoch - config.warm_up_start) % config.test_epoch_freq == 1 and epoch > config.warm_up_start:
+                    current_class = current_class + 1
+                    session.run(tf.global_variables_initializer())  # Initialize all variables
+                    train_flow, mixed_test_flow = update_training_data()
+
                 if epoch > config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
                         try:
@@ -457,14 +456,6 @@ def main():
                                 input_x: x
                             })
                             loop.collect_metrics(glow_loss=batch_glow_loss)
-                        except Exception as e:
-                            pass
-                    for step, [x] in loop.iter_steps(mixed_test_flow):
-                        try:
-                            _, batch_glow_omega_loss = session.run([glow_omega_train_op, glow_omega_loss], feed_dict={
-                                input_x: x
-                            })
-                            loop.collect_metrics(glow_omega_loss=batch_glow_omega_loss)
                         except Exception as e:
                             pass
                 else:
@@ -477,67 +468,14 @@ def main():
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
 
-                def update_training_data():
-                    train_flow = spt.DataFlow.arrays([x_train[y_train == current_class]],
-                                                     config.batch_size, shuffle=True,
-                                                     skip_incomplete=True)
-                    mixed_test_flow = spt.DataFlow.arrays([mixed_array[mixed_array_predict == current_class]],
-                                                          config.batch_size,
-                                                          shuffle=True,
-                                                          skip_incomplete=True)
-                    return train_flow, mixed_test_flow
-
                 if epoch == config.warm_up_start:
-                    cifar_test_predict = get_ele(predict, cifar_test_flow, input_x)
-                    print('Correct number in cifar test is {}'.format(
-                        np.sum(cifar_test_predict == y_test)))
-                    svhn_test_predict = get_ele(predict, svhn_test_flow, input_x)
-                    mixed_array_predict = get_ele(
-                        predict, spt.DataFlow.arrays([mixed_array], config.batch_size), input_x)
-                    train_flow, mixed_test_flow = update_training_data()
                     learning_rate.set(config.initial_lr)
+
+                if (epoch - config.warm_up_start) % config.test_epoch_freq == 0:
+                    loop._checkpoint_saver.save(epoch)
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
-
-                if (epoch - config.warm_up_start) % config.test_epoch_freq == 0 and epoch > config.warm_up_start:
-                    cifar_test_ll = get_ele(ele_test_ll, cifar_test_flow, input_x)
-                    svhn_test_ll = get_ele(ele_test_ll, svhn_test_flow, input_x)
-                    cifar_test_omega_ll = get_ele(ele_test_omega_ll, cifar_test_flow, input_x)
-                    svhn_test_omega_ll = get_ele(ele_test_omega_ll, svhn_test_flow, input_x)
-
-                    mask = cifar_test_predict == current_class
-                    final_cifar_test_ll[mask] = cifar_test_ll[mask]
-                    final_cifar_test_omega_ll[mask] = cifar_test_omega_ll[mask]
-                    mask = svhn_test_predict == current_class
-                    final_svhn_test_ll[mask] = svhn_test_ll[mask]
-                    final_svhn_test_omega_ll[mask] = svhn_test_omega_ll[mask]
-
-                    current_class = current_class + 1
-                    train_flow, mixed_test_flow = update_training_data()
-                    session.run(tf.global_variables_initializer())  # Initialize all variables
-
-                if epoch % config.max_epoch == 0:
-                    plot_fig(
-                        [final_cifar_test_ll, final_svhn_test_ll],
-                        color_list=['red', 'green'],
-                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
-                        fig_name='log_prob_histogram', auc_pair=(0, 1)
-                    )
-                    plot_fig(
-                        [final_cifar_test_omega_ll, final_svhn_test_omega_ll],
-                        color_list=['red', 'green'],
-                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
-                        fig_name='log_prob_mixed_histogram_', auc_pair=(0, 1)
-                    )
-                    AUC = plot_fig(
-                        [final_cifar_test_ll - final_cifar_test_omega_ll,
-                         final_svhn_test_ll - final_svhn_test_omega_ll],
-                        color_list=['red', 'green'],
-                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
-                        fig_name='kl_histogram', auc_pair=(0, 1)
-                    )
-                    loop.collect_metrics(AUC=AUC)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

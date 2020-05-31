@@ -313,7 +313,7 @@ def main():
     x_train = (x_train - 127.5) / 256.0 * 2
     x_test = (x_test - 127.5) / 256.0 * 2
 
-    (svhn_train, _svhn_train_y, svhn_test,  svhn_test_y) = load_overall(config.out_dataset)
+    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
 
@@ -411,7 +411,7 @@ def main():
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
                            var_groups=['q_net', 'p_net', 'posterior_flow', 'G_theta', 'D_psi'],
-                           max_epoch=config.max_epoch,
+                           max_epoch=config.max_epoch + 1,
                            max_step=config.max_step,
                            summary_dir=(results.system_path('train_summary')
                                         if config.write_summary else None),
@@ -430,6 +430,19 @@ def main():
             n_critical = config.n_critical
             # adversarial training
             for epoch in epoch_iterator:
+
+                if epoch == config.max_epoch + 1:
+                    AUC = make_diagram(
+                        ele_test_energy,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='log_prob_histogram_{}'.format(epoch)
+                    )
+                    loop.collect_metrics(AUC=AUC)
+                    loop.print_logs()
+                    break
+
                 for step, [x] in loop.iter_steps(train_flow):
                     for [y] in mixed_test_flow:
                         # spec-training discriminator
@@ -450,16 +463,6 @@ def main():
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
-
-                if epoch % config.max_epoch == 0:
-                    AUC = make_diagram(
-                        ele_test_energy,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_{}'.format(epoch)
-                    )
-                    loop.collect_metrics(AUC=AUC)
 
                 if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
                     # Distill
