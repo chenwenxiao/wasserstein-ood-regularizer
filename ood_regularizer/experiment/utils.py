@@ -11,7 +11,7 @@ def get_ele(op, flow, inputs):
         inputs = [inputs]
     packs = []
     session = tf.get_default_session()
-    for [batch_x] in flow:
+    for batch_x in flow:
         feed_dict = {}
         for i in range(len(inputs)):
             feed_dict[inputs[i]] = batch_x[i]

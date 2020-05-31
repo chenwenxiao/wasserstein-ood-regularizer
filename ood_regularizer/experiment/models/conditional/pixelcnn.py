@@ -378,8 +378,9 @@ def main():
                     for current_class in range(0, config.class_num):
                         cifar_mask = cifar_test_predict == current_class
                         svhn_mask = svhn_test_predict == current_class
+                        pse_epoch = config.warm_up_start + (current_class + 1) * config.test_epoch_freq
                         loop._checkpoint_saver.restore(os.path.join(
-                            restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(epoch)))
+                            restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(pse_epoch)))
                         cifar_test_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([
                             x_test[cifar_mask]
                         ], config.test_batch_size), input_x)
