@@ -78,6 +78,7 @@ class ExpConfig(spt.Config):
     sample_n_z = 100
 
     x_shape = (32, 32, 3)
+    extra_stride = 2
 
 
 config = ExpConfig()
@@ -111,7 +112,8 @@ def q_net(x, observed=None, n_z=None):
         h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
         h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=config.extra_stride,
+                                             scope='level_4')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
 
@@ -144,22 +146,24 @@ def p_net(observed=None, n_z=None):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
+        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[
+            1] // 4 // config.extra_stride // config.extra_stride, scope='level_0',
                                normalizer_fn=None)
         h_z = spt.ops.reshape_tail(
             h_z,
             ndims=1,
-            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 128)
+            shape=(config.x_shape[0] // 4 // config.extra_stride, config.x_shape[1] // 4 // config.extra_stride, 128)
         )
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, scope='level_5')  # output: (14, 14, 32)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=config.extra_stride,
+                                               scope='level_5')  # output: (14, 14, 32)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
         x_mean = spt.layers.conv2d(
             h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_mean',
-            kernel_initializer=tf.zeros_initializer(),
+            kernel_initializer=tf.zeros_initializer(),  # activation_fn=tf.nn.tanh
         )
         x_logstd = spt.layers.conv2d(
             h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_logstd',
@@ -176,38 +180,6 @@ def p_net(observed=None, n_z=None):
         max_val=1.0 - 1.0 / 256.0,
         epsilon=1e-10
     ), group_ndims=3)
-    return net
-
-
-@add_arg_scope
-@spt.global_reuse
-def q_omega_net(x, observed=None, n_z=None):
-    net = spt.BayesianNet(observed=observed)
-    normalizer_fn = None
-
-    # compute the hidden features
-    with arg_scope([spt.layers.resnet_conv2d_block],
-                   kernel_size=config.kernel_size,
-                   shortcut_kernel_size=config.shortcut_kernel_size,
-                   activation_fn=tf.nn.leaky_relu,
-                   normalizer_fn=normalizer_fn,
-                   kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg), ):
-        h_x = tf.to_float(x)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
-
-        h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
-        z_mean = spt.layers.dense(h_x, config.z_dim, scope='z_mean')
-        z_logstd = spt.layers.dense(h_x, config.z_dim, scope='z_logstd')
-
-    # sample z ~ q(z|x)
-    z = net.add('z', spt.Normal(mean=z_mean, logstd=spt.ops.maybe_clip_value(z_logstd, min_val=config.min_logstd_of_q)),
-                n_samples=n_z, group_ndims=1)
-
     return net
 
 
@@ -305,6 +277,8 @@ def main():
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
 
     config.x_shape = x_train.shape[1:]
+    if config.x_shape == (28, 28, 1):
+        config.extra_stride = 1
 
     # input placeholders
     input_x = tf.placeholder(
@@ -414,11 +388,11 @@ def main():
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
 
-    if config.use_transductive:
-        mixed_array = np.concatenate([x_test, svhn_test])
-    else:
-        mixed_array = np.random.randint(0, 256, size=(20000,) + config.x_shape)
-        mixed_array = (mixed_array - 127.5) / 256.0 * 2
+    mixed_array = np.concatenate([x_test, svhn_test])
+    print(mixed_array.shape)
+    index = np.arange(len(mixed_array))
+    np.random.shuffle(index)
+    mixed_array = mixed_array[index]
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
     reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True)
@@ -455,6 +429,7 @@ def main():
                 if epoch == config.max_epoch + 1:
                     mixed_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([mixed_array], config.test_batch_size), input_x)
                     mixed_kl = []
+                    loop.make_checkpoint()
                     for i in range(0, len(mixed_array), config.mixed_train_skip):
                         loop._checkpoint_saver.restore_latest()
                         mixed_test_flow = spt.DataFlow.arrays([mixed_array[:i + config.mixed_train_skip]],
@@ -470,17 +445,16 @@ def main():
                                     input_x: x
                                 })
                                 loop.collect_metrics(VAE_loss=batch_VAE_loss)
-                        for j in range(len(mixed_array[i: i + config.mixed_train_skip])):
-                            mixed_kl.append(session.run(ele_test_ll, feed_dict={
-                                input_x: mixed_array[i + j: i + j + 1]
-                            })[0])
+                                loop.print_logs()
+                        mixed_kl.append(session.run(ele_test_ll, feed_dict={
+                            input_x: mixed_array[i: i + config.mixed_train_skip]
+                        }))
                         print(repeat_epoch, len(mixed_kl))
-                        loop.print_logs()
 
-                    mixed_kl = np.asarray(mixed_kl)
+                    mixed_kl = np.concatenate(mixed_kl)
                     mixed_kl = mixed_kl - mixed_ll
-                    cifar_kl = mixed_kl[:len(x_test)]
-                    svhn_kl = mixed_kl[len(x_test):]
+                    cifar_kl = mixed_kl[index < len(x_test)]
+                    svhn_kl = mixed_kl[index >= len(x_test)]
                     AUC = plot_fig([-cifar_kl, -svhn_kl],
                                    ['red', 'green'],
                                    [config.in_dataset + ' Test', config.out_dataset + ' Test'], 'log(bit/dims)',
