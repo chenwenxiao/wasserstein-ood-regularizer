@@ -333,7 +333,9 @@ def main():
     reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True)
     reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True)
 
-    current_class = 0
+    cifar_test_predict = None
+
+    current_class = -1
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
@@ -351,7 +353,6 @@ def main():
                            summary_graph=tf.get_default_graph(),
                            early_stopping=False,
                            checkpoint_dir=results.system_path('checkpoint'),
-                           checkpoint_epoch_freq=100,
                            restore_checkpoint=restore_checkpoint
                            ) as loop:
 
@@ -388,8 +389,8 @@ def main():
                             svhn_test[svhn_mask]
                         ], config.test_batch_size), input_x)
 
-                        final_cifar_test_ll[cifar_mask] = cifar_test_ll[cifar_mask]
-                        final_svhn_test_ll[svhn_mask] = svhn_test_ll[svhn_mask]
+                        final_cifar_test_ll[cifar_mask] = cifar_test_ll
+                        final_svhn_test_ll[svhn_mask] = svhn_test_ll
 
                     plot_fig(
                         [final_cifar_test_ll, final_svhn_test_ll],
@@ -432,6 +433,9 @@ def main():
 
                 if epoch == config.warm_up_start:
                     learning_rate.set(config.initial_lr)
+
+                if (epoch - config.warm_up_start) % config.test_epoch_freq == 0:
+                    loop._checkpoint_saver.save(epoch)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

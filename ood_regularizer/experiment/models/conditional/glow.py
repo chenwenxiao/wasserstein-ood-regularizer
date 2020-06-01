@@ -423,8 +423,8 @@ def main():
                             svhn_test[svhn_mask]
                         ], config.test_batch_size), input_x)
 
-                        final_cifar_test_ll[cifar_mask] = cifar_test_ll[cifar_mask]
-                        final_svhn_test_ll[svhn_mask] = svhn_test_ll[svhn_mask]
+                        final_cifar_test_ll[cifar_mask] = cifar_test_ll
+                        final_svhn_test_ll[svhn_mask] = svhn_test_ll
 
                     plot_fig(
                         [final_cifar_test_ll, final_svhn_test_ll],
