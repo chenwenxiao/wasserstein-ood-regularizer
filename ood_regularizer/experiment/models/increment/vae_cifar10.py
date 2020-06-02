@@ -373,19 +373,6 @@ def main():
         except Exception as e:
             print(e)
 
-    # prepare for training and testing data
-    (x_train, y_train), (x_test, y_test) = spt.datasets.load_cifar10(x_shape=config.x_shape)
-    x_train = (x_train - 127.5) / 256.0 * 2
-    x_test = (x_test - 127.5) / 256.0 * 2
-    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
-    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
-
-    (svhn_train, y_train), (svhn_test, y_test) = load_svhn(x_shape=config.x_shape)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
-    svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
-    svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
-
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
 
     mixed_array = np.concatenate([x_test, svhn_test])
