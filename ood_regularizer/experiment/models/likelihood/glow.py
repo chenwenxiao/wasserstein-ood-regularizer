@@ -56,6 +56,7 @@ class ExpConfig(spt.Config):
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
+    compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
     max_step = None
     batch_size = 128
@@ -271,9 +272,13 @@ def main():
         test_p_net = p_net(glow_theta, observed={'x': input_x},
                            n_z=config.test_n_qz)
         print(test_p_net['x'].log_prob().flow_origin.log_prob().shape)
-        print(test_p_net['x'].log_prob().log_prob().shape)
+        print(test_p_net['x'].log_prob().shape)
 
-        ele_test_origin_ll = test_p_net['x'].log_prob().flow_origin.log_prob() - config.x_shape_multiple * np.log(128)
+        ele_test_origin_ll = tf.reduce_sum(
+            test_p_net['x'].log_prob().flow_origin.log_prob() - config.x_shape_multiple * np.log(128),
+            axis=tf.range(-len(config.x_shape), 0)
+        )
+        print(ele_test_origin_ll.shape)
         ele_test_ll = test_p_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
         ele_test_log_det = ele_test_ll - ele_test_origin_ll
         test_nll = -tf.reduce_mean(

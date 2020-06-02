@@ -57,6 +57,7 @@ class ExpConfig(spt.Config):
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
+    compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
     max_step = None
     batch_size = 32

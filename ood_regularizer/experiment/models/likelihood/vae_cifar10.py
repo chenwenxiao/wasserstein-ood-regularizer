@@ -641,13 +641,19 @@ def main():
                                                   input_x)
                         return spt.DataFlow.arrays([mcmc_sample, origin], config.test_batch_size)
 
+                    mcmc_data = [get_mcmc_and_origin(x_train), get_mcmc_and_origin(x_test),
+                                 get_mcmc_and_origin(svhn_train), get_mcmc_and_origin(svhn_test)]
                     make_diagram(
-                        ele_test_recon,
-                        [get_mcmc_and_origin(x_train), get_mcmc_and_origin(x_test),
-                         get_mcmc_and_origin(svhn_train), get_mcmc_and_origin(svhn_test)], [input_x, input_y],
+                        ele_test_recon, mcmc_data, [input_x, input_y],
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='mcmc_recon_histogram_{}'.format(epoch)
+                    )
+                    make_diagram(
+                        ele_test_ll, mcmc_data, [input_x, input_y],
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='mcmc_log_prob_histogram_{}'.format(epoch)
                     )
                     loop.print_logs()
                     break
