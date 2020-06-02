@@ -46,10 +46,10 @@ class ExpConfig(spt.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 100
+    mixed_train_epoch = 20
     mixed_train_skip = 1
     initial_omega_with_theta = True
-    dynamic_epochs = False
+    dynamic_epochs = True
     self_ood = False
     in_dataset_test_ratio = 1.0
 
@@ -57,7 +57,7 @@ class ExpConfig(spt.Config):
     out_dataset = 'svhn'
 
     max_step = None
-    batch_size = 128
+    batch_size = 64
     smallest_step = 5e-5
     initial_lr = 0.0002
     lr_anneal_factor = 0.5
@@ -423,33 +423,43 @@ def main():
             spt.utils.ensure_variables_initialized()
 
             epoch_iterator = loop.iter_epochs()
+            # print(loop.epoch)
             # adversarial training
             for epoch in epoch_iterator:
-
-                if epoch == config.max_epoch + 1:
+                if epoch > config.max_epoch:
                     mixed_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([mixed_array], config.test_batch_size), input_x)
                     mixed_kl = []
-                    loop.make_checkpoint()
-                    for i in range(0, len(mixed_array), config.mixed_train_skip):
-                        loop._checkpoint_saver.restore_latest()
-                        mixed_test_flow = spt.DataFlow.arrays([mixed_array[:i + config.mixed_train_skip]],
-                                                              config.batch_size, shuffle=True)
+                    # if restore_checkpoint is not None:
+                    #     loop.make_checkpoint()
+                    print('Starting testing')
+                    for i in range(0, len(mixed_array)):
+                        # loop._checkpoint_saver.restore_latest()
                         if config.dynamic_epochs:
                             repeat_epoch = int(
-                                config.mixed_train_epoch * len(mixed_array) / (mixed_test_flow.data_length))
+                                config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))
+                            repeat_epoch = max(1, repeat_epoch)
                         else:
                             repeat_epoch = config.mixed_train_epoch
                         for pse_epoch in range(repeat_epoch):
-                            for step, [x] in loop.iter_steps(mixed_test_flow):
-                                _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
-                                    input_x: x
-                                })
-                                loop.collect_metrics(VAE_loss=batch_VAE_loss)
-                                loop.print_logs()
+                            if i < config.batch_size - 1:
+                                train_index = np.random.randint(0, len(x_train), config.batch_size - i - 1)
+                                batch_x = [mixed_array[0:i + 1], x_train[train_index]]
+                                batch_x = np.concatenate(batch_x)
+                                # print(batch_x.shape)
+                            else:
+                                mixed_index = np.random.randint(0, i, config.batch_size)
+                                mixed_index[-1] = i
+                                batch_x = mixed_array[mixed_index]
+                                # print(batch_x.shape)
+                            _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
+                                input_x: batch_x
+                            })
+                        loop.collect_metrics(VAE_loss=batch_VAE_loss)
                         mixed_kl.append(session.run(ele_test_ll, feed_dict={
-                            input_x: mixed_array[i: i + config.mixed_train_skip]
+                            input_x: mixed_array[i: i + 1]
                         }))
                         print(repeat_epoch, len(mixed_kl))
+                        loop.print_logs()
 
                     mixed_kl = np.concatenate(mixed_kl)
                     mixed_kl = mixed_kl - mixed_ll

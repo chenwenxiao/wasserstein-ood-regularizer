@@ -75,6 +75,7 @@ class ExpConfig(spt.Config):
     plot_epoch_freq = 20
     distill_ratio = 1.0
     distill_epoch = 25
+    mcmc_times = 10
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -410,7 +411,8 @@ def main():
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
-        ele_test_lb = tf.reduce_mean(test_chain.vi.lower_bound.elbo(), axis=0)
+        ele_test_lb = test_chain.vi.lower_bound.elbo()
+        print(ele_test_lb)
         test_lb = tf.reduce_mean(ele_test_lb)
 
         test_q_omega_net = q_omega_net(input_x, n_z=config.test_n_qz)
@@ -641,8 +643,8 @@ def main():
 
                     make_diagram(
                         ele_test_recon,
-                        [get_mcmc_and_origin(cifar_train_flow), get_mcmc_and_origin(cifar_test_flow),
-                         get_mcmc_and_origin(svhn_train_flow), get_mcmc_and_origin(svhn_test_flow)], [input_x, input_y],
+                        [get_mcmc_and_origin(x_train), get_mcmc_and_origin(x_test),
+                         get_mcmc_and_origin(svhn_train), get_mcmc_and_origin(svhn_test)], [input_x, input_y],
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='mcmc_recon_histogram_{}'.format(epoch)

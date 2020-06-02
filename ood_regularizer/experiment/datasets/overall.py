@@ -62,8 +62,8 @@ def load_overall(dataset_name, dtype=np.float):
 
 
 def load_complexity(dataset_name, compressor):
-    train_complexity_path = '/home/cwx17/new_data/' + dataset_name + '/' + 'train.npy'
-    test_complexity_path = '/home/cwx17/new_data/' + dataset_name + '/' + 'test.npy'
+    train_complexity_path = '/home/cwx17/new_data/' + dataset_name + '/' + 'train_complexity.npy'
+    test_complexity_path = '/home/cwx17/new_data/' + dataset_name + '/' + 'test_complexity.npy'
     x_train_complexity = None
     x_test_complexity = None
     if os.path.exists(train_complexity_path):
@@ -72,4 +72,5 @@ def load_complexity(dataset_name, compressor):
         x_test_complexity = np.load(test_complexity_path)
     if x_train_complexity is None:
         x_train_complexity = x_test_complexity
+    print(x_train_complexity.shape, x_test_complexity.shape)
     return x_train_complexity[..., compressor], x_test_complexity[..., compressor]
