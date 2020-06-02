@@ -85,6 +85,7 @@ class ExpConfig(spt.Config):
 
     x_shape = (32, 32, 3)
     x_shape_multiple = 3072
+    extra_stride = 2
     class_num = 10
 
 

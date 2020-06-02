@@ -81,6 +81,8 @@ class ExpConfig(spt.Config):
     sample_n_z = 100
 
     x_shape = (32, 32, 3)
+    x_shape_multiple = 3072
+    extra_stride = 2
 
 
 config = ExpConfig()
@@ -213,6 +215,9 @@ def main():
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset, dtype=np.int)
     (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset, dtype=np.int)
     config.x_shape = x_train.shape[1:]
+    config.x_shape_multiple = 1
+    for x in config.x_shape:
+        config.x_shape_multiple *= x
 
     # input placeholders
     input_x = tf.placeholder(

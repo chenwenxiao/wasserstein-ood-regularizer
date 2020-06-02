@@ -83,8 +83,8 @@ class ExpConfig(spt.Config):
     sample_n_z = 100
 
     x_shape = (32, 32, 3)
-    extra_stride = 2
     x_shape_multiple = 3072
+    extra_stride = 2
     class_num = 10
 
 

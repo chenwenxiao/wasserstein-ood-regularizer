@@ -76,6 +76,7 @@ class ExpConfig(spt.Config):
     sample_n_z = 100
 
     x_shape = (32, 32, 3)
+    x_shape_multiple = 3072
     extra_stride = 2
 
 
@@ -275,6 +276,9 @@ def main():
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
 
     config.x_shape = x_train.shape[1:]
+    config.x_shape_multiple = 1
+    for x in config.x_shape:
+        config.x_shape_multiple *= x
     if config.x_shape == (28, 28, 1):
         config.extra_stride = 1
 

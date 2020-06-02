@@ -84,6 +84,7 @@ class ExpConfig(spt.Config):
     sample_n_z = 100
 
     x_shape = (32, 32, 3)
+    x_shape_multiple = 3072
     extra_stride = 2
     class_num = 10
 
@@ -263,6 +264,9 @@ def main():
 
     config.class_num = np.max(y_train) + 1
     config.x_shape = x_train.shape[1:]
+    config.x_shape_multiple = 1
+    for x in config.x_shape:
+        config.x_shape_multiple *= x
     if config.x_shape == (28, 28, 1):
         config.extra_stride = 1
     config.max_epoch = config.warm_up_start + config.test_epoch_freq * config.class_num
