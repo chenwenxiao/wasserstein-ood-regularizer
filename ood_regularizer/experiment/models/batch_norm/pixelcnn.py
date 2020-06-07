@@ -243,7 +243,7 @@ def main():
         ele_test_ll = -tf.reduce_sum(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=input_x, logits=test_p_net),
             axis=np.arange(-len(config.x_shape), 0)
-        )
+        ) / config.x_shape_multiple / np.log(2)
 
     # derive the nll and logits output for testing
     with tf.name_scope('evaluating'), \
@@ -252,7 +252,7 @@ def main():
         ele_eval_ll = -tf.reduce_sum(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=input_x, logits=eval_p_net),
             axis=np.arange(-len(config.x_shape), 0)
-        )
+        ) / config.x_shape_multiple / np.log(2)
         eval_nll = -tf.reduce_mean(
             ele_eval_ll
         )

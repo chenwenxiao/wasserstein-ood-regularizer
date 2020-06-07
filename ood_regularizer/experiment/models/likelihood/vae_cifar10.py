@@ -407,15 +407,15 @@ def main():
         test_q_net = q_net(input_x, n_z=config.test_n_qz)
         test_chain = test_q_net.chain(p_net, observed={'x': input_y}, n_z=config.test_n_qz, latent_axis=0)
         ele_test_recon_sample = test_chain.model['x'].distribution.mean[0]
-        ele_test_recon = tf.reduce_mean(test_chain.model['x'].log_prob(), axis=0)
+        ele_test_recon = tf.reduce_mean(test_chain.model['x'].log_prob(), axis=0) / config.x_shape_multiple / np.log(2)
         test_recon = tf.reduce_mean(
             ele_test_recon
         )
-        ele_test_ll = test_chain.vi.evaluation.is_loglikelihood()
+        ele_test_ll = test_chain.vi.evaluation.is_loglikelihood() / config.x_shape_multiple / np.log(2)
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
-        ele_test_lb = test_chain.vi.lower_bound.elbo()
+        ele_test_lb = test_chain.vi.lower_bound.elbo() / config.x_shape_multiple / np.log(2)
         print(ele_test_lb)
         test_lb = tf.reduce_mean(ele_test_lb)
 
@@ -425,7 +425,7 @@ def main():
         test_omega_recon = tf.reduce_mean(
             test_omega_chain.model['x'].log_prob()
         )
-        ele_test_omega_ll = test_omega_chain.vi.evaluation.is_loglikelihood()
+        ele_test_omega_ll = test_omega_chain.vi.evaluation.is_loglikelihood() / config.x_shape_multiple / np.log(2)
         test_omega_nll = -tf.reduce_mean(
             ele_test_omega_ll
         )
@@ -619,7 +619,7 @@ def main():
                     )
 
                     make_diagram(
-                        ele_test_ll + input_complexity,
+                        ele_test_ll + input_complexity / config.x_shape_multiple / np.log(2),
                         [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
                          svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
                         [input_x, input_y, input_complexity],

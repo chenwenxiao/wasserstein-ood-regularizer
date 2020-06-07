@@ -307,7 +307,7 @@ def main():
         test_recon = tf.reduce_mean(
             test_chain.model['x'].log_prob()
         )
-        ele_test_ll = test_chain.vi.evaluation.is_loglikelihood()
+        ele_test_ll = test_chain.vi.evaluation.is_loglikelihood() / config.x_shape_multiple / np.log(2)
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
@@ -321,7 +321,7 @@ def main():
         eval_recon = tf.reduce_mean(
             eval_chain.model['x'].log_prob()
         )
-        ele_eval_ll = eval_chain.vi.evaluation.is_loglikelihood()
+        ele_eval_ll = eval_chain.vi.evaluation.is_loglikelihood() / config.x_shape_multiple / np.log(2)
         eval_nll = -tf.reduce_mean(
             ele_eval_ll
         )

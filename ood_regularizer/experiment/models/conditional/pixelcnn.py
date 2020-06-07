@@ -301,7 +301,7 @@ def main():
         ele_test_ll = -tf.reduce_sum(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=input_x, logits=test_p_net),
             axis=np.arange(-len(config.x_shape), 0)
-        )
+        ) / config.x_shape_multiple / np.log(2)
         predict = tf.argmax(resnet34(input_x), axis=-1)
 
     # derive the optimizer

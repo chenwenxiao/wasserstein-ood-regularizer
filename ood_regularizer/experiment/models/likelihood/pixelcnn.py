@@ -288,13 +288,13 @@ def main():
         ele_test_ll = -tf.reduce_sum(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=input_x, logits=test_p_net),
             axis=np.arange(-len(config.x_shape), 0)
-        )
+        ) / config.x_shape_multiple / np.log(2)
 
         test_p_omega_net = p_omega_net(input_x)
         ele_test_omega_ll = -tf.reduce_sum(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=input_x, logits=test_p_omega_net),
             axis=np.arange(-len(config.x_shape), 0)
-        )
+        ) / config.x_shape_multiple / np.log(2)
 
         ele_test_kl = ele_test_omega_ll - ele_test_ll
 
@@ -389,7 +389,7 @@ def main():
                     )
 
                     make_diagram(
-                        ele_test_ll + input_complexity,
+                        ele_test_ll + input_complexity / config.x_shape_multiple / np.log(2),
                         [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
                          svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
                         [input_x, input_complexity],

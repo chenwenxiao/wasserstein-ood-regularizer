@@ -358,11 +358,11 @@ def main():
     with tf.name_scope('testing'):
         test_q_net = q_net(input_x, n_z=config.test_n_qz)
         test_chain = test_q_net.chain(p_net, observed={'x': input_x}, n_z=config.test_n_qz, latent_axis=0)
-        ele_test_recon = tf.reduce_mean(test_chain.model['x'].log_prob(), axis=0)
+        ele_test_recon = tf.reduce_mean(test_chain.model['x'].log_prob(), axis=0) / config.x_shape_multiple / np.log(2)
         test_recon = tf.reduce_mean(
             ele_test_recon
         )
-        ele_test_ll = test_chain.vi.evaluation.is_loglikelihood()
+        ele_test_ll = test_chain.vi.evaluation.is_loglikelihood() / config.x_shape_multiple / np.log(2)
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )

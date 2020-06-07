@@ -301,6 +301,7 @@ def main():
         test_p_net = p_net(glow_theta, observed={'x': input_x},
                            n_z=config.test_n_qz)
         ele_test_ll = test_p_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
+        ele_test_ll = ele_test_ll / config.x_shape_multiple / np.log(2)
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )

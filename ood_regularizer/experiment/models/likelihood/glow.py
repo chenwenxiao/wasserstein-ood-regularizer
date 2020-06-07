@@ -287,9 +287,10 @@ def main():
         ele_test_origin_ll = tf.reduce_sum(
             test_p_net['x'].log_prob().flow_origin.log_prob() - config.x_shape_multiple * np.log(128),
             axis=tf.range(-len(config.x_shape), 0)
-        )
+        ) / config.x_shape_multiple / np.log(2)
         print(ele_test_origin_ll.shape)
         ele_test_ll = test_p_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
+        ele_test_ll = ele_test_ll / config.x_shape_multiple / np.log(2)
         ele_test_log_det = ele_test_ll - ele_test_origin_ll
         test_nll = -tf.reduce_mean(
             ele_test_ll
@@ -298,6 +299,7 @@ def main():
         test_p_omega_net = p_omega_net(glow_omega, observed={'x': input_x},
                                        n_z=config.test_n_qz)
         ele_test_omega_ll = test_p_omega_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
+        ele_test_omega_ll = ele_test_omega_ll / config.x_shape_multiple / np.log(2)
         test_omega_nll = -tf.reduce_mean(
             ele_test_omega_ll
         )
@@ -397,7 +399,7 @@ def main():
                            max_epoch=config.max_epoch + 1,
                            max_step=config.max_step,
                            summary_dir=(results.system_path('train_summary')
-                           if config.write_summary else None),
+                                        if config.write_summary else None),
                            summary_graph=tf.get_default_graph(),
                            early_stopping=False,
                            checkpoint_dir=results.system_path('checkpoint'),
@@ -430,7 +432,7 @@ def main():
                     )
 
                     make_diagram(
-                        ele_test_ll + input_complexity,
+                        ele_test_ll + input_complexity / config.x_shape_multiple / np.log(2),
                         [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
                          svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
                         [input_x, input_complexity],
