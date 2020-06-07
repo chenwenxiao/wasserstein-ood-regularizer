@@ -238,7 +238,7 @@ def main():
     if x_train.shape[-1] == 1:
         x_train, x_test, svhn_train, svhn_test = np.tile(x_train, (1, 1, 1, 3)), np.tile(x_test, (1, 1, 1, 3)), np.tile(
             svhn_train, (1, 1, 1, 3)), np.tile(svhn_test, (1, 1, 1, 3))
-        myRNVPConfig.flow_depth = 5
+        myRNVPConfig.flow_depth = 10
         x_train_complexity, x_test_complexity, svhn_train_complexity, svhn_test_complexity = x_train_complexity * 3.0, x_test_complexity * 3.0, svhn_train_complexity * 3.0, svhn_test_complexity * 3.0
 
     config.x_shape = x_train.shape[1:]
@@ -328,6 +328,12 @@ def main():
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             glow_train_op = glow_optimizer.apply_gradients(glow_grads)
             glow_omega_train_op = glow_omega_optimizer.apply_gradients(glow_omega_grads)
+
+        update_ops = []
+        for i in range(len(glow_params)):
+            print(glow_omega_params[i], glow_params[i])
+            update_ops.append(tf.assign(glow_omega_params[i], glow_params[i]))
+        copy_ops = tf.group(*update_ops)
 
     # derive the plotting function
     with tf.name_scope('plotting'):

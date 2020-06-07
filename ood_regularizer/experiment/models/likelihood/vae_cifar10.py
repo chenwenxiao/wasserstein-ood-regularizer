@@ -75,7 +75,7 @@ class ExpConfig(spt.Config):
     plot_epoch_freq = 20
     distill_ratio = 1.0
     distill_epoch = 25
-    mcmc_times = 10
+    mcmc_times = 5
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
