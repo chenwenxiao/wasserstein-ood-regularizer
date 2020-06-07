@@ -238,7 +238,7 @@ def main():
     if x_train.shape[-1] == 1:
         x_train, x_test, svhn_train, svhn_test = np.tile(x_train, (1, 1, 1, 3)), np.tile(x_test, (1, 1, 1, 3)), np.tile(
             svhn_train, (1, 1, 1, 3)), np.tile(svhn_test, (1, 1, 1, 3))
-        # myRNVPConfig.flow_depth = 5
+        myRNVPConfig.flow_depth = 5
         x_train_complexity, x_test_complexity, svhn_train_complexity, svhn_test_complexity = x_train_complexity * 3.0, x_test_complexity * 3.0, svhn_train_complexity * 3.0, svhn_test_complexity * 3.0
 
     config.x_shape = x_train.shape[1:]
@@ -397,7 +397,7 @@ def main():
                            max_epoch=config.max_epoch + 1,
                            max_step=config.max_step,
                            summary_dir=(results.system_path('train_summary')
-                                        if config.write_summary else None),
+                           if config.write_summary else None),
                            summary_graph=tf.get_default_graph(),
                            early_stopping=False,
                            checkpoint_dir=results.system_path('checkpoint'),
