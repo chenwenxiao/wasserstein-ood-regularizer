@@ -42,8 +42,8 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 200
-    warm_up_start = 100
+    max_epoch = 400
+    warm_up_start = 200
     initial_beta = -3.0
     uniform_scale = False
     use_transductive = True
@@ -61,7 +61,7 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 128
     smallest_step = 5e-5
-    initial_lr = 0.0005
+    initial_lr = 0.0002
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
@@ -232,6 +232,15 @@ def main():
     svhn_train = (svhn_train - 127.5) / 256.0 * 2
     svhn_test = (svhn_test - 127.5) / 256.0 * 2
 
+    x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
+    svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
+
+    if x_train.shape[-1] == 1:
+        x_train, x_test, svhn_train, svhn_test = np.tile(x_train, (1, 1, 1, 3)), np.tile(x_test, (1, 1, 1, 3)), np.tile(
+            svhn_train, (1, 1, 1, 3)), np.tile(svhn_test, (1, 1, 1, 3))
+        # myRNVPConfig.flow_depth = 5
+        x_train_complexity, x_test_complexity, svhn_train_complexity, svhn_test_complexity = x_train_complexity * 3.0, x_test_complexity * 3.0, svhn_train_complexity * 3.0, svhn_test_complexity * 3.0
+
     config.x_shape = x_train.shape[1:]
     config.x_shape_multiple = 1
     for x in config.x_shape:
@@ -360,9 +369,6 @@ def main():
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
-
-    x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
-    svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
 
     cifar_train_flow_with_complexity = spt.DataFlow.arrays([x_train, x_train_complexity],
                                                            config.test_batch_size)
