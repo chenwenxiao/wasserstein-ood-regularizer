@@ -583,7 +583,7 @@ def main():
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_{}'.format(epoch)
+                        fig_name='log_prob_histogram_{}'.format(epoch), return_metrics=True
                     )
 
                     def t_perm(base, another_arrays=None):
