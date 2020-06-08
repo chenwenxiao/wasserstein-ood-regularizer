@@ -361,13 +361,16 @@ def main():
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
+    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
     train_flow = spt.DataFlow.arrays([x_train, y_train], config.batch_size, shuffle=True,
                                      skip_incomplete=True)
+    train_flow = train_flow.map(uniform_sampler)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
                                           shuffle=True,
                                           skip_incomplete=True)
+    mixed_test_flow = mixed_test_flow.map(uniform_sampler)
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
     reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True)
@@ -445,10 +448,12 @@ def main():
                     train_flow = spt.DataFlow.arrays([x_train[y_train == current_class]],
                                                      config.batch_size, shuffle=True,
                                                      skip_incomplete=True)
+                    train_flow = train_flow.map(uniform_sampler)
                     mixed_test_flow = spt.DataFlow.arrays([mixed_array[mixed_array_predict == current_class]],
                                                           config.batch_size,
                                                           shuffle=True,
                                                           skip_incomplete=True)
+                    mixed_test_flow = mixed_test_flow.map(uniform_sampler)
                     return train_flow, mixed_test_flow
 
                 if (epoch - config.warm_up_start) % config.test_epoch_freq == 1 and epoch > config.warm_up_start:

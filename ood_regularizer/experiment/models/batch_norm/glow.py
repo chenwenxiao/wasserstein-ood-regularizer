@@ -309,7 +309,9 @@ def main():
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
+    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
+    train_flow = train_flow.map(uniform_sampler)
 
     tmp_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size, shuffle=True)
     mixed_array = np.concatenate([x_test, svhn_test])

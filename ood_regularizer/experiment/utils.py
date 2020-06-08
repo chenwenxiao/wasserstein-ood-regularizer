@@ -82,9 +82,12 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, 
 
 def make_diagram(op, flows, input_x, colors=['red', 'salmon', 'green', 'lightgreen'],
                  names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
-                 x_label='log(bit/dims)', fig_name='log_pro_histogram'):
+                 x_label='log(bit/dims)', fig_name='log_pro_histogram', return_metrics=False):
     packs = [get_ele(op, flow, input_x) for flow in flows]
-    return plot_fig(packs, colors, names, x_label, fig_name)
+    if return_metrics:
+        return packs
+    else:
+        return plot_fig(packs, colors, names, x_label, fig_name)
 
 
 if __name__ == '__main__':

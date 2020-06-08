@@ -25,7 +25,7 @@ from ood_regularizer.experiment.datasets.celeba import load_celeba
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.utils import get_mixed_array
-from ood_regularizer.experiment.utils import make_diagram, get_ele
+from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
 
 
 class ExpConfig(spt.Config):
@@ -578,13 +578,31 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
-                    make_diagram(
+                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(
                         ele_test_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], [input_x, input_y],
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
+
+                    def t_perm(base, another_arrays=None):
+                        base = sorted(base)
+                        N = len(base)
+                        return_arrays = []
+                        for array in another_arrays:
+                            return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
+                        return return_arrays
+
+                    [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
+                        cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
+
+                    plot_fig(data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
+                             color_list=['red', 'salmon', 'green', 'lightgreen'],
+                             label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                             x_label='bits/dim',
+                             fig_name='T_perm_histogram_{}'.format(epoch))
 
                     make_diagram(
                         ele_test_omega_ll,

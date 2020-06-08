@@ -25,7 +25,7 @@ from ood_regularizer.experiment.datasets.overall import load_overall, load_compl
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPConfig
 from ood_regularizer.experiment.models.utils import get_mixed_array
-from ood_regularizer.experiment.utils import make_diagram, get_ele
+from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
 
 
 class ExpConfig(spt.Config):
@@ -386,12 +386,15 @@ def main():
     svhn_test_flow_with_complexity = spt.DataFlow.arrays([svhn_test, svhn_test_complexity],
                                                          config.test_batch_size)
 
+    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
+    train_flow = train_flow.map(uniform_sampler)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
                                           shuffle=True,
                                           skip_incomplete=True)
+    mixed_test_flow.map(uniform_sampler)
 
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
@@ -421,13 +424,31 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
-                    make_diagram(
+                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
+
+                    def t_perm(base, another_arrays=None):
+                        base = sorted(base)
+                        N = len(base)
+                        return_arrays = []
+                        for array in another_arrays:
+                            return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
+                        return return_arrays
+
+                    [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
+                        cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
+
+                    plot_fig(data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
+                             color_list=['red', 'salmon', 'green', 'lightgreen'],
+                             label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                             x_label='bits/dim',
+                             fig_name='T_perm_histogram_{}'.format(epoch))
 
                     make_diagram(
                         ele_test_omega_ll,
@@ -511,6 +532,7 @@ def main():
                     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
                                                           shuffle=True,
                                                           skip_incomplete=True)
+                    mixed_test_flow.map(uniform_sampler)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()
