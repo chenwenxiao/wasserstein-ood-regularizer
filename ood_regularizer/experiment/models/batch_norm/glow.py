@@ -215,7 +215,7 @@ def main():
     if x_train.shape[-1] == 1:
         x_train, x_test, svhn_train, svhn_test = np.tile(x_train, (1, 1, 1, 3)), np.tile(x_test, (1, 1, 1, 3)), np.tile(
             svhn_train, (1, 1, 1, 3)), np.tile(svhn_test, (1, 1, 1, 3))
-        myRNVPConfig.flow_depth = 5
+        myRNVPConfig.flow_depth = 10
 
     config.x_shape = x_train.shape[1:]
     config.x_shape_multiple = 1
