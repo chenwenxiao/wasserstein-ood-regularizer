@@ -346,6 +346,9 @@ def main():
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
         ele_test_energy = D_psi(input_x)
+        ele_gradient = tf.square(tf.gradients(ele_test_energy, [input_x])[0])
+        ele_gradient_norm = tf.sqrt(tf.reduce_sum(ele_gradient, tf.range(-len(config.x_shape), 0)))
+        print(ele_gradient_norm)
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
@@ -437,6 +440,14 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
+                    make_diagram(
+                        ele_gradient_norm,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='gradient_norm_histogram_{}'.format(epoch), return_metrics=True
+                    )
+
                     AUC = make_diagram(
                         ele_test_energy,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
