@@ -85,6 +85,7 @@ def make_diagram(op, flows, input_x, colors=['red', 'salmon', 'green', 'lightgre
                  x_label='log(bit/dims)', fig_name='log_pro_histogram', return_metrics=False):
     packs = [get_ele(op, flow, input_x) for flow in flows]
     if return_metrics:
+        plot_fig(packs, colors, names, x_label, fig_name)
         return packs
     else:
         return plot_fig(packs, colors, names, x_label, fig_name)

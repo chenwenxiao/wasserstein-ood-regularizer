@@ -290,10 +290,6 @@ def main():
             axis=np.arange(-len(config.x_shape), 0)
         ) / config.x_shape_multiple / np.log(2)
 
-        ele_gradient = tf.square(tf.gradients(ele_test_ll, [input_x])[0])
-        ele_gradient_norm = tf.sqrt(tf.reduce_sum(ele_gradient, tf.range(-len(config.x_shape), 0)))
-        print(ele_gradient_norm)
-
         test_p_omega_net = p_omega_net(input_x)
         ele_test_omega_ll = -tf.reduce_sum(
             tf.nn.sparse_softmax_cross_entropy_with_logits(labels=input_x, logits=test_p_omega_net),
@@ -374,14 +370,6 @@ def main():
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='log_prob_histogram_{}'.format(epoch), return_metrics=True
-                    )
-
-                    make_diagram(
-                        ele_gradient_norm,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='gradient_norm_histogram_{}'.format(epoch), return_metrics=True
                     )
 
                     def t_perm(base, another_arrays=None):
