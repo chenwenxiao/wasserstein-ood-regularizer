@@ -386,15 +386,12 @@ def main():
     svhn_test_flow_with_complexity = spt.DataFlow.arrays([svhn_test, svhn_test_complexity],
                                                          config.test_batch_size)
 
-    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
-    train_flow = train_flow.map(uniform_sampler)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
                                           shuffle=True,
                                           skip_incomplete=True)
-    mixed_test_flow.map(uniform_sampler)
 
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
@@ -532,7 +529,6 @@ def main():
                     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
                                                           shuffle=True,
                                                           skip_incomplete=True)
-                    mixed_test_flow.map(uniform_sampler)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()
