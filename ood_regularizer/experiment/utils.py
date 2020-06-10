@@ -47,6 +47,7 @@ def draw_metric(metric, color, label, fig_name):
     np.save(fig_name + label, metric)
     metric = metric[~np.isnan(metric)]
     metric = metric[~np.isinf(metric)]
+    metric = metric.clip()
     metric = list(metric)
     n, bins, patches = pyplot.hist(metric, 40, normed=True, facecolor=color, alpha=0.4, label=label)
 

@@ -22,22 +22,22 @@ def load_overall(dataset_name, dtype=np.float):
     y_test = None
     if dataset_name == 'celeba':
         x_train, x_validate, x_test = load_celeba(img_size=32)
-    elif dataset_name == 'imagenet':
-        (x_train, y_train), (x_test, y_test) = load_imagenet()
     elif dataset_name == 'tinyimagenet':
         (x_train, y_train), (x_test, y_test) = load_tinyimagenet()
-    elif dataset_name == 'isun':
-        x_test, y_test = load_isun_test()
-    elif dataset_name == 'sun':
-        (x_train, y_train), (x_test, y_test) = load_sun()
-    elif dataset_name == 'lsun':
-        x_test, y_test = load_lsun_test()
     elif dataset_name == 'svhn':
         (x_train, y_train), (x_test, y_test) = load_svhn()
     elif dataset_name == 'cifar10':
         (x_train, y_train), (x_test, y_test) = load_cifar10()
     elif dataset_name == 'cifar100':
         (x_train, y_train), (x_test, y_test) = load_cifar100()
+    elif dataset_name == 'imagenet':
+        (x_train, y_train), (x_test, y_test) = load_imagenet()
+    elif dataset_name == 'isun':
+        x_test, y_test = load_isun_test()
+    elif dataset_name == 'sun':
+        (x_train, y_train), (x_test, y_test) = load_sun()
+    elif dataset_name == 'lsun':
+        x_test, y_test = load_lsun_test()
     elif dataset_name == 'kmnist':
         (x_train, y_train), (x_test, y_test) = load_kmnist()
     elif dataset_name == 'not_mnist':
