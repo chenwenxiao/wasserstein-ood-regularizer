@@ -65,22 +65,26 @@ def draw_metric(metric, color, label, fig_name):
 
 
 def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, -1)):
-    pyplot.cla()
-    pyplot.plot()
-    pyplot.grid(c='silver', ls='--')
-    pyplot.xlabel(x_label)
-    spines = pyplot.gca().spines
-    for sp in spines:
-        spines[sp].set_color('silver')
+    tmp = None
+    try:
+        pyplot.cla()
+        pyplot.plot()
+        pyplot.grid(c='silver', ls='--')
+        pyplot.xlabel(x_label)
+        spines = pyplot.gca().spines
+        for sp in spines:
+            spines[sp].set_color('silver')
 
-    for i in range(len(data_list)):
-        draw_metric(data_list[i], color_list[i], label_list[i], fig_name)
-    pyplot.savefig('plotting/%s.jpg' % fig_name)
+        for i in range(len(data_list)):
+            draw_metric(data_list[i], color_list[i], label_list[i], fig_name)
+        pyplot.savefig('plotting/%s.jpg' % fig_name)
 
-    pyplot.cla()
-    pyplot.plot()
-    tmp = draw_curve(data_list[auc_pair[0]], data_list[auc_pair[1]], fig_name)
-    pyplot.savefig('plotting/%s_curve.jpg' % fig_name)
+        pyplot.cla()
+        pyplot.plot()
+        tmp = draw_curve(data_list[auc_pair[0]], data_list[auc_pair[1]], fig_name)
+        pyplot.savefig('plotting/%s_curve.jpg' % fig_name)
+    except Exception as e:
+        print(e)
     return tmp
 
 
