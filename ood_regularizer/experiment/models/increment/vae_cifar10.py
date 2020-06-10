@@ -319,8 +319,6 @@ def main():
         with tf.variable_scope('theta_optimizer'):
             VAE_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)
-        with tf.variable_scope('omega_optimizer'):
-            VAE_omega_optimizer = tf.train.AdamOptimizer(learning_rate)
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             VAE_train_op = VAE_optimizer.apply_gradients(VAE_grads)
 

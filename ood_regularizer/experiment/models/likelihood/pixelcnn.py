@@ -310,8 +310,8 @@ def main():
             omega_grads = omega_optimizer.compute_gradients(omega_loss, omega_params)
 
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            theta_train_op = theta_optimizer.apply_gradients(theta_grads)
             omega_train_op = omega_optimizer.apply_gradients(omega_grads)
+            theta_train_op = theta_optimizer.apply_gradients(theta_grads)
 
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
