@@ -62,7 +62,7 @@ class ExpConfig(spt.Config):
     max_step = None
     batch_size = 128
     smallest_step = 5e-5
-    initial_lr = 0.0005
+    initial_lr = 0.0002
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
@@ -93,8 +93,8 @@ config = ExpConfig()
 
 
 class MyRNVPConfig(RealNVPConfig):
-    flow_depth = 15
-    strict_invertible = True
+    flow_depth = 5
+    use_invertible_flow = False
     conv_coupling_squeeze_before_first_block = True
 
 
@@ -260,7 +260,7 @@ def main():
     if x_train.shape[-1] == 1:
         x_train, x_test, svhn_train, svhn_test = np.tile(x_train, (1, 1, 1, 3)), np.tile(x_test, (1, 1, 1, 3)), np.tile(
             svhn_train, (1, 1, 1, 3)), np.tile(svhn_test, (1, 1, 1, 3))
-        myRNVPConfig.flow_depth = 10
+        myRNVPConfig.flow_depth = 5
 
     config.class_num = np.max(y_train) + 1
     config.x_shape = x_train.shape[1:]

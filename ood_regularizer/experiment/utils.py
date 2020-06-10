@@ -26,6 +26,10 @@ def get_ele(op, flow, inputs):
 
 
 def draw_curve(cifar_test, svhn_test, fig_name):
+    cifar_test = cifar_test[~np.isnan(cifar_test)]
+    cifar_test = cifar_test[~np.isinf(cifar_test)]
+    svhn_test = svhn_test[~np.isnan(svhn_test)]
+    svhn_test = svhn_test[~np.isinf(svhn_test)]
     label = np.concatenate(([1] * len(cifar_test), [-1] * len(svhn_test)))
     score = np.concatenate((cifar_test, svhn_test))
 
