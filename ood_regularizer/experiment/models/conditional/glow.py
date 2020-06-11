@@ -378,6 +378,7 @@ def main():
     cifar_test_predict = None
 
     current_class = -1
+    step_counter = 0
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
@@ -456,10 +457,13 @@ def main():
                     current_class = current_class + 1
                     session.run(tf.global_variables_initializer())  # Initialize all variables
                     train_flow, mixed_test_flow = update_training_data()
+                    step_counter = 0
 
                 if epoch > config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
                         try:
+                            step_counter += 1
+                            learning_rate.set(min(1.0, step_counter / config.glow_warm_up_steps) * config.initial_lr)
                             _, batch_glow_loss = session.run([glow_train_op, glow_loss], feed_dict={
                                 input_x: x
                             })

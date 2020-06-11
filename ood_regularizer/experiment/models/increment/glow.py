@@ -53,7 +53,7 @@ class ExpConfig(spt.Config):
     mixed_train_skip = 1
     dynamic_epochs = True
     in_dataset_test_ratio = 1.0
-    glow_warm_up_steps = 50000
+    glow_warm_up_steps = 100000
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -322,6 +322,8 @@ def main():
     reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True)
     reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True)
 
+    step_counter = 0
+
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
@@ -402,6 +404,8 @@ def main():
 
                 for step, [x] in loop.iter_steps(train_flow):
                     try:
+                        step_counter += 1
+                        learning_rate.set(min(1.0, step_counter / config.glow_warm_up_steps) * config.initial_lr)
                         _, batch_VAE_loss = session.run([glow_train_op, glow_loss], feed_dict={
                             input_x: x
                         })
@@ -414,6 +418,7 @@ def main():
 
                 if epoch == config.warm_up_start:
                     learning_rate.set(config.initial_lr)
+                    step_counter = 0
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)

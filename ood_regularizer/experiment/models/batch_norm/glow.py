@@ -330,6 +330,7 @@ def main():
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
     reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True)
 
+    step_counter = 0
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
@@ -416,6 +417,8 @@ def main():
 
                 for step, [x] in loop.iter_steps(train_flow):
                     try:
+                        step_counter += 1
+                        learning_rate.set(min(1.0, step_counter / config.glow_warm_up_steps) * config.initial_lr)
                         _, batch_glow_loss = session.run([glow_train_op, glow_loss], feed_dict={
                             input_x: x
                         })
@@ -427,6 +430,7 @@ def main():
                     learning_rate.anneal()
 
                 if epoch == config.warm_up_start:
+                    step_counter = 0
                     learning_rate.set(config.initial_lr)
 
                 if epoch % config.plot_epoch_freq == 0:

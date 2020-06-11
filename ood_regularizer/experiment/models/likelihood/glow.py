@@ -44,8 +44,8 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 400
-    warm_up_start = 200
+    max_epoch = 200
+    warm_up_start = 100
     initial_beta = -3.0
     uniform_scale = False
     use_transductive = True
@@ -55,7 +55,7 @@ class ExpConfig(spt.Config):
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
-    glow_warm_up_steps = 50000
+    glow_warm_up_steps = 100000
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
