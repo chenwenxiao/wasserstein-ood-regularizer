@@ -27,6 +27,8 @@ from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPCon
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
 
+from imgaug import augmenters as iaa
+
 
 class ExpConfig(spt.Config):
     # model parameters
@@ -53,13 +55,14 @@ class ExpConfig(spt.Config):
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
+    glow_warm_up_steps = 50000
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
     max_step = None
-    batch_size = 128
+    batch_size = 32
     smallest_step = 5e-5
     initial_lr = 0.0005
     lr_anneal_factor = 0.5
@@ -75,7 +78,7 @@ class ExpConfig(spt.Config):
     test_epoch_freq = 200
     plot_epoch_freq = 20
     distill_ratio = 1.0
-    distill_epoch = 50
+    distill_epoch = 5000
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -386,12 +389,24 @@ def main():
     svhn_test_flow_with_complexity = spt.DataFlow.arrays([svhn_test, svhn_test_complexity],
                                                          config.test_batch_size)
 
+    def augment(arrays):
+        img = arrays
+        seq = iaa.Sequential([iaa.Affine(
+            translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
+            mode='edge',
+            backend='cv2'
+        )])
+        return [seq.augment_images(img)]
+
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
+    train_flow = train_flow.map(augment)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
                                           shuffle=True,
                                           skip_incomplete=True)
+    mixed_test_flow = mixed_test_flow.map(augment)
+    step_counter = 0
 
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
@@ -495,6 +510,8 @@ def main():
                 if epoch <= config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
                         try:
+                            step_counter += 1
+                            learning_rate.set(min(1.0, step_counter / config.glow_warm_up_steps) * config.initial_lr)
                             _, batch_glow_loss = session.run([glow_train_op, glow_loss], feed_dict={
                                 input_x: x
                             })
@@ -504,6 +521,8 @@ def main():
                 else:
                     for step, [x] in loop.iter_steps(mixed_test_flow):
                         try:
+                            step_counter += 1
+                            learning_rate.set(min(1.0, step_counter / config.glow_warm_up_steps) * config.initial_lr)
                             _, batch_glow_omega_loss = session.run([glow_omega_train_op, glow_omega_loss], feed_dict={
                                 input_x: x
                             })
@@ -515,6 +534,7 @@ def main():
                     learning_rate.anneal()
 
                 if epoch == config.warm_up_start:
+                    step_counter = 0
                     learning_rate.set(config.initial_lr)
 
                 if epoch % config.plot_epoch_freq == 0:

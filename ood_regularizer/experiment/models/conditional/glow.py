@@ -29,6 +29,7 @@ from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPCon
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
 
+from imgaug import augmenters as iaa
 
 class ExpConfig(spt.Config):
     # model parameters

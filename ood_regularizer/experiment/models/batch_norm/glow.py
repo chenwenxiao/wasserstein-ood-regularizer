@@ -27,6 +27,7 @@ from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPCon
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, plot_fig
 
+from imgaug import augmenters as iaa
 
 class ExpConfig(spt.Config):
     # model parameters
@@ -52,12 +53,13 @@ class ExpConfig(spt.Config):
     mixed_ratio2 = 0.9
     self_ood = False
     in_dataset_test_ratio = 1.0
+    glow_warm_up_steps = 50000
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
 
     max_step = None
-    batch_size = 64
+    batch_size = 32
     smallest_step = 5e-5
     initial_lr = 0.0002
     lr_anneal_factor = 0.5
@@ -303,12 +305,22 @@ def main():
         except Exception as e:
             print(e)
 
+    def augment(arrays):
+        img = arrays
+        seq = iaa.Sequential([iaa.Affine(
+            translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
+            mode='edge',
+            backend='cv2'
+        )])
+        return [seq.augment_images(img)]
+
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
+    train_flow = train_flow.map(augment)
 
     tmp_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size, shuffle=True)
     mixed_array = np.concatenate([x_test, svhn_test])

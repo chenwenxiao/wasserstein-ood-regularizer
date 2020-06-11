@@ -48,9 +48,7 @@ class ExpConfig(spt.Config):
     mixed_train = False
     mixed_train_epoch = 20
     mixed_train_skip = 1
-    initial_omega_with_theta = True
     dynamic_epochs = True
-    self_ood = False
     in_dataset_test_ratio = 1.0
 
     in_dataset = 'cifar10'
