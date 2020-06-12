@@ -97,6 +97,7 @@ config = ExpConfig()
 class MyRNVPConfig(RealNVPConfig):
     flow_depth = 5
     use_invertible_flow = False
+    coupling_scale_type = 'exp'
     conv_coupling_squeeze_before_first_block = True
 
 
@@ -462,10 +463,12 @@ def main():
                     train_flow = spt.DataFlow.arrays([x_train[y_train == current_class]],
                                                      config.batch_size, shuffle=True,
                                                      skip_incomplete=True)
+                    train_flow = train_flow.map(augment)
                     mixed_test_flow = spt.DataFlow.arrays([mixed_array[mixed_array_predict == current_class]],
                                                           config.batch_size,
                                                           shuffle=True,
                                                           skip_incomplete=True)
+                    mixed_test_flow = mixed_test_flow.map(augment)
                     return train_flow, mixed_test_flow
 
                 if (epoch - config.warm_up_start) % config.test_epoch_freq == 1 and epoch > config.warm_up_start:

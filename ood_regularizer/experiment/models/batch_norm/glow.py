@@ -91,6 +91,7 @@ config = ExpConfig()
 class MyRNVPConfig(RealNVPConfig):
     flow_depth = 5
     strict_invertible = True
+    coupling_scale_type = 'exp'
     conv_coupling_squeeze_before_first_block = True
 
 

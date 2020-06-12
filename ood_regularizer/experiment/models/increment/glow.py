@@ -91,6 +91,7 @@ config = ExpConfig()
 class MyRNVPConfig(RealNVPConfig):
     flow_depth = 15
     strict_invertible = True
+    coupling_scale_type = 'exp'
     conv_coupling_squeeze_before_first_block = True
 
 
@@ -380,6 +381,7 @@ def main():
                                 batch_x = mixed_array[mixed_index]
                                 # print(batch_x.shape)
                             try:
+                                [batch_x] = augment(batch_x)
                                 _, batch_VAE_loss = session.run([glow_train_op, glow_loss], feed_dict={
                                     input_x: batch_x
                                 })
