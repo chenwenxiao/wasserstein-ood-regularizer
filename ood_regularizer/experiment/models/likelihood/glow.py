@@ -377,6 +377,18 @@ def main():
         except Exception as e:
             print(e)
 
+    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
+    def augment(arrays):
+        img = arrays
+        seq = iaa.Sequential([iaa.Affine(
+            translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
+            mode='edge',
+            backend='cv2'
+        )])
+        img = seq.augment_images(img)
+        img = uniform_sampler.sample(img)
+        return [img]
+
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
@@ -389,18 +401,6 @@ def main():
                                                           config.test_batch_size)
     svhn_test_flow_with_complexity = spt.DataFlow.arrays([svhn_test, svhn_test_complexity],
                                                          config.test_batch_size)
-
-    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
-    def augment(arrays):
-        img = arrays
-        seq = iaa.Sequential([iaa.Affine(
-            translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
-            mode='edge',
-            backend='cv2'
-        )])
-        img = seq.augment_images(img)
-        img = uniform_sampler.sample(img)
-        return [img]
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
     train_flow = train_flow.map(augment)
@@ -428,7 +428,7 @@ def main():
                            summary_graph=tf.get_default_graph(),
                            early_stopping=False,
                            checkpoint_dir=results.system_path('checkpoint'),
-                           checkpoint_epoch_freq=100,
+                           checkpoint_epoch_freq=config.warm_up_start,
                            restore_checkpoint=restore_checkpoint
                            ) as loop:
 
@@ -439,13 +439,13 @@ def main():
             # adversarial training
             for epoch in epoch_iterator:
 
-                if epoch == config.max_epoch + 1:
-                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(
+                if epoch == config.warm_up_start + 1:
+                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(loop,
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_{}'.format(epoch), return_metrics=True
+                        fig_name='log_prob_histogram_{}'.format(epoch)
                     )
 
                     def t_perm(base, another_arrays=None):
@@ -466,7 +466,7 @@ def main():
                              x_label='bits/dim',
                              fig_name='T_perm_histogram_{}'.format(epoch))
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_test_omega_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
@@ -474,7 +474,7 @@ def main():
                         fig_name='log_prob_mixed_histogram_{}'.format(epoch)
                     )
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_test_ll + input_complexity / config.x_shape_multiple / np.log(2),
                         [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
                          svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
@@ -484,7 +484,7 @@ def main():
                         fig_name='ll_with_complexity_histogram_{}'.format(epoch)
                     )
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_test_origin_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
@@ -492,7 +492,7 @@ def main():
                         fig_name='origin_log_prob_histogram_{}'.format(epoch)
                     )
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_test_log_det,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
@@ -500,16 +500,15 @@ def main():
                         fig_name='log_det_histogram_{}'.format(epoch)
                     )
 
-                    AUC = make_diagram(
-                        -ele_test_kl,
+                if epoch == config.max_epoch + 1:
+                    make_diagram(loop,
+                        ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='kl_histogram_{}'.format(epoch)
+                        fig_name='kl_histogram_{}'.format(epoch),
+                        addtion_data=[cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll]
                     )
-                    loop.collect_metrics(AUC=AUC)
-                    loop.print_logs()
-                    break
 
                 if epoch <= config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
@@ -527,7 +526,7 @@ def main():
                         try:
                             step_counter += 1
                             learning_rate.set(min(1.0, step_counter / config.glow_warm_up_steps) * config.initial_lr)
-                            _, batch_glow_omega_loss = session.run([glow_omega_train_op, glow_omega_loss], feed_dict={
+                            _, batch_glow_omega_loss = session.run([glow_train_op, glow_loss], feed_dict={
                                 input_x: x
                             })
                             loop.collect_metrics(glow_omega_loss=batch_glow_omega_loss)

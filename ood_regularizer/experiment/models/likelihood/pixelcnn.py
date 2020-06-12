@@ -352,7 +352,7 @@ def main():
                            summary_graph=tf.get_default_graph(),
                            early_stopping=False,
                            checkpoint_dir=results.system_path('checkpoint'),
-                           checkpoint_epoch_freq=100,
+                           checkpoint_epoch_freq=config.warm_up_start,
                            restore_checkpoint=restore_checkpoint
                            ) as loop:
 
@@ -364,12 +364,12 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
-                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(
+                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(loop,
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_{}'.format(epoch), return_metrics=True
+                        fig_name='log_prob_histogram_{}'.format(epoch)
                     )
 
                     def t_perm(base, another_arrays=None):
@@ -390,7 +390,7 @@ def main():
                              x_label='bits/dim',
                              fig_name='T_perm_histogram_{}'.format(epoch))
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_test_omega_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
@@ -398,7 +398,7 @@ def main():
                         fig_name='log_prob_mixed_histogram_{}'.format(epoch)
                     )
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_test_omega_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
@@ -406,7 +406,7 @@ def main():
                         fig_name='log_prob_mixed_histogram_{}'.format(epoch)
                     )
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_test_ll + input_complexity / config.x_shape_multiple / np.log(2),
                         [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
                          svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
@@ -416,7 +416,7 @@ def main():
                         fig_name='ll_with_complexity_histogram_{}'.format(epoch)
                     )
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
@@ -424,7 +424,7 @@ def main():
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
 
-                    AUC = make_diagram(
+                    AUC = make_diagram(loop,
                         -ele_test_kl,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',

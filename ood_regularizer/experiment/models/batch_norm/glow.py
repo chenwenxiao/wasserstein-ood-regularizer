@@ -404,7 +404,7 @@ def main():
                                    'batch_norm_r1-r2_log_pro_histogram', auc_pair=(0, 1))
                     loop.collect_metrics(AUC=AUC)
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
@@ -412,7 +412,7 @@ def main():
                         fig_name='log_prob_histogram_with_batch_norm_{}'.format(epoch)
                     )
 
-                    make_diagram(
+                    make_diagram(loop,
                         ele_eval_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',

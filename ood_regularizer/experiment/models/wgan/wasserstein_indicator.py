@@ -440,15 +440,15 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
-                    make_diagram(
+                    make_diagram(loop,
                         ele_gradient_norm,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='gradient_norm_histogram_{}'.format(epoch), return_metrics=True
+                        fig_name='gradient_norm_histogram_{}'.format(epoch)
                     )
 
-                    AUC = make_diagram(
+                    AUC = make_diagram(loop,
                         ele_test_energy,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',

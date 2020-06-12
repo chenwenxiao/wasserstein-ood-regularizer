@@ -88,15 +88,17 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, 
     return tmp
 
 
-def make_diagram(op, flows, input_x, colors=['red', 'salmon', 'green', 'lightgreen'],
+def make_diagram(loop, op, flows, input_x, colors=['red', 'salmon', 'green', 'lightgreen'],
                  names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
-                 x_label='log(bit/dims)', fig_name='log_pro_histogram', return_metrics=False):
+                 x_label='log(bit/dims)', fig_name='log_pro_histogram', addtion_data=None):
     packs = [get_ele(op, flow, input_x) for flow in flows]
-    if return_metrics:
-        plot_fig(packs, colors, names, x_label, fig_name)
-        return packs
-    else:
-        return plot_fig(packs, colors, names, x_label, fig_name)
+    if addtion_data is not None:
+        if len(packs) == len(addtion_data):
+            packs = [packs[i] + addtion_data[i] for i in range(len(packs))]
+    _dict = {}
+    _dict[fig_name] = plot_fig(packs, colors, names, x_label, fig_name)
+    loop.collect_metrics(_dict)
+    return packs
 
 
 if __name__ == '__main__':
