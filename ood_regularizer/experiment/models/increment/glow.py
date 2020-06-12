@@ -300,6 +300,7 @@ def main():
         except Exception as e:
             print(e)
 
+    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
     def augment(arrays):
         img = arrays
         seq = iaa.Sequential([iaa.Affine(
@@ -307,7 +308,9 @@ def main():
             mode='edge',
             backend='cv2'
         )])
-        return [seq.augment_images(img)]
+        img = seq.augment_images(img)
+        img = uniform_sampler.sample(img)
+        return [img]
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
     train_flow = train_flow.map(augment)

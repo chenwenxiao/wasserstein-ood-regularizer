@@ -305,6 +305,8 @@ def main():
         except Exception as e:
             print(e)
 
+    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
+
     def augment(arrays):
         img = arrays
         seq = iaa.Sequential([iaa.Affine(
@@ -312,7 +314,9 @@ def main():
             mode='edge',
             backend='cv2'
         )])
-        return [seq.augment_images(img)]
+        img = seq.augment_images(img)
+        img = uniform_sampler.sample(img)
+        return [img]
 
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)

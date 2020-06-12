@@ -31,6 +31,7 @@ from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
 
 from imgaug import augmenters as iaa
 
+
 class ExpConfig(spt.Config):
     # model parameters
     z_dim = 256
@@ -357,6 +358,19 @@ def main():
         except Exception as e:
             print(e)
 
+    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
+
+    def augment(arrays):
+        img = arrays
+        seq = iaa.Sequential([iaa.Affine(
+            translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
+            mode='edge',
+            backend='cv2'
+        )])
+        img = seq.augment_images(img)
+        img = uniform_sampler.sample(img)
+        return [img]
+
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
@@ -364,6 +378,7 @@ def main():
 
     train_flow = spt.DataFlow.arrays([x_train, y_train], config.batch_size, shuffle=True,
                                      skip_incomplete=True)
+    train_flow = train_flow.map(augment)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
