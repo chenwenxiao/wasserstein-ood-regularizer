@@ -279,6 +279,8 @@ def _conv_real_nvp(config: RealNVPConfig,
 
             for i in range(depth):
                 block_level = []
+                if config.use_actnorm_flow:
+                    block_level.append(spt.layers.ActNorm(value_ndims=3))
                 if config.use_invertible_flow:
                     block_level.append(
                         spt.layers.InvertibleConv2d(
@@ -298,8 +300,6 @@ def _conv_real_nvp(config: RealNVPConfig,
                         sigmoid_scale_bias=config.coupling_sigmoid_scale_bias,
                     )
                 )
-                if config.use_actnorm_flow:
-                    block_level.append(spt.layers.ActNorm(value_ndims=3))
                 if config.use_leaky_relu_flow:
                     block_level.append(
                         spt.layers.LeakyReLU().as_flow(value_ndims=3))

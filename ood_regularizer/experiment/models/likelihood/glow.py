@@ -44,8 +44,8 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 200
-    warm_up_start = 100
+    max_epoch = 400
+    warm_up_start = 200
     initial_beta = -3.0
     uniform_scale = False
     use_transductive = True
@@ -62,7 +62,7 @@ class ExpConfig(spt.Config):
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
     max_step = None
-    batch_size = 32
+    batch_size = 64
     smallest_step = 5e-5
     initial_lr = 0.0005
     lr_anneal_factor = 0.5
@@ -96,6 +96,7 @@ config = ExpConfig()
 class MyRNVPConfig(RealNVPConfig):
     flow_depth = 15
     strict_invertible = True
+    coupling_scale_type = 'exp'
     conv_coupling_squeeze_before_first_block = True
 
 
