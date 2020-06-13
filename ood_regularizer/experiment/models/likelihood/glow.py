@@ -522,7 +522,7 @@ def main():
                 else:
                     for step, [x] in loop.iter_steps(mixed_test_flow):
                         try:
-                            warm_up_steps = config.glow_warm_up_epochs * len(x_train) / config.batch_size
+                            warm_up_steps = config.glow_warm_up_epochs * len(mixed_array) / config.batch_size
                             step_counter += 1
                             learning_rate.set(min(1.0, step_counter / warm_up_steps) * config.initial_lr)
                             _, batch_glow_omega_loss = session.run([glow_train_op, glow_loss], feed_dict={
