@@ -55,7 +55,7 @@ class ExpConfig(spt.Config):
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
-    glow_warm_up_steps = 50000
+    glow_warm_up_epochs = 50
     pretrain = True
 
     in_dataset = 'cifar10'
@@ -510,8 +510,9 @@ def main():
                 if epoch <= config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
                         try:
+                            warm_up_steps = config.glow_warm_up_epochs * len(x_train) / config.batch_size
                             step_counter += 1
-                            learning_rate.set(min(1.0, step_counter / config.glow_warm_up_steps) * config.initial_lr)
+                            learning_rate.set(min(1.0, step_counter / warm_up_steps) * config.initial_lr)
                             _, batch_glow_loss = session.run([glow_train_op, glow_loss], feed_dict={
                                 input_x: x
                             })
@@ -521,8 +522,9 @@ def main():
                 else:
                     for step, [x] in loop.iter_steps(mixed_test_flow):
                         try:
+                            warm_up_steps = config.glow_warm_up_epochs * len(x_train) / config.batch_size
                             step_counter += 1
-                            learning_rate.set(min(1.0, step_counter / config.glow_warm_up_steps) * config.initial_lr)
+                            learning_rate.set(min(1.0, step_counter / warm_up_steps) * config.initial_lr)
                             _, batch_glow_omega_loss = session.run([glow_train_op, glow_loss], feed_dict={
                                 input_x: x
                             })
