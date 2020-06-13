@@ -47,6 +47,10 @@ def draw_metric(metric, color, label, fig_name):
     np.save(fig_name + label, metric)
     metric = metric[~np.isnan(metric)]
     metric = metric[~np.isinf(metric)]
+    mean, std = np.mean(metric), np.std(metric)
+    print('{} done. Value is {:.4f}±{:.4f}'.format(label, mean, std))
+    metric[metric > mean + std * 10] = mean + std * 10
+    metric[metric < mean - std * 10] = mean - std * 10
     metric = list(metric)
     n, bins, patches = pyplot.hist(metric, 40, normed=True, facecolor=color, alpha=0.4, label=label)
 
@@ -61,7 +65,6 @@ def draw_metric(metric, color, label, fig_name):
     n[2:-2] = smooth(n)
     pyplot.plot(index, n, color=color)
     pyplot.legend()
-    print('{} done. Value is {:.4f}±{:.4f}'.format(label, np.mean(metric), np.std(metric)))
 
 
 def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, -1)):

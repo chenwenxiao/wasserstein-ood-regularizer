@@ -55,7 +55,8 @@ class ExpConfig(spt.Config):
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
-    glow_warm_up_steps = 100000
+    glow_warm_up_steps = 50000
+    pretrain = True
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -242,13 +243,16 @@ def main():
     if x_train.shape[-1] == 1:
         x_train, x_test, svhn_train, svhn_test = np.tile(x_train, (1, 1, 1, 3)), np.tile(x_test, (1, 1, 1, 3)), np.tile(
             svhn_train, (1, 1, 1, 3)), np.tile(svhn_test, (1, 1, 1, 3))
-        myRNVPConfig.flow_depth = 10
         x_train_complexity, x_test_complexity, svhn_train_complexity, svhn_test_complexity = x_train_complexity * 3.0, x_test_complexity * 3.0, svhn_train_complexity * 3.0, svhn_test_complexity * 3.0
 
     config.x_shape = x_train.shape[1:]
     config.x_shape_multiple = 1
     for x in config.x_shape:
         config.x_shape_multiple *= x
+    x_train_complexity /= config.x_shape_multiple
+    x_test_complexity /= config.x_shape_multiple
+    svhn_train_complexity /= config.x_shape_multiple
+    svhn_test_complexity /= config.x_shape_multiple
 
     # input placeholders
     input_x = tf.placeholder(
@@ -335,7 +339,6 @@ def main():
 
         update_ops = []
         for i in range(len(glow_params)):
-            print(glow_omega_params[i], glow_params[i])
             update_ops.append(tf.assign(glow_omega_params[i], glow_params[i]))
         copy_ops = tf.group(*update_ops)
 
@@ -389,27 +392,17 @@ def main():
         img = uniform_sampler.sample(img)
         return [img]
 
-    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
-    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
-    svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
-    svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
+    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size).map(augment)
+    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size).map(augment)
+    svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size).map(augment)
+    svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size).map(augment)
 
-    cifar_train_flow_with_complexity = spt.DataFlow.arrays([x_train, x_train_complexity],
-                                                           config.test_batch_size)
-    cifar_test_flow_with_complexity = spt.DataFlow.arrays([x_test, x_test_complexity], config.test_batch_size)
-    svhn_train_flow_with_complexity = spt.DataFlow.arrays([svhn_train, svhn_train_complexity],
-                                                          config.test_batch_size)
-    svhn_test_flow_with_complexity = spt.DataFlow.arrays([svhn_test, svhn_test_complexity],
-                                                         config.test_batch_size)
-
-    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
-    train_flow = train_flow.map(augment)
+    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True).map(augment)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
                                           shuffle=True,
-                                          skip_incomplete=True)
-    mixed_test_flow = mixed_test_flow.map(augment)
+                                          skip_incomplete=True).map(augment)
     step_counter = 0
 
     with spt.utils.create_session().as_default() as session, \
@@ -440,7 +433,7 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.warm_up_start + 1:
-                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(loop,
+                    cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll = make_diagram(loop,
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
@@ -457,7 +450,7 @@ def main():
                         return return_arrays
 
                     [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
-                        cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
+                        cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
 
                     plot_fig(data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
                              color_list=['red', 'salmon', 'green', 'lightgreen'],
@@ -467,21 +460,13 @@ def main():
                              fig_name='T_perm_histogram_{}'.format(epoch))
 
                     make_diagram(loop,
-                        ele_test_omega_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
-                    )
-
-                    make_diagram(loop,
-                        ele_test_ll + input_complexity / config.x_shape_multiple / np.log(2),
-                        [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
-                         svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
+                        ele_test_ll,
+                        [cifar_train_flow, cifar_test_flow,svhn_train_flow, svhn_test_flow],
                         [input_x, input_complexity],
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='ll_with_complexity_histogram_{}'.format(epoch)
+                        fig_name='ll_with_complexity_histogram_{}'.format(epoch),
+                        addtion_data=[x_train_complexity, x_test_complexity, svhn_train_complexity, svhn_test_complexity]
                     )
 
                     make_diagram(loop,
@@ -499,15 +484,27 @@ def main():
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='log_det_histogram_{}'.format(epoch)
                     )
+                    if not config.pretrain:
+                        session.run(tf.global_variables_initializer())
+                    step_counter = 0 if config.pretrain else config.glow_warm_up_steps
 
                 if epoch == config.max_epoch + 1:
+
                     make_diagram(loop,
                         ele_test_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
+                    )
+
+                    make_diagram(loop,
+                        -ele_test_ll,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='kl_histogram_{}'.format(epoch),
-                        addtion_data=[cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll]
+                        addtion_data=[cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll]
                     )
 
                 if epoch <= config.warm_up_start:
@@ -537,7 +534,6 @@ def main():
                     learning_rate.anneal()
 
                 if epoch == config.warm_up_start:
-                    step_counter = 0
                     learning_rate.set(config.initial_lr)
 
                 if epoch % config.plot_epoch_freq == 0:
