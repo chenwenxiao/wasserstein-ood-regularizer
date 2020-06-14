@@ -12,7 +12,6 @@ usage:
 '''
 from PIL import Image
 from scipy.ndimage import filters
-from scipy.misc import imresize, imsave
 import os
 import tensorflow as tf
 import numpy as np
@@ -43,7 +42,6 @@ def _fetch_array_x(path):
         # # img.setflags(write=True)
         # # for dim in range(img.shape[2]):
         # #     img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
-        # img = imresize(img,(32,32,3))
         imgs.append(img)
         print(len(imgs))
 

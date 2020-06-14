@@ -12,8 +12,6 @@ import tarfile
 
 from PIL import Image
 from scipy.ndimage import filters
-from scipy.misc import imresize, imsave
-# from cv2 import resize as imresize
 import os
 import tensorflow as tf
 import numpy as np
@@ -44,7 +42,6 @@ def _fetch_array_x(path):
         # img.setflags(write=True)
         # for dim in range(img.shape[2]):
         # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
-        img = imresize(img, (32, 32, 3))
         if len(img.shape) > 2:
             imgs.append(img)
 
@@ -110,7 +107,6 @@ def export_images(db_path, limit=-1):
             # img.setflags(write=True)
             # for dim in range(img.shape[2]):
             # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
-            img = imresize(img, (32, 32, 3))
             if img.shape == (32, 32, 3):
                 imgs.append(img)
             else:
@@ -146,7 +142,6 @@ def prepare_numpy(path):
                 # img.setflags(write=True)
                 # for dim in range(img.shape[2]):
                 # img[...,dim] = filters.gaussian_filter(img[...,dim], sigma=(sigma,sigma))
-                img_ = imresize(img, (32, 32, 3))
                 if img_.shape == (32, 32, 3):
                     imgs[root].append(img_)
                 else:
