@@ -580,7 +580,7 @@ def main():
                 if epoch == config.max_epoch + 1:
                     cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(loop,
                         ele_test_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], [input_x, input_y],
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='log_prob_histogram_{}'.format(epoch)
@@ -637,7 +637,7 @@ def main():
                     )
 
                     make_diagram(loop,
-                        ele_test_ll + input_complexity / config.x_shape_multiple / np.log(2),
+                        ele_test_ll + input_complexity,
                         [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
                          svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
                         [input_x, input_y, input_complexity],

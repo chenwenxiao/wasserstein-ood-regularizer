@@ -7,6 +7,7 @@ import numpy as np
 import tensorkit as tk
 from tensorkit import tensor as T, examples
 
+from flow_next.models.glow import Glow
 from utils.data import *
 from utils.evaluation import dequantized_bpd
 
@@ -95,7 +96,7 @@ def build_optimizer(config: TrainConfig,
 
 
 def train_model(exp: mltk.Experiment,
-                model: T.Module,
+                model: Glow,
                 train_dataset: DataSet,
                 test_dataset: DataSet):
     train_config: TrainConfig = exp.config.train

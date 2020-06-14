@@ -407,7 +407,7 @@ def main():
                     )
 
                     make_diagram(loop,
-                        ele_test_ll + input_complexity / config.x_shape_multiple / np.log(2),
+                        ele_test_ll + input_complexity,
                         [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
                          svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
                         [input_x, input_complexity],

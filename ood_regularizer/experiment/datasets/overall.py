@@ -73,4 +73,11 @@ def load_complexity(dataset_name, compressor):
     if x_train_complexity is None:
         x_train_complexity = x_test_complexity
     print(x_train_complexity.shape, x_test_complexity.shape)
+    if dataset_name in ['celeba', 'tinyimagenet', 'svhn', 'cifar10', 'cifar100', 'imagenet', 'isun', 'sun', 'lsun']:
+        x_train_complexity = x_train_complexity / (32 * 32 * 3 * np.log(2))
+        x_test_complexity = x_test_complexity / (32 * 32 * 3 * np.log(2))
+    else:
+        x_train_complexity = x_train_complexity / (28 * 28 * 1 * np.log(2))
+        x_test_complexity = x_test_complexity / (28 * 28 * 1 * np.log(2))
+
     return x_train_complexity[..., compressor], x_test_complexity[..., compressor]
