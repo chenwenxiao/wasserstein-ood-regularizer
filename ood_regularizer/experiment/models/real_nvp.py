@@ -371,6 +371,8 @@ def _dense_real_nvp(config: RealNVPConfig,
         flows = []
         for i in range(config.flow_depth):
             level = []
+            if config.use_actnorm_flow:
+                level.append(spt.layers.ActNorm())
             if config.use_invertible_flow:
                 level.append(
                     spt.layers.InvertibleDense(
@@ -386,8 +388,6 @@ def _dense_real_nvp(config: RealNVPConfig,
                     sigmoid_scale_bias=config.coupling_sigmoid_scale_bias,
                 )
             )
-            if config.use_actnorm_flow:
-                level.append(spt.layers.ActNorm())
             flows.extend(level)
         flow = spt.layers.SequentialFlow(flows)
 
