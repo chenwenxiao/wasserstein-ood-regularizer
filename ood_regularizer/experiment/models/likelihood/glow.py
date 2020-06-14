@@ -481,17 +481,6 @@ def main():
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
 
-                if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
-                    # Distill
-                    mixed_array_kl = get_ele(-ele_test_ll, spt.DataFlow.arrays([mixed_array], config.batch_size),
-                                             input_x)
-                    mixed_array_kl = mixed_array_kl + np.concatenate([cifar_test_ll, svhn_test_ll])
-                    ascent_index = np.argsort(mixed_array_kl, axis=0)
-                    mixed_array = mixed_array[ascent_index[:int(config.distill_ratio * len(mixed_array))]]
-                    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
-                                                          shuffle=True,
-                                                          skip_incomplete=True)
-
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()
 
