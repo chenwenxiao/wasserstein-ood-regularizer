@@ -234,10 +234,10 @@ def main():
     config.x_shape_multiple = 1
     for x in config.x_shape:
         config.x_shape_multiple *= x
-    x_train_complexity /= config.x_shape_multiple
-    x_test_complexity /= config.x_shape_multiple
-    svhn_train_complexity /= config.x_shape_multiple
-    svhn_test_complexity /= config.x_shape_multiple
+    x_train_complexity = x_train_complexity / config.x_shape_multiple
+    x_test_complexity = x_test_complexity / config.x_shape_multiple
+    svhn_train_complexity = svhn_train_complexity / config.x_shape_multiple
+    svhn_test_complexity = svhn_test_complexity / config.x_shape_multiple
 
     # input placeholders
     input_x = tf.placeholder(
