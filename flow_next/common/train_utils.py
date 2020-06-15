@@ -98,7 +98,8 @@ def build_optimizer(config: TrainConfig,
 def train_model(exp: mltk.Experiment,
                 model: Glow,
                 train_dataset: DataSet,
-                test_dataset: DataSet):
+                test_dataset: DataSet,
+                data_generator = None):
     train_config: TrainConfig = exp.config.train
 
     # print information of the data
@@ -219,7 +220,7 @@ def train_model(exp: mltk.Experiment,
         loop=loop,
         optimizer=optimizer,
         fn=train_step,
-        stream=train_stream,
+        stream=train_stream if data_generator is None else data_generator,
         global_clip_norm=train_config.grad_global_clip_norm,
     )
 

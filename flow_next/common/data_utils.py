@@ -18,6 +18,8 @@ __all__ = [
 class InMemoryDataSetName(str, Enum):
     MNIST = 'mnist'
     CIFAR10 = 'cifar10'
+    SVHN = 'svhn'
+
 
 
 class DataSetConfig(mltk.Config):
@@ -83,11 +85,13 @@ def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet]:
         dataset = MNIST()
     elif config.name == InMemoryDataSetName.CIFAR10:
         dataset = Cifar10()
+    elif config.name == InMemoryDataSetName.SVHN:
+        dataset = SVHN()
 
     # assemble the pipelines
     def common_mappers():
         m = []
-        if dataset.name in ('mnist', 'fashion_mnist'):
+        if dataset.name in ('mnist', 'fashion_mnist', 'kmnist', 'omniglot', 'not_mnist'):
             m.append(mappers.Pad([(2, 2), (2, 2), (0, 0)]))  # pad to 32x32x1
             if config.enable_grayscale_to_rgb:
                 m.append(mappers.GrayscaleToRGB())  # copy to 32x32x3
@@ -101,15 +105,14 @@ def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet]:
     # train dataset
     m = []
     if config.enable_train_aug:
-        if dataset.name in ('mnist', 'fashion_mnist', 'cifar10'):
-            print('Affine augmentation added.')
-            aug = iaa.Affine(
-                translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
-                # order=3,  # turn on this if not just translation
-                mode='edge',
-                backend='cv2'
-            )
-            m.append(ImageAugmentationMapper(aug))
+        print('Affine augmentation added.')
+        aug = iaa.Affine(
+            translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
+            # order=3,  # turn on this if not just translation
+            mode='edge',
+            backend='cv2'
+        )
+        m.append(ImageAugmentationMapper(aug))
     m.extend(common_mappers())
     train_dataset = dataset.apply_mappers(x=m)
 
