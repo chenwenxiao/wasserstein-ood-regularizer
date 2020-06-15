@@ -52,8 +52,6 @@ class ExperimentConfig(mltk.Config):
     glow_warm_up_epochs = 50
     pretrain = True
 
-    in_dataset = 'cifar10'
-    out_dataset = 'svhn'
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
     max_step = None
@@ -101,7 +99,8 @@ class ExperimentConfig(mltk.Config):
         depth=16,
         levels=3,
     )
-    dataset = DataSetConfig()
+    dataset = DataSetConfig(name='cifar10')
+    out_dataset = DataSetConfig(name='svhn')
 
 
 def main():
@@ -109,8 +108,8 @@ def main():
             T.use_device(T.first_gpu_device()):
         config = exp.config
         # prepare for training and testing data
-        x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
-        svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
+        x_train_complexity, x_test_complexity = load_complexity(config.dataset.name, config.compressor)
+        svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         restore_checkpoint = None
 

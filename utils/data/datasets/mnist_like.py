@@ -4,27 +4,20 @@ from typing import *
 import mltk
 import numpy as np
 
+from ood_regularizer.experiment.datasets.overall import load_overall
 from ...misc import get_bit_depth
 from ..types import *
 from .base import *
 
-__all__ = ['MNIST', 'FashionMNIST']
+__all__ = ['MNIST', 'FashionMNIST', 'KMNIST', 'NotMNIST', 'Omniglot']
 
 
 class BaseMNISTLike(ArrayDataSet):
-
     name: str
 
     def __init__(self, val_split: Optional[float] = None):
-        if self.name == 'mnist':
-            loader = partial(mltk.data.load_mnist, x_shape=(28, 28, 1), x_dtype=np.uint8)
-            n_categories = 10
-
-        elif self.name == 'fashion_mnist':
-            loader = partial(mltk.data.load_fashion_mnist, x_shape=(28, 28, 1), x_dtype=np.uint8)
-            n_categories = 10
-
-        (train_x, train_y), (test_x, test_y) = loader()
+        n_categories = 10
+        train_x, train_y, test_x, test_y = load_overall(self.name)
         val_x, val_y = None, None
         if val_split is not None and val_split > 0.:
             (train_x, train_y), (val_x, val_y) = mltk.utils.split_numpy_arrays(
@@ -67,3 +60,15 @@ class MNIST(BaseMNISTLike):
 
 class FashionMNIST(BaseMNISTLike):
     name = 'fashion_mnist'
+
+
+class KMNIST(BaseMNISTLike):
+    name = 'kmnist'
+
+
+class NotMNIST(BaseMNISTLike):
+    name = 'not_mnist'
+
+
+class Omniglot(BaseMNISTLike):
+    name = 'omniglot'
