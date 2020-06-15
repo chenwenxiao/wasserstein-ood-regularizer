@@ -1,44 +1,30 @@
 # -*- coding: utf-8 -*-
-import functools
+import mltk
+from tensorkit import tensor as T
 import sys
 from argparse import ArgumentParser
-from contextlib import contextmanager
 
-import mltk
 from pprint import pformat
 
 from matplotlib import pyplot
-from tensorflow.contrib.framework import arg_scope, add_arg_scope
-from tensorkit import tensor as T
 import torch
 
 import tfsnippet as spt
-from tfsnippet import DiscretizedLogistic
 from tfsnippet.examples.utils import (MLResults,
-                                      save_images_collection,
-                                      bernoulli_as_pixel,
-                                      bernoulli_flow,
-                                      bernoulli_flow,
                                       print_with_title)
 import numpy as np
-
-from tfsnippet.preprocessing import UniformNoiseSampler
 
 from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model
 from flow_next.models.glow import GlowConfig, Glow
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
-from ood_regularizer.experiment.datasets.svhn import load_svhn
-from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPConfig
 from ood_regularizer.experiment.models.utils import get_mixed_array
-from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig, make_diagram_torch
-
-from imgaug import augmenters as iaa
+from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch
 
 from utils.data import SplitInfo
 from utils.evaluation import dequantized_bpd
 
 
-class ExpConfig(spt.Config):
+class ExperimentConfig(mltk.Config):
     # model parameters
     z_dim = 256
     act_norm = False
@@ -98,11 +84,6 @@ class ExpConfig(spt.Config):
     x_shape_multiple = 3072
     extra_stride = 2
 
-
-config = ExpConfig()
-
-
-class ExperimentConfig(mltk.Config):
     train = TrainConfig(
         optimizer='adamax',
         init_batch_size=128,
@@ -124,41 +105,21 @@ class ExperimentConfig(mltk.Config):
 
 
 def main():
-    # parse the arguments
-    arg_parser = ArgumentParser()
-    spt.register_config_arguments(config, arg_parser, title='Model options')
-    spt.register_config_arguments(spt.settings, arg_parser, prefix='tfsnippet',
-                                  title='TFSnippet options')
-    arg_parser.parse_args(sys.argv[1:])
+    with mltk.Experiment(ExperimentConfig, args=sys.argv[2:]) as exp, \
+            T.use_device(T.first_gpu_device()):
+        config = exp.config
+        # prepare for training and testing data
+        x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
+        svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
 
-    # print the config
-    print_with_title('Configurations', pformat(config.to_dict()), after='\n')
+        restore_checkpoint = None
 
-    # open the result object and prepare for result directories
-    results = MLResults(config.result_dir)
-    results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
-
-    # prepare for training and testing data
-    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
-    x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
-    svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
-
-    restore_checkpoint = None
-
-    with T.use_device(T.first_gpu_device()):
         # load the dataset
-        exp = ExperimentConfig()
-        exp.dataset.name = config.in_dataset
-        cifar_train_dataset, cifar_test_dataset = make_dataset(exp.config.dataset)
+        config.dataset.name = config.in_dataset
+        cifar_train_dataset, cifar_test_dataset = make_dataset(config.dataset)
         print('CIFAR DataSet loaded.')
-        exp.dataset.name = config.out_dataset
-        svhn_train_dataset, svhn_test_dataset = make_dataset(exp.config.dataset)
+        config.dataset.name = config.out_dataset
+        svhn_train_dataset, svhn_test_dataset = make_dataset(config.dataset)
         print('SVHN DataSet loaded.')
 
         cifar_train_flow = cifar_train_dataset.get_stream('train', 'x', config.batch_size)
@@ -216,19 +177,20 @@ def main():
             [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
                 cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
 
-            loop.add_metrics(T_perm_histogram=plot_fig(data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
-                     color_list=['red', 'salmon', 'green', 'lightgreen'],
-                     label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                 config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                     x_label='bits/dim', fig_name='T_perm_histogram'))
+            loop.add_metrics(T_perm_histogram=plot_fig(
+                data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                            config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                x_label='bits/dim', fig_name='T_perm_histogram'))
 
             loop.add_metrics(ll_with_complexity_histogram=plot_fig(
                 data_list=[cifar_train_ll + x_train_complexity, cifar_test_ll + x_test_complexity,
-                                svhn_train_ll + svhn_train_complexity, svhn_test_ll + svhn_test_complexity],
-                     color_list=['red', 'salmon', 'green', 'lightgreen'],
-                     label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                 config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                     x_label='bits/dim', fig_name='ll_with_complexity_histogram'))
+                           svhn_train_ll + svhn_train_complexity, svhn_test_ll + svhn_test_complexity],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                            config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                x_label='bits/dim', fig_name='ll_with_complexity_histogram'))
 
             cifar_train_det, cifar_test_det, svhn_train_det, svhn_test_det = make_diagram_torch(
                 loop, eval_log_det,
@@ -239,11 +201,11 @@ def main():
 
             loop.add_metrics(origin_log_prob_histogram=plot_fig(
                 data_list=[cifar_train_ll - cifar_train_det, cifar_test_ll - cifar_test_det,
-                                svhn_train_ll - svhn_train_det, svhn_test_ll - svhn_test_det],
-                     color_list=['red', 'salmon', 'green', 'lightgreen'],
-                     label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                 config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                     x_label='bits/dim', fig_name='origin_log_prob_histogram'))
+                           svhn_train_ll - svhn_train_det, svhn_test_ll - svhn_test_det],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                            config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                x_label='bits/dim', fig_name='origin_log_prob_histogram'))
 
             if not config.pretrain:
                 model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
@@ -258,25 +220,21 @@ def main():
             train_model(exp, model, svhn_train_dataset, svhn_test_dataset)
 
             make_diagram_torch(
-                         loop, eval_bpd,
-                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                         fig_name='log_prob_mixed_histogram'
-                         )
+                loop, eval_bpd,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                       config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                fig_name='log_prob_mixed_histogram'
+            )
 
             make_diagram_torch(
-                         loop, lambda x: -eval_bpd(x),
-                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                         fig_name='kl_histogram',
-                         addtion_data=[cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll]
-                         )
-
-    # print the final metrics and close the results object
-    print_with_title('Results', results.format_metrics(), before='\n')
-    results.close()
+                loop, lambda x: -eval_bpd(x),
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                       config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                fig_name='kl_histogram',
+                addtion_data=[cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll]
+            )
 
 
 if __name__ == '__main__':
