@@ -5,12 +5,11 @@ from argparse import ArgumentParser
 from contextlib import contextmanager
 
 import mltk
-import tensorflow as tf
 from pprint import pformat
 
 from matplotlib import pyplot
 from tensorflow.contrib.framework import arg_scope, add_arg_scope
-import torch as T
+from tensorkit import tensor as T
 
 import tfsnippet as spt
 from tfsnippet import DiscretizedLogistic
@@ -109,15 +108,15 @@ class ExperimentConfig(mltk.Config):
         batch_size=32,
         test_batch_size=64,
         test_epoch_freq=10,
-        max_epoch=500,
+        max_epoch=100,
         grad_global_clip_norm=None,
         # grad_global_clip_norm=100.0,
         debug=True
     )
     model = GlowConfig(
         hidden_conv_activation='relu',
-        hidden_conv_kernel_sizes=[3, 1],
-        depth=32,
+        hidden_conv_channels=[128, 128],
+        depth=16,
         levels=3,
     )
     dataset = DataSetConfig()
@@ -181,21 +180,21 @@ def main():
         with mltk.TestLoop() as loop:
 
             def eval_bpd(x):
-                x = T.from_numpy(x)
+                x = T.to_numpy(x)
                 print(x)
                 ll, outputs = model(x)
                 print(ll)
                 bpd = dequantized_bpd(ll, cifar_train_dataset.slots['x'])
-                return bpd.numpy()
+                return T.to_numpy(bpd)
 
             def eval_log_det(x):
-                x = T.from_numpy(x)
+                x = T.to_numpy(x)
                 ll, outputs = model(x)
                 log_det = outputs[0].log_det
                 for output in outputs[1:]:
                     log_det = log_det + output.log_det
                 log_det = dequantized_bpd(log_det, cifar_train_dataset.slots['x'])
-                return log_det.numpy()
+                return T.to_numpy(log_det)
 
             cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll = make_diagram_torch(
                 loop, eval_bpd,

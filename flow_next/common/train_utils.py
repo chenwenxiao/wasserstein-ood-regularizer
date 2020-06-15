@@ -95,7 +95,7 @@ def build_optimizer(config: TrainConfig,
         raise ValueError(f'Unsupported optimizer: {config.optimizer}')
 
 
-def rtrain_model(exp: mltk.Experiment,
+def train_model(exp: mltk.Experiment,
                 model: Glow,
                 train_dataset: DataSet,
                 test_dataset: DataSet):
