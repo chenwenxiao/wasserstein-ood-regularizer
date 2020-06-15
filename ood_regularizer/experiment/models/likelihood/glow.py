@@ -216,32 +216,34 @@ def main():
             [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
                 cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
 
-            plot_fig(data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
+            loop.add_metrics(T_perm_histogram=plot_fig(data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
                      color_list=['red', 'salmon', 'green', 'lightgreen'],
                      label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                  config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                     x_label='bits/dim', fig_name='T_perm_histogram')
+                     x_label='bits/dim', fig_name='T_perm_histogram'))
 
-            plot_fig(data_list=[cifar_train_ll + x_train_complexity, cifar_test_ll + x_test_complexity,
+            loop.add_metrics(ll_with_complexity_histogram=plot_fig(
+                data_list=[cifar_train_ll + x_train_complexity, cifar_test_ll + x_test_complexity,
                                 svhn_train_ll + svhn_train_complexity, svhn_test_ll + svhn_test_complexity],
                      color_list=['red', 'salmon', 'green', 'lightgreen'],
                      label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                  config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                     x_label='bits/dim', fig_name='ll_with_complexity_histogram')
+                     x_label='bits/dim', fig_name='ll_with_complexity_histogram'))
 
             cifar_train_det, cifar_test_det, svhn_train_det, svhn_test_det = make_diagram_torch(
-                eval_log_det,
+                loop, eval_log_det,
                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
                 fig_name='log_det_histogram')
 
-            plot_fig(data_list=[cifar_train_ll - cifar_train_det, cifar_test_ll - cifar_test_det,
+            loop.add_metrics(origin_log_prob_histogram=plot_fig(
+                data_list=[cifar_train_ll - cifar_train_det, cifar_test_ll - cifar_test_det,
                                 svhn_train_ll - svhn_train_det, svhn_test_ll - svhn_test_det],
                      color_list=['red', 'salmon', 'green', 'lightgreen'],
                      label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                  config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                     x_label='bits/dim', fig_name='origin_log_prob_histogram')
+                     x_label='bits/dim', fig_name='origin_log_prob_histogram'))
 
             if not config.pretrain:
                 model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
@@ -256,7 +258,7 @@ def main():
             train_model(exp, model, svhn_train_dataset, svhn_test_dataset)
 
             make_diagram_torch(
-                         eval_bpd,
+                         loop, eval_bpd,
                          [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
                          names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                 config.out_dataset + ' Train', config.out_dataset + ' Test'],
@@ -264,7 +266,7 @@ def main():
                          )
 
             make_diagram_torch(
-                         lambda x: -eval_bpd(x),
+                         loop, lambda x: -eval_bpd(x),
                          [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
                          names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                 config.out_dataset + ' Train', config.out_dataset + ' Test'],

@@ -116,7 +116,7 @@ def make_diagram(loop, op, flows, input_x, colors=['red', 'salmon', 'green', 'li
     return packs
 
 
-def make_diagram_torch(fn, flows, colors=['red', 'salmon', 'green', 'lightgreen'],
+def make_diagram_torch(loop, fn, flows, colors=['red', 'salmon', 'green', 'lightgreen'],
                        names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
                        x_label='log(bit/dims)', fig_name='log_pro_histogram', addtion_data=None):
     packs = [get_ele_torch(fn, flow) for flow in flows]
@@ -125,6 +125,7 @@ def make_diagram_torch(fn, flows, colors=['red', 'salmon', 'green', 'lightgreen'
             packs = [packs[i] + addtion_data[i] for i in range(len(packs))]
     _dict = {}
     _dict[fig_name] = plot_fig(packs, colors, names, x_label, fig_name)
+    loop.add_metrics(_dict)
     return packs
 
 
