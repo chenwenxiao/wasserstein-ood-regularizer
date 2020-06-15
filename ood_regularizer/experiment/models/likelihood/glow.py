@@ -178,97 +178,99 @@ def main():
 
         T.save(model, 'model.pkl')
 
-        loop = mltk.TestLoop()
+        with mltk.TestLoop() as loop:
 
-        def eval_bpd(x):
-            print(x)
-            ll, outputs = model(x)
-            print(ll)
-            bpd = dequantized_bpd(ll, cifar_train_dataset.slots['x'])
-            return bpd
+            def eval_bpd(x):
+                x = T.from_numpy(x)
+                print(x)
+                ll, outputs = model(x)
+                print(ll)
+                bpd = dequantized_bpd(ll, cifar_train_dataset.slots['x'])
+                return bpd.numpy()
 
-        def eval_log_det(x):
-            ll, outputs = model(x)
-            log_det = outputs[0].log_det
-            for output in outputs[1:]:
-                log_det = log_det + output.log_det
-            log_det = dequantized_bpd(log_det, cifar_train_dataset.slots['x'])
-            return log_det
+            def eval_log_det(x):
+                x = T.from_numpy(x)
+                ll, outputs = model(x)
+                log_det = outputs[0].log_det
+                for output in outputs[1:]:
+                    log_det = log_det + output.log_det
+                log_det = dequantized_bpd(log_det, cifar_train_dataset.slots['x'])
+                return log_det.numpy()
 
-        cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll = make_diagram_torch(
-            loop, eval_bpd,
-            [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-            names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                   config.out_dataset + ' Train', config.out_dataset + ' Test'],
-            fig_name='log_prob_histogram'
-        )
+            cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll = make_diagram_torch(
+                loop, eval_bpd,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                       config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                fig_name='log_prob_histogram'
+            )
 
-        def t_perm(base, another_arrays=None):
-            base = sorted(base)
-            N = len(base)
-            return_arrays = []
-            for array in another_arrays:
-                return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
-            return return_arrays
+            def t_perm(base, another_arrays=None):
+                base = sorted(base)
+                N = len(base)
+                return_arrays = []
+                for array in another_arrays:
+                    return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
+                return return_arrays
 
-        [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
-            cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
+            [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
+                cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
 
-        plot_fig(data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
-                 color_list=['red', 'salmon', 'green', 'lightgreen'],
-                 label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                             config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                 x_label='bits/dim', fig_name='T_perm_histogram')
+            plot_fig(data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
+                     color_list=['red', 'salmon', 'green', 'lightgreen'],
+                     label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                 config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                     x_label='bits/dim', fig_name='T_perm_histogram')
 
-        plot_fig(data_list=[cifar_train_ll + x_train_complexity, cifar_test_ll + x_test_complexity,
-                            svhn_train_ll + svhn_train_complexity, svhn_test_ll + svhn_test_complexity],
-                 color_list=['red', 'salmon', 'green', 'lightgreen'],
-                 label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                             config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                 x_label='bits/dim', fig_name='ll_with_complexity_histogram')
+            plot_fig(data_list=[cifar_train_ll + x_train_complexity, cifar_test_ll + x_test_complexity,
+                                svhn_train_ll + svhn_train_complexity, svhn_test_ll + svhn_test_complexity],
+                     color_list=['red', 'salmon', 'green', 'lightgreen'],
+                     label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                 config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                     x_label='bits/dim', fig_name='ll_with_complexity_histogram')
 
-        cifar_train_det, cifar_test_det, svhn_train_det, svhn_test_det = make_diagram_torch(
-            loop, eval_log_det,
-            [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-            names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                   config.out_dataset + ' Train', config.out_dataset + ' Test'],
-            fig_name='log_det_histogram')
+            cifar_train_det, cifar_test_det, svhn_train_det, svhn_test_det = make_diagram_torch(
+                eval_log_det,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                       config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                fig_name='log_det_histogram')
 
-        plot_fig(data_list=[cifar_train_ll - cifar_train_det, cifar_test_ll - cifar_test_det,
-                            svhn_train_ll - svhn_train_det, svhn_test_ll - svhn_test_det],
-                 color_list=['red', 'salmon', 'green', 'lightgreen'],
-                 label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                             config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                 x_label='bits/dim', fig_name='origin_log_prob_histogram')
+            plot_fig(data_list=[cifar_train_ll - cifar_train_det, cifar_test_ll - cifar_test_det,
+                                svhn_train_ll - svhn_train_det, svhn_test_ll - svhn_test_det],
+                     color_list=['red', 'salmon', 'green', 'lightgreen'],
+                     label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                 config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                     x_label='bits/dim', fig_name='origin_log_prob_histogram')
 
-        if not config.pretrain:
-            model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
+            if not config.pretrain:
+                model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
-        if config.use_transductive:
-            svhn_train_dataset.arrays['train'] = get_mixed_array(
-                config,
-                cifar_train_dataset.arrays['train'], cifar_test_dataset.array['test'],
-                svhn_train_dataset.arrays['train'], svhn_test_dataset.arrays['test'])
-            svhn_train_dataset.splits['train'] = SplitInfo(data_count=len(svhn_train_dataset.arrays['train']))
+            if config.use_transductive:
+                svhn_train_dataset.arrays['train'] = get_mixed_array(
+                    config,
+                    cifar_train_dataset.arrays['train'], cifar_test_dataset.array['test'],
+                    svhn_train_dataset.arrays['train'], svhn_test_dataset.arrays['test'])
+                svhn_train_dataset.splits['train'] = SplitInfo(data_count=len(svhn_train_dataset.arrays['train']))
 
-        train_model(exp, model, svhn_train_dataset, svhn_test_dataset)
+            train_model(exp, model, svhn_train_dataset, svhn_test_dataset)
 
-        make_diagram(loop,
-                     eval_bpd,
-                     [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                            config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                     fig_name='log_prob_mixed_histogram'
-                     )
+            make_diagram_torch(
+                         eval_bpd,
+                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                         fig_name='log_prob_mixed_histogram'
+                         )
 
-        make_diagram(loop,
-                     lambda x: -eval_bpd(x),
-                     [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                            config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                     fig_name='kl_histogram',
-                     addtion_data=[cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll]
-                     )
+            make_diagram_torch(
+                         lambda x: -eval_bpd(x),
+                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                         fig_name='kl_histogram',
+                         addtion_data=[cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll]
+                         )
 
     # print the final metrics and close the results object
     print_with_title('Results', results.format_metrics(), before='\n')
