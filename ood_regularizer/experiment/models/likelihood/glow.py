@@ -10,6 +10,7 @@ from pprint import pformat
 from matplotlib import pyplot
 from tensorflow.contrib.framework import arg_scope, add_arg_scope
 from tensorkit import tensor as T
+import torch
 
 import tfsnippet as spt
 from tfsnippet import DiscretizedLogistic
@@ -166,7 +167,7 @@ def main():
         svhn_test_flow = svhn_test_dataset.get_stream('test', 'x', config.batch_size)
 
         if restore_checkpoint is not None:
-            model = T.load(restore_checkpoint)
+            model = torch.load(restore_checkpoint)
         else:
             # construct the model
             model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
@@ -175,7 +176,7 @@ def main():
             # train the model
             train_model(exp, model, cifar_train_dataset, cifar_test_dataset)
 
-        T.save(model, 'model.pkl')
+        torch.save(model, 'model.pkl')
 
         with mltk.TestLoop() as loop:
 
