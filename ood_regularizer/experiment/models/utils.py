@@ -661,4 +661,5 @@ def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test, norm
             mixed_array = svhn_train
 
     np.random.shuffle(mixed_array)
+    mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
     return mixed_array

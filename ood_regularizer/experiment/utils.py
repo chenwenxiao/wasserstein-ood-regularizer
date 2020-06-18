@@ -49,8 +49,10 @@ def draw_curve(cifar_test, svhn_test, fig_name):
     precision, recall, thresholds = precision_recall_curve(label, score)
     pyplot.plot(recall, precision)
     pyplot.plot(fpr, tpr)
-    print('%s auc: %4f, aupr: %4f, ap: %4f, FPR@TPR95: %4f' % (
-        fig_name, auc(fpr, tpr), auc(recall, precision), average_precision_score(label, score),
+    out_precision, out_recall, out_thresholds = precision_recall_curve(-label, score)
+    print('%s auc: %4f, in_aupr: %4f, out_aupr: %4f, ap: %4f, FPR@TPR95: %4f' % (
+        fig_name, auc(fpr, tpr), auc(recall, precision), auc(out_recall, out_precision),
+        average_precision_score(label, score),
         np.min(fpr[tpr > 0.95])))
     return auc(fpr, tpr)
 

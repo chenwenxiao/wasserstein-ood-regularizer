@@ -17,13 +17,21 @@ __all__ = [
 
 class InMemoryDataSetName(str, Enum):
     MNIST = 'mnist'
+    KMINIST = 'kmnist'
+    NOTMNIST = 'not_mnist'
+    FASHIONMIST = 'fashion_mnist'
+    OMNNIGLOT = 'omniglot'
     CIFAR10 = 'cifar10'
+    CIFAR100 = 'cifar100'
     SVHN = 'svhn'
-
+    CELEBA = 'celeba'
+    LSUN = 'lsun'
+    ISUN = 'isun'
+    SUN = 'sun'
+    TINYIMAGENET = 'tinyimagenet'
 
 
 class DataSetConfig(mltk.Config):
-
     name: Optional[InMemoryDataSetName] = None
     """Name of in-memory dataset."""
 
@@ -47,7 +55,6 @@ class DataSetConfig(mltk.Config):
 
 
 class ImageAugmentationMapper(mappers.ArrayMapper):
-
     aug: iaa.Augmenter
 
     def __init__(self, aug: iaa.Augmenter):
@@ -85,8 +92,28 @@ def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet]:
         dataset = MNIST()
     elif config.name == InMemoryDataSetName.CIFAR10:
         dataset = Cifar10()
+    elif config.name == InMemoryDataSetName.FASHIONMIST:
+        dataset = FashionMNIST()
+    elif config.name == InMemoryDataSetName.KMINIST:
+        dataset = KMNIST()
+    elif config.name == InMemoryDataSetName.NOTMNIST:
+        dataset = NotMNIST()
+    elif config.name == InMemoryDataSetName.OMNNIGLOT:
+        dataset = Omniglot()
     elif config.name == InMemoryDataSetName.SVHN:
         dataset = SVHN()
+    elif config.name == InMemoryDataSetName.CIFAR100:
+        dataset = Cifar100()
+    elif config.name == InMemoryDataSetName.CELEBA:
+        dataset = CelebA()
+    elif config.name == InMemoryDataSetName.ISUN:
+        dataset = ISUN()
+    elif config.name == InMemoryDataSetName.SUN:
+        dataset = SUN()
+    elif config.name == InMemoryDataSetName.LSUN:
+        dataset = LSUN()
+    elif config.name == InMemoryDataSetName.TINYIMAGENET:
+        dataset = TinyImagenet()
 
     # assemble the pipelines
     def common_mappers():
@@ -120,4 +147,3 @@ def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet]:
     test_dataset = dataset.apply_mappers(x=common_mappers())
 
     return train_dataset, test_dataset
-

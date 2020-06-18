@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import mltk
-from mltk.data import ArraysDataStream
+from mltk.data import ArraysDataStream, DataStream
 from tensorkit import tensor as T
 import sys
 from argparse import ArgumentParser
@@ -97,7 +97,7 @@ class ExperimentConfig(mltk.Config):
     model = GlowConfig(
         hidden_conv_activation='relu',
         hidden_conv_channels=[64, 64],
-        depth=3,
+        depth=6,
         levels=3,
     )
     in_dataset = DataSetConfig(name='cifar10')
@@ -113,7 +113,7 @@ def main():
         x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
-        restore_checkpoint = '/mnt/mfs/mlstorage-experiments/cwx17/85/a7/48d18cbe8ce08c837ee5/model.pkl'
+        restore_checkpoint = None
 
         # load the dataset
         cifar_train_dataset, cifar_test_dataset = make_dataset(config.in_dataset)
@@ -219,9 +219,10 @@ def main():
                 steam = ArraysDataStream([mixed_array], batch_size=config.batch_size, shuffle=True,
                                          skip_incomplete=True)
                 for [x] in steam:
-                    yield [x]
+                    yield [T.from_numpy(x)]
 
-            train_model(exp, model, svhn_train_dataset, svhn_test_dataset, data_generator() if config.use_transductive else None)
+            train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
+                        DataStream.generator(data_generator) if config.use_transductive else None)
 
             make_diagram_torch(
                 loop, eval_ll,

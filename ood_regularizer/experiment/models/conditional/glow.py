@@ -381,7 +381,6 @@ def main():
                                      skip_incomplete=True)
     train_flow = train_flow.map(augment)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
-    mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
                                           shuffle=True,
                                           skip_incomplete=True)
