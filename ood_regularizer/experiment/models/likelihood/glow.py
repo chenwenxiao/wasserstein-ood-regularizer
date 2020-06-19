@@ -207,6 +207,10 @@ def main():
             if not config.pretrain:
                 model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
+            shuffle_index = np.arange(0, cifar_test_dataset.splits['test'].data_count + svhn_test_dataset.splits[
+                'test'].data_count)
+            np.random.shuffle(shuffle_index)
+
             def data_generator():
                 mixed_array = get_mixed_array(
                     config,
@@ -216,7 +220,7 @@ def main():
                     svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
                 )
                 print(mixed_array.shape)
-                steam = ArraysDataStream([mixed_array], batch_size=config.batch_size, shuffle=True,
+                steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
                                          skip_incomplete=True)
                 for [x] in steam:
                     yield [T.from_numpy(x)]
