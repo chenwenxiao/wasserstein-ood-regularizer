@@ -3,16 +3,7 @@ import mltk
 from mltk.data import ArraysDataStream, DataStream
 from tensorkit import tensor as T
 import sys
-from argparse import ArgumentParser
-
-from pprint import pformat
-
-from matplotlib import pyplot
 import torch
-
-import tfsnippet as spt
-from tfsnippet.examples.utils import (MLResults,
-                                      print_with_title)
 import numpy as np
 
 from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model
@@ -21,7 +12,6 @@ from ood_regularizer.experiment.datasets.overall import load_overall, load_compl
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch
 
-from utils.data import SplitInfo
 from utils.evaluation import dequantized_bpd
 import torch.autograd as autograd
 
@@ -51,7 +41,6 @@ class ExperimentConfig(mltk.Config):
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
-    glow_warm_up_epochs = 50
     pretrain = True
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
@@ -106,7 +95,7 @@ class ExperimentConfig(mltk.Config):
 
 
 def main():
-    with mltk.Experiment(ExperimentConfig, args=sys.argv[2:]) as exp, \
+    with mltk.Experiment(ExperimentConfig, args=sys.argv[1:]) as exp, \
             T.use_device(T.first_gpu_device()):
         exp.make_dirs('plotting')
         config = exp.config
@@ -115,12 +104,14 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
-            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/6c/97/483105fdc153046a7ee5'
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6c/97/483105fdc153046a7ee5'
         }
+        print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
             restore_checkpoint = experiment_dict[config.in_dataset.name]
         else:
             restore_checkpoint = None
+        print('restore model from {}'.format(restore_checkpoint))
 
         # load the dataset
         cifar_train_dataset, cifar_test_dataset = make_dataset(config.in_dataset)
@@ -210,7 +201,7 @@ def main():
                 gradients = autograd.grad(ll, x, grad_outputs=torch.ones(ll.size()).cuda(),
                               create_graph=True, retain_graph=True)[0]
                 grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
-                return grad_norm
+                return T.to_numpy(grad_norm)
 
             make_diagram_torch(
                 loop, eval_grad_norm,

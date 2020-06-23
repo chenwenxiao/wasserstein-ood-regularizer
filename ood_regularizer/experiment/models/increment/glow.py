@@ -19,7 +19,7 @@ from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_mod
 from flow_next.models.glow import GlowConfig, Glow
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
 from ood_regularizer.experiment.models.utils import get_mixed_array
-from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch
+from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch, get_ele_torch
 
 from utils.data import SplitInfo
 from utils.evaluation import dequantized_bpd
@@ -46,13 +46,9 @@ class ExperimentConfig(mltk.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    self_ood = False
-    mixed_ratio = 1.0
-    mutation_rate = 0.1
-    noise_type = "mutation"  # or unit
-    in_dataset_test_ratio = 1.0
-    glow_warm_up_epochs = 50
-    pretrain = True
+    mixed_train_epoch = 20
+    mixed_train_skip = 1
+    dynamic_epochs = True
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
@@ -106,7 +102,7 @@ class ExperimentConfig(mltk.Config):
 
 
 def main():
-    with mltk.Experiment(ExperimentConfig, args=sys.argv[2:]) as exp, \
+    with mltk.Experiment(ExperimentConfig, args=sys.argv[1:]) as exp, \
             T.use_device(T.first_gpu_device()):
         exp.make_dirs('plotting')
         config = exp.config
@@ -155,33 +151,57 @@ def main():
                 fig_name='log_prob_histogram'
             )
 
-            if not config.pretrain:
-                model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
-
+            x_train = cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
+            x_test = cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
+            svhn_test = svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
             mixed_array = np.concatenate([
-                cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
-                svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+                x_test, svhn_test
             ])
-            shuffle_index = np.arange(0, len(mixed_array))
-            np.random.shuffle(shuffle_index)
-            steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
-                                     skip_incomplete=True)
+            index = np.arange(0, len(mixed_array))
+            np.random.shuffle(index)
+            mixed_array = mixed_array[index]
+            mixed_kl = []
+
+            mixed_ll = get_ele_torch(eval_ll, ArraysDataStream([mixed_array], batch_size=config.batch_size,
+                                                               shuffle=False, skip_incomplete=False))
 
             def data_generator():
-                for [x] in steam:
-                    yield [T.from_numpy(x)]
+                for i in range(0, len(mixed_array)):
+                    if config.dynamic_epochs:
+                        repeat_epoch = int(
+                            config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))
+                        repeat_epoch = max(1, repeat_epoch)
+                    else:
+                        repeat_epoch = config.mixed_train_epoch
+                    for pse_epoch in range(repeat_epoch):
+                        if i < config.batch_size - 1:
+                            train_index = np.random.randint(0, len(x_train), config.batch_size - i - 1)
+                            batch_x = [mixed_array[0:i + 1], x_train[train_index]]
+                            batch_x = np.concatenate(batch_x)
+                            # print(batch_x.shape)
+                        else:
+                            mixed_index = np.random.randint(0, i, config.batch_size)
+                            mixed_index[-1] = i
+                            batch_x = mixed_array[mixed_index]
+                            # print(batch_x.shape)
+                        yield [T.from_numpy(batch_x)]
 
+                    mixed_kl.append(eval_ll(mixed_array[i: i + 1]))
+                    print(repeat_epoch, len(mixed_kl))
+
+            exp.config.train.max_epoch = 1
             train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
                         DataStream.generator(data_generator))
 
-            make_diagram_torch(
-                loop, lambda x: -eval_ll(x),
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                fig_name='kl_histogram',
-                addtion_data=[cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll]
-            )
+            mixed_kl = np.concatenate(mixed_kl)
+            mixed_kl = mixed_kl - mixed_ll
+            cifar_kl = mixed_kl[index < len(x_test)]
+            svhn_kl = mixed_kl[index >= len(x_test)]
+            loop.add_metrics(kl_histogram=plot_fig([-cifar_kl, -svhn_kl],
+                                                   ['red', 'green'],
+                                                   [config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                                   'log(bit/dims)',
+                                                   'kl_histogram', auc_pair=(0, 1)))
 
 
 if __name__ == '__main__':

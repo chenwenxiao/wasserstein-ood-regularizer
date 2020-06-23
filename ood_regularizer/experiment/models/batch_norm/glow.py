@@ -1,35 +1,22 @@
 # -*- coding: utf-8 -*-
-import functools
+import mltk
+from mltk.data import ArraysDataStream, DataStream
+from tensorkit import tensor as T
 import sys
-from argparse import ArgumentParser
-from contextlib import contextmanager
-import tensorflow as tf
-from pprint import pformat
-
-from matplotlib import pyplot
-from tensorflow.contrib.framework import arg_scope, add_arg_scope
-
-import tfsnippet as spt
-from tfsnippet import DiscretizedLogistic
-from tfsnippet.examples.utils import (MLResults,
-                                      save_images_collection,
-                                      bernoulli_as_pixel,
-                                      bernoulli_flow,
-                                      bernoulli_flow,
-                                      print_with_title)
+import torch
 import numpy as np
 
-from tfsnippet.preprocessing import UniformNoiseSampler
-
-from ood_regularizer.experiment.datasets.overall import load_overall
-from ood_regularizer.experiment.datasets.svhn import load_svhn
-from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPConfig
+from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model
+from flow_next.models.glow import GlowConfig, Glow
+from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
 from ood_regularizer.experiment.models.utils import get_mixed_array
-from ood_regularizer.experiment.utils import make_diagram, plot_fig
+from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch
 
-from imgaug import augmenters as iaa
+from utils.evaluation import dequantized_bpd
+import torch.autograd as autograd
 
-class ExpConfig(spt.Config):
+
+class ExperimentConfig(mltk.Config):
     # model parameters
     z_dim = 256
     act_norm = False
@@ -43,8 +30,8 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 100
-    warm_up_start = 100
+    max_epoch = 400
+    warm_up_start = 200
     initial_beta = -3.0
     uniform_scale = False
     use_transductive = True
@@ -53,15 +40,13 @@ class ExpConfig(spt.Config):
     mixed_ratio2 = 0.9
     self_ood = False
     in_dataset_test_ratio = 1.0
-    glow_warm_up_steps = 50000
 
-    in_dataset = 'cifar10'
-    out_dataset = 'svhn'
+    compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
     max_step = None
-    batch_size = 32
+    batch_size = 64
     smallest_step = 5e-5
-    initial_lr = 0.0002
+    initial_lr = 0.0005
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
     lr_anneal_step_freq = None
@@ -74,6 +59,8 @@ class ExpConfig(spt.Config):
     test_batch_size = 64
     test_epoch_freq = 200
     plot_epoch_freq = 20
+    distill_ratio = 1.0
+    distill_epoch = 5000
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -84,369 +71,193 @@ class ExpConfig(spt.Config):
     x_shape_multiple = 3072
     extra_stride = 2
 
-
-config = ExpConfig()
-
-
-class MyRNVPConfig(RealNVPConfig):
-    flow_depth = 5
-    strict_invertible = True
-    coupling_scale_type = 'exp'
-    conv_coupling_squeeze_before_first_block = True
-
-
-myRNVPConfig = MyRNVPConfig()
-
-
-@add_arg_scope
-def batch_norm(inputs, training=False, scope=None):
-    return tf.layers.batch_normalization(inputs, training=training, name=scope)
-
-
-@add_arg_scope
-def dropout(inputs, training=False, scope=None):
-    print(inputs, training)
-    return spt.layers.dropout(inputs, rate=0.2, training=training, name=scope)
-
-
-@add_arg_scope
-@spt.global_reuse
-def p_net(glow_theta, observed=None, n_z=None):
-    net = spt.BayesianNet(observed=observed)
-    # sample z ~ p(z)
-    normal = spt.Normal(mean=tf.zeros(config.x_shape),
-                        logstd=tf.zeros(config.x_shape))
-    z = net.add('z', normal, n_samples=n_z, group_ndims=len(config.x_shape))
-    _ = glow_theta.transform(z)
-    x = net.add('x', spt.distributions.FlowDistribution(
-        normal, glow_theta
-    ), n_samples=n_z)
-
-    return net
-
-
-def get_all_loss(p_net):
-    with tf.name_scope('adv_prior_loss'):
-        glow_loss = -p_net['x'].log_prob() + config.x_shape_multiple * np.log(128)
-    return glow_loss
-
-
-class MyIterator(object):
-    def __init__(self, iterator):
-        self._iterator = iter(iterator)
-        self._next = None
-        self._has_next = True
-        self.next()
-
-    @property
-    def has_next(self):
-        return self._has_next
-
-    def next(self):
-        if not self._has_next:
-            raise StopIteration()
-
-        ret = self._next
-        try:
-            self._next = next(self._iterator)
-        except StopIteration:
-            self._next = None
-            self._has_next = False
-        else:
-            self._has_next = True
-        return ret
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        return self.next()
-
-
-def limited(iterator, n):
-    i = 0
-    try:
-        while i < n:
-            yield next(iterator)
-            i += 1
-    except StopIteration:
-        pass
-
-
-def get_var(name):
-    pfx = name.rsplit('/', 1)
-    if len(pfx) == 2:
-        vars = tf.global_variables(pfx[0] + '/')
-    else:
-        vars = tf.global_variables()
-    for var in vars:
-        if var.name.split(':', 1)[0] == name:
-            return var
-    raise NameError('Variable {} not exist.'.format(name))
+    train = TrainConfig(
+        optimizer='adamax',
+        init_batch_size=128,
+        batch_size=64,
+        test_batch_size=64,
+        test_epoch_freq=10,
+        max_epoch=50,
+        grad_global_clip_norm=None,
+        # grad_global_clip_norm=100.0,
+        debug=True
+    )
+    model = GlowConfig(
+        hidden_conv_activation='relu',
+        hidden_conv_channels=[64, 64],
+        depth=6,
+        levels=3,
+    )
+    in_dataset = DataSetConfig(name='cifar10')
+    out_dataset = DataSetConfig(name='svhn')
 
 
 def main():
-    # parse the arguments
-    arg_parser = ArgumentParser()
-    spt.register_config_arguments(config, arg_parser, title='Model options')
-    spt.register_config_arguments(spt.settings, arg_parser, prefix='tfsnippet',
-                                  title='TFSnippet options')
-    arg_parser.parse_args(sys.argv[1:])
+    with mltk.Experiment(ExperimentConfig, args=sys.argv[1:]) as exp, \
+            T.use_device(T.first_gpu_device()):
+        exp.make_dirs('plotting')
+        config = exp.config
+        # prepare for training and testing data
+        x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
+        svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
-    # print the config
-    print_with_title('Configurations', pformat(config.to_dict()), after='\n')
+        experiment_dict = {
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6c/97/483105fdc153046a7ee5'
+        }
+        print(experiment_dict)
+        if config.in_dataset.name in experiment_dict:
+            restore_checkpoint = experiment_dict[config.in_dataset.name]
+        else:
+            restore_checkpoint = None
+        print('restore model from {}'.format(restore_checkpoint))
 
-    # open the result object and prepare for result directories
-    results = MLResults(config.result_dir)
-    results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
+        # load the dataset
+        cifar_train_dataset, cifar_test_dataset = make_dataset(config.in_dataset)
+        print('CIFAR DataSet loaded.')
+        svhn_train_dataset, svhn_test_dataset = make_dataset(config.out_dataset)
+        print('SVHN DataSet loaded.')
 
-    # prepare for training and testing data
-    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    x_train = (x_train - 127.5) / 256.0 * 2
-    x_test = (x_test - 127.5) / 256.0 * 2
+        cifar_train_flow = cifar_train_dataset.get_stream('train', 'x', config.batch_size)
+        cifar_test_flow = cifar_test_dataset.get_stream('test', 'x', config.batch_size)
+        svhn_train_flow = svhn_train_dataset.get_stream('train', 'x', config.batch_size)
+        svhn_test_flow = svhn_test_dataset.get_stream('test', 'x', config.batch_size)
 
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+        if restore_checkpoint is not None:
+            model = torch.load(restore_checkpoint + '/model.pkl')
+        else:
+            # construct the model
+            model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
+            print('Model constructed.')
 
-    if x_train.shape[-1] == 1:
-        x_train, x_test, svhn_train, svhn_test = np.tile(x_train, (1, 1, 1, 3)), np.tile(x_test, (1, 1, 1, 3)), np.tile(
-            svhn_train, (1, 1, 1, 3)), np.tile(svhn_test, (1, 1, 1, 3))
-        myRNVPConfig.flow_depth = 5
+            # train the model
+            train_model(exp, model, cifar_train_dataset, cifar_test_dataset)
 
-    config.x_shape = x_train.shape[1:]
-    config.x_shape_multiple = 1
-    for x in config.x_shape:
-        config.x_shape_multiple *= x
+        torch.save(model, 'model.pkl')
 
-    # input placeholders
-    input_x = tf.placeholder(
-        dtype=tf.float32, shape=(None,) + config.x_shape, name='input_x')
-    learning_rate = spt.AnnealingVariable(
-        'learning_rate', config.initial_lr, config.lr_anneal_factor)
+        with mltk.TestLoop() as loop:
 
-    with tf.variable_scope('glow_theta'):
-        glow_theta = make_real_nvp(
-            rnvp_config=myRNVPConfig, is_conv=True, is_prior_flow=False, normalizer_fn=batch_norm,
-            scope=tf.get_variable_scope())
+            def eval_ll(x):
+                x = T.from_numpy(x)
+                ll, outputs = model(x)
+                bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
+                return T.to_numpy(bpd)
 
-    # derive the loss and lower-bound for training
-    with tf.name_scope('training'), \
-         arg_scope([batch_norm], training=True):
-        train_p_net = p_net(glow_theta, observed={'x': input_x},
-                            n_z=config.train_n_qz)
-        glow_loss = get_all_loss(train_p_net)
+            def eval_log_det(x):
+                x = T.from_numpy(x)
+                ll, outputs = model(x)
+                log_det = outputs[0].log_det
+                for output in outputs[1:]:
+                    log_det = log_det + output.log_det
+                log_det = -dequantized_bpd(log_det, cifar_train_dataset.slots['x'])
+                return T.to_numpy(log_det)
 
-        glow_loss += tf.losses.get_regularization_loss()
+            cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll = make_diagram_torch(
+                loop, eval_ll,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                fig_name='log_prob_histogram'
+            )
 
-    # derive the nll and logits output for testing
-    with tf.name_scope('testing'), \
-         arg_scope([batch_norm], training=True):
-        test_p_net = p_net(glow_theta, observed={'x': input_x},
-                           n_z=config.test_n_qz)
-        ele_test_ll = test_p_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
-        ele_test_ll = ele_test_ll / config.x_shape_multiple / np.log(2)
-        test_nll = -tf.reduce_mean(
-            ele_test_ll
-        )
+            def t_perm(base, another_arrays=None):
+                base = sorted(base)
+                N = len(base)
+                return_arrays = []
+                for array in another_arrays:
+                    return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
+                return return_arrays
 
-    # derive the nll and logits output for testing
-    with tf.name_scope('evaluating'), \
-         arg_scope([batch_norm], training=False):
-        eval_p_net = p_net(glow_theta, observed={'x': input_x},
-                           n_z=config.test_n_qz)
-        ele_eval_ll = eval_p_net['x'].log_prob() - config.x_shape_multiple * np.log(128)
-        ele_eval_ll = ele_eval_ll / config.x_shape_multiple / np.log(2)
-        eval_nll = -tf.reduce_mean(
-            ele_eval_ll
-        )
+            [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
+                cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
 
-    # derive the optimizer
-    with tf.name_scope('optimizing'):
-        glow_params = tf.trainable_variables('glow_theta')
-        with tf.variable_scope('theta_optimizer'):
-            glow_optimizer = tf.train.AdamOptimizer(learning_rate)
-            glow_grads = glow_optimizer.compute_gradients(glow_loss, glow_params)
-            grads, vars_ = zip(*glow_grads)
-            grads, gradient_norm = tf.clip_by_global_norm(grads, clip_norm=config.clip_norm)
-            gradient_norm = tf.check_numerics(gradient_norm, "Gradient norm is NaN or Inf.")
-            glow_grads = zip(grads, vars_)
+            loop.add_metrics(T_perm_histogram=plot_fig(
+                data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                x_label='bits/dim', fig_name='T_perm_histogram'))
 
-        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-            glow_train_op = glow_optimizer.apply_gradients(glow_grads)
+            loop.add_metrics(ll_with_complexity_histogram=plot_fig(
+                data_list=[cifar_train_ll + x_train_complexity, cifar_test_ll + x_test_complexity,
+                           svhn_train_ll + svhn_train_complexity, svhn_test_ll + svhn_test_complexity],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                x_label='bits/dim', fig_name='ll_with_complexity_histogram'))
 
-    # derive the plotting function
-    with tf.name_scope('plotting'), \
-         arg_scope([batch_norm], training=True):
-        plot_net = p_net(glow_theta, n_z=config.sample_n_z)
-        vae_plots = tf.reshape(plot_net['x'], (-1,) + config.x_shape)
-        vae_plots = 256.0 * vae_plots / 2 + 127.5
-        vae_plots = tf.clip_by_value(vae_plots, 0, 255)
+            cifar_train_det, cifar_test_det, svhn_train_det, svhn_test_det = make_diagram_torch(
+                loop, eval_log_det,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                fig_name='log_det_histogram')
 
-    def plot_samples(loop, extra_index=None):
-        if extra_index is None:
-            extra_index = loop.epoch
+            def eval_grad_norm(x):
+                x = T.from_numpy(x)
+                x.requires_grad = True
+                ll, outputs = model(x)
+                gradients = autograd.grad(ll, x, grad_outputs=torch.ones(ll.size()).cuda(),
+                              create_graph=True, retain_graph=True)[0]
+                grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
+                return T.to_numpy(grad_norm)
 
-        try:
-            with loop.timeit('plot_time'):
-                # plot samples
-                images = session.run(vae_plots)
-                print(images.shape)
-                save_images_collection(
-                    images=np.round(images),
-                    filename='plotting/sample/{}-{}.png'.format('theta', extra_index),
-                    grid_size=(10, 10),
-                    results=results,
-                )
-        except Exception as e:
-            print(e)
+            make_diagram_torch(
+                loop, eval_grad_norm,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                fig_name='grad_norm_histogram')
 
-    uniform_sampler = UniformNoiseSampler(-1.0 / 256.0, 1.0 / 256.0, dtype=np.float)
+            loop.add_metrics(origin_log_prob_histogram=plot_fig(
+                data_list=[cifar_train_ll - cifar_train_det, cifar_test_ll - cifar_test_det,
+                           svhn_train_ll - svhn_train_det, svhn_test_ll - svhn_test_det],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                x_label='bits/dim', fig_name='origin_log_prob_histogram'))
 
-    def augment(arrays):
-        img = arrays
-        seq = iaa.Sequential([iaa.Affine(
-            translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
-            mode='edge',
-            backend='cv2'
-        )])
-        img = seq.augment_images(img)
-        img = uniform_sampler.sample(img)
-        return [img]
+            if not config.pretrain:
+                model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
-    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
-    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
-    svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
-    svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
+            mixed_array = get_mixed_array(
+                config,
+                cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
+                cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
+                svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
+                svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+            )
+            shuffle_index = np.arange(0, len(mixed_array))
+            np.random.shuffle(shuffle_index)
+            steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
+                                     skip_incomplete=True)
+            for [x] in svhn_test_dataset.get_stream('test', ['x'], config.batch_size):
+                print(x)
+                break
 
-    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
-    train_flow = train_flow.map(augment)
+            def data_generator():
+                for [x] in steam:
+                    print(x)
+                    yield [T.from_numpy(x)]
 
-    tmp_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size, shuffle=True)
-    mixed_array = np.concatenate([x_test, svhn_test])
-    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size, shuffle=True,
-                                          skip_incomplete=True)
+            train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
+                        DataStream.generator(data_generator) if config.use_transductive else None)
 
-    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True)
+            make_diagram_torch(
+                loop, eval_ll,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                fig_name='log_prob_mixed_histogram'
+            )
 
-    step_counter = 0
-    with spt.utils.create_session().as_default() as session, \
-            train_flow.threaded(5) as train_flow:
-        spt.utils.ensure_variables_initialized()
-
-        restore_checkpoint = None
-
-        # train the network
-        with spt.TrainLoop(tf.trainable_variables(),
-                           var_groups=['q_net', 'p_net', 'posterior_flow', 'G_theta', 'D_psi', 'G_omega', 'D_kappa'],
-                           max_epoch=config.max_epoch + 1,
-                           max_step=config.max_step,
-                           summary_dir=(results.system_path('train_summary')
-                                        if config.write_summary else None),
-                           summary_graph=tf.get_default_graph(),
-                           early_stopping=False,
-                           checkpoint_dir=results.system_path('checkpoint'),
-                           checkpoint_epoch_freq=100,
-                           restore_checkpoint=restore_checkpoint
-                           ) as loop:
-
-            loop.print_training_summary()
-            spt.utils.ensure_variables_initialized()
-
-            epoch_iterator = loop.iter_epochs()
-            # adversarial training
-            for epoch in epoch_iterator:
-                if epoch == config.max_epoch + 1:
-                    def permutation_test(flow, ratio):
-                        R = min(max(1, int(ratio * config.test_batch_size - 1)), config.test_batch_size - 1)
-                        print('R={}'.format(R))
-                        packs = []
-                        for [batch_x] in flow:
-                            for i in range(len(batch_x)):
-                                for [batch_y] in mixed_test_flow:
-                                    for [batch_z] in tmp_train_flow:
-                                        batch = np.concatenate(
-                                            [batch_x[i:i + 1], batch_y[:R], batch_z[:config.test_batch_size - R - 1]],
-                                            axis=0)
-                                        pack = session.run(
-                                            ele_test_ll, feed_dict={
-                                                input_x: batch,
-                                            })  # [batch_size]
-                                        pack = np.asarray(pack)[:1]
-                                        break
-                                    break
-                                packs.append(pack)
-                        packs = np.concatenate(packs, axis=0)  # [len_of_flow]
-                        print(packs.shape)
-                        return packs
-
-                    def delta_test(flow):
-                        return permutation_test(flow, config.mixed_ratio1) - permutation_test(flow, config.mixed_ratio2)
-
-                    cifar_r1 = permutation_test(cifar_test_flow, config.mixed_ratio1)
-                    cifar_r2 = permutation_test(cifar_test_flow, config.mixed_ratio2)
-                    svhn_r1 = permutation_test(svhn_test_flow, config.mixed_ratio1)
-                    svhn_r2 = permutation_test(svhn_test_flow, config.mixed_ratio2)
-
-                    plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
-                             ['red', 'salmon', 'green', 'lightgreen'],
-                             ['CIFAR-10 r1', 'CIFAR-10 r2', 'SVHN r1', 'SVHN r2'], 'log(bit/dims)',
-                             'batch_norm_log_pro_histogram', auc_pair=(0, 2))
-                    AUC = plot_fig([cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
-                                   ['red', 'green'],
-                                   [config.in_dataset + ' test', config.out_dataset + ' test'], 'log(bit/dims)',
-                                   'batch_norm_r1-r2_log_pro_histogram', auc_pair=(0, 1))
-                    loop.collect_metrics(AUC=AUC)
-
-                    make_diagram(loop,
-                        ele_test_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_with_batch_norm_{}'.format(epoch)
-                    )
-
-                    make_diagram(loop,
-                        ele_eval_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_without_batch_norm{}'.format(epoch)
-                    )
-
-                for step, [x] in loop.iter_steps(train_flow):
-                    try:
-                        step_counter += 1
-                        learning_rate.set(min(1.0, step_counter / config.glow_warm_up_steps) * config.initial_lr)
-                        _, batch_glow_loss = session.run([glow_train_op, glow_loss], feed_dict={
-                            input_x: x
-                        })
-                        loop.collect_metrics(glow_loss=batch_glow_loss)
-                    except Exception as e:
-                        pass
-
-                if epoch in config.lr_anneal_epoch_freq:
-                    learning_rate.anneal()
-
-                if epoch == config.warm_up_start:
-                    step_counter = 0
-                    learning_rate.set(config.initial_lr)
-
-                if epoch % config.plot_epoch_freq == 0:
-                    plot_samples(loop)
-
-                loop.collect_metrics(lr=learning_rate.get())
-                loop.print_logs()
-
-    # print the final metrics and close the results object
-    print_with_title('Results', results.format_metrics(), before='\n')
-    results.close()
+            make_diagram_torch(
+                loop, lambda x: -eval_ll(x),
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                fig_name='kl_histogram',
+                addtion_data=[cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll]
+            )
 
 
 if __name__ == '__main__':
