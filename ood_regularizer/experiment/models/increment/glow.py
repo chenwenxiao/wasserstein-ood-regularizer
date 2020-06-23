@@ -110,7 +110,15 @@ def main():
         x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
-        restore_checkpoint = None
+        experiment_dict = {
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6c/97/483105fdc153046a7ee5'
+        }
+        print(experiment_dict)
+        if config.in_dataset.name in experiment_dict:
+            restore_checkpoint = experiment_dict[config.in_dataset.name]
+        else:
+            restore_checkpoint = None
+        print('restore model from {}'.format(restore_checkpoint))
 
         # load the dataset
         cifar_train_dataset, cifar_test_dataset = make_dataset(config.in_dataset)

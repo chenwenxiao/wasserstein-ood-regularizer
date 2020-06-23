@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import mltk
 from mltk.data import ArraysDataStream, DataStream
+import tensorkit as tk
 from tensorkit import tensor as T
 import sys
 import torch
@@ -87,6 +88,7 @@ class ExperimentConfig(mltk.Config):
         hidden_conv_channels=[64, 64],
         depth=6,
         levels=3,
+        hidden_conv_act_norm=False
     )
     in_dataset = DataSetConfig(name='cifar10')
     out_dataset = DataSetConfig(name='svhn')
@@ -102,7 +104,6 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
-            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6c/97/483105fdc153046a7ee5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -134,130 +135,88 @@ def main():
 
         torch.save(model, 'model.pkl')
 
+        tk.layers.set_train_mode(model, False)
         with mltk.TestLoop() as loop:
+            x_train = cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
+            x_test = cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
+            svhn_test = svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+            mixed_array = np.concatenate([
+                x_test, svhn_test
+            ])
+            mixed_test_flow = ArraysDataStream([mixed_array], config.test_batch_size, shuffle=True,
+                                               skip_incomplete=True)
+            tmp_train_flow = ArraysDataStream([x_train], config.test_batch_size, shuffle=True, skip_incomplete=True)
 
             def eval_ll(x):
+                tk.layers.set_train_mode(model, True)
                 x = T.from_numpy(x)
                 ll, outputs = model(x)
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
-            def eval_log_det(x):
+            def eval_without_batch_norm_ll(x):
                 x = T.from_numpy(x)
                 ll, outputs = model(x)
-                log_det = outputs[0].log_det
-                for output in outputs[1:]:
-                    log_det = log_det + output.log_det
-                log_det = -dequantized_bpd(log_det, cifar_train_dataset.slots['x'])
-                return T.to_numpy(log_det)
+                bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
+                return T.to_numpy(bpd)
 
-            cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll = make_diagram_torch(
-                loop, eval_ll,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                fig_name='log_prob_histogram'
-            )
+            def permutation_test(flow, ratio):
+                R = min(max(1, int(ratio * config.test_batch_size - 1)), config.test_batch_size - 1)
+                print('R={}'.format(R))
+                packs = []
+                for [batch_x] in flow:
+                    for i in range(len(batch_x)):
+                        for [batch_y] in mixed_test_flow:
+                            for [batch_z] in tmp_train_flow:
+                                batch = np.concatenate(
+                                    [batch_x[i:i + 1], batch_y[:R], batch_z[:config.test_batch_size - R - 1]],
+                                    axis=0)
+                                pack = eval_ll(batch)
+                                pack = np.asarray(pack)[:1]
+                                break
+                            break
+                        packs.append(pack)
+                packs = np.concatenate(packs, axis=0)  # [len_of_flow]
+                print(packs.shape)
+                return packs
 
-            def t_perm(base, another_arrays=None):
-                base = sorted(base)
-                N = len(base)
-                return_arrays = []
-                for array in another_arrays:
-                    return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
-                return return_arrays
+            def delta_test(flow):
+                return permutation_test(flow, config.mixed_ratio1) - permutation_test(flow, config.mixed_ratio2)
 
-            [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
-                cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
+            cifar_r1 = permutation_test(cifar_test_flow, config.mixed_ratio1)
+            cifar_r2 = permutation_test(cifar_test_flow, config.mixed_ratio2)
+            svhn_r1 = permutation_test(svhn_test_flow, config.mixed_ratio1)
+            svhn_r2 = permutation_test(svhn_test_flow, config.mixed_ratio2)
 
-            loop.add_metrics(T_perm_histogram=plot_fig(
-                data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                x_label='bits/dim', fig_name='T_perm_histogram'))
+            loop.add_metrics(batch_norm_log_pro_histogram=plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
+                                                                   ['red', 'salmon', 'green', 'lightgreen'],
+                                                                   ['CIFAR-10 r1', 'CIFAR-10 r2', 'SVHN r1', 'SVHN r2'],
+                                                                   'log(bit/dims)',
+                                                                   'batch_norm_log_pro_histogram', auc_pair=(0, 2)))
 
-            loop.add_metrics(ll_with_complexity_histogram=plot_fig(
-                data_list=[cifar_train_ll + x_train_complexity, cifar_test_ll + x_test_complexity,
-                           svhn_train_ll + svhn_train_complexity, svhn_test_ll + svhn_test_complexity],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                x_label='bits/dim', fig_name='ll_with_complexity_histogram'))
+            loop.add_metrics(batch_norm_r1_r2_log_pro_histogram=plot_fig([cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
+                                                                         ['red', 'green'],
+                                                                         [config.in_dataset + ' test',
+                                                                          config.out_dataset + ' test'],
+                                                                         'log(bit/dims)',
+                                                                         'batch_norm_r1-r2_log_pro_histogram',
+                                                                         auc_pair=(0, 1)))
 
-            cifar_train_det, cifar_test_det, svhn_train_det, svhn_test_det = make_diagram_torch(
-                loop, eval_log_det,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                fig_name='log_det_histogram')
+            make_diagram_torch(loop,
+                               eval_ll,
+                               [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                               names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                      config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                               fig_name='log_prob_histogram_with_batch_norm'
+                               )
 
-            def eval_grad_norm(x):
-                x = T.from_numpy(x)
-                x.requires_grad = True
-                ll, outputs = model(x)
-                gradients = autograd.grad(ll, x, grad_outputs=torch.ones(ll.size()).cuda(),
-                              create_graph=True, retain_graph=True)[0]
-                grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
-                return T.to_numpy(grad_norm)
-
-            make_diagram_torch(
-                loop, eval_grad_norm,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                fig_name='grad_norm_histogram')
-
-            loop.add_metrics(origin_log_prob_histogram=plot_fig(
-                data_list=[cifar_train_ll - cifar_train_det, cifar_test_ll - cifar_test_det,
-                           svhn_train_ll - svhn_train_det, svhn_test_ll - svhn_test_det],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                x_label='bits/dim', fig_name='origin_log_prob_histogram'))
-
-            if not config.pretrain:
-                model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
-
-            mixed_array = get_mixed_array(
-                config,
-                cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
-                cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
-                svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
-                svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
-            )
-            shuffle_index = np.arange(0, len(mixed_array))
-            np.random.shuffle(shuffle_index)
-            steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
-                                     skip_incomplete=True)
-            for [x] in svhn_test_dataset.get_stream('test', ['x'], config.batch_size):
-                print(x)
-                break
-
-            def data_generator():
-                for [x] in steam:
-                    print(x)
-                    yield [T.from_numpy(x)]
-
-            train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
-                        DataStream.generator(data_generator) if config.use_transductive else None)
-
-            make_diagram_torch(
-                loop, eval_ll,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                fig_name='log_prob_mixed_histogram'
-            )
-
-            make_diagram_torch(
-                loop, lambda x: -eval_ll(x),
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                fig_name='kl_histogram',
-                addtion_data=[cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll]
-            )
+            make_diagram_torch(loop,
+                               eval_without_batch_norm_ll,
+                               [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                               names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                      config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                               fig_name='log_prob_histogram_without_batch_norm'
+                               )
 
 
 if __name__ == '__main__':

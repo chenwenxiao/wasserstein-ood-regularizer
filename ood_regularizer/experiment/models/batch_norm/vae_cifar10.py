@@ -398,10 +398,9 @@ def main():
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
 
-    tmp_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size, shuffle=True)
+    tmp_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size, shuffle=True, skip_incomplete=True)
     mixed_array = np.concatenate([x_test, svhn_test])
-    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size, shuffle=True,
-                                          skip_incomplete=True)
+    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size, shuffle=True, skip_incomplete=True)
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
     reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True)

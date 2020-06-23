@@ -199,7 +199,7 @@ def main():
                 x.requires_grad = True
                 ll, outputs = model(x)
                 gradients = autograd.grad(ll, x, grad_outputs=torch.ones(ll.size()).cuda(),
-                              create_graph=True, retain_graph=True)[0]
+                                          create_graph=True, retain_graph=True)[0]
                 grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
                 return T.to_numpy(grad_norm)
 
@@ -230,15 +230,11 @@ def main():
             )
             shuffle_index = np.arange(0, len(mixed_array))
             np.random.shuffle(shuffle_index)
-            steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
-                                     skip_incomplete=True)
-            for [x] in svhn_test_dataset.get_stream('test', ['x'], config.batch_size):
-                print(x)
-                break
+            mixed_steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
+                                           skip_incomplete=True)
 
             def data_generator():
-                for [x] in steam:
-                    print(x)
+                for [x] in mixed_steam:
                     yield [T.from_numpy(x)]
 
             train_model(exp, model, svhn_train_dataset, svhn_test_dataset,

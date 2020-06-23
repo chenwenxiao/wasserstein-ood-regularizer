@@ -181,7 +181,7 @@ class GlowBlock(tk.flows.SequentialFlow):
         n2 = n_channels - n1
         normalizer_cls = (
             tk.layers.ActNorm2d if config.hidden_conv_act_norm
-            else None
+            else tk.layers.BatchNorm2d
         )
 
         in_channels = n1
