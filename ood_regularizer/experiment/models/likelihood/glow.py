@@ -114,7 +114,13 @@ def main():
         x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
-        restore_checkpoint = None
+        experiment_dict = {
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/6c/97/483105fdc153046a7ee5'
+        }
+        if config.in_dataset.name in experiment_dict:
+            restore_checkpoint = experiment_dict[config.in_dataset.name]
+        else:
+            restore_checkpoint = None
 
         # load the dataset
         cifar_train_dataset, cifar_test_dataset = make_dataset(config.in_dataset)
@@ -128,7 +134,7 @@ def main():
         svhn_test_flow = svhn_test_dataset.get_stream('test', 'x', config.batch_size)
 
         if restore_checkpoint is not None:
-            model = torch.load(restore_checkpoint)
+            model = torch.load(restore_checkpoint + '/model.pkl')
         else:
             # construct the model
             model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
@@ -206,7 +212,7 @@ def main():
                 grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
                 return grad_norm
 
-            cifar_train_det, cifar_test_det, svhn_train_det, svhn_test_det = make_diagram_torch(
+            make_diagram_torch(
                 loop, eval_grad_norm,
                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
                 names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
@@ -224,22 +230,24 @@ def main():
             if not config.pretrain:
                 model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
-            shuffle_index = np.arange(0, cifar_test_dataset.splits['test'].data_count + svhn_test_dataset.splits[
-                'test'].data_count)
+            mixed_array = get_mixed_array(
+                config,
+                cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
+                cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
+                svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
+                svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+            )
+            shuffle_index = np.arange(0, len(mixed_array))
             np.random.shuffle(shuffle_index)
+            steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
+                                     skip_incomplete=True)
+            for [x] in svhn_test_dataset.get_stream('test', ['x'], config.batch_size):
+                print(x)
+                break
 
             def data_generator():
-                mixed_array = get_mixed_array(
-                    config,
-                    cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
-                    cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
-                    svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
-                    svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
-                )
-                print(mixed_array.shape)
-                steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
-                                         skip_incomplete=True)
                 for [x] in steam:
+                    print(x)
                     yield [T.from_numpy(x)]
 
             train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
