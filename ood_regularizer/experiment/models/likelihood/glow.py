@@ -138,12 +138,14 @@ def main():
 
         with mltk.TestLoop() as loop:
 
+            @torch.no_grad
             def eval_ll(x):
                 x = T.from_numpy(x)
                 ll, outputs = model(x)
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
+            @torch.no_grad
             def eval_log_det(x):
                 x = T.from_numpy(x)
                 ll, outputs = model(x)

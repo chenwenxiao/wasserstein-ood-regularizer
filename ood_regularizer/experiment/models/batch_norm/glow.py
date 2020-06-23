@@ -135,7 +135,16 @@ def main():
 
         torch.save(model, 'model.pkl')
 
-        tk.layers.set_train_mode(model, False)
+        def set_train_mode(m):
+            if isinstance(m, torch.nn.BatchNorm2d):
+                m.track_running_stats = False
+
+        def set_eval_mode(m):
+            if isinstance(m, torch.nn.BatchNorm2d):
+                m.track_running_stats = True
+
+        model.apply(set_train_mode)
+        tk.layers.set_eval_mode(model)
         with mltk.TestLoop() as loop:
             x_train = cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
             x_test = cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
@@ -147,13 +156,14 @@ def main():
                                                skip_incomplete=True)
             tmp_train_flow = ArraysDataStream([x_train], config.test_batch_size, shuffle=True, skip_incomplete=True)
 
+            @torch.no_grad
             def eval_ll(x):
-                tk.layers.set_train_mode(model, True)
                 x = T.from_numpy(x)
                 ll, outputs = model(x)
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
+            @torch.no_grad
             def eval_without_batch_norm_ll(x):
                 x = T.from_numpy(x)
                 ll, outputs = model(x)
@@ -210,6 +220,7 @@ def main():
                                fig_name='log_prob_histogram_with_batch_norm'
                                )
 
+            model.apply(set_eval_mode)
             make_diagram_torch(loop,
                                eval_without_batch_norm_ll,
                                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
