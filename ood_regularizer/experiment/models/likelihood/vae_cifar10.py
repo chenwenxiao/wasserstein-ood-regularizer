@@ -433,6 +433,11 @@ def main():
 
         ele_test_kl = ele_test_omega_ll - ele_test_ll
 
+        eval_test_chain = test_q_net.chain(p_net, observed={'x': input_x}, n_z=config.test_n_qz, latent_axis=0)
+        eval_test_ll = eval_test_chain.vi.evaluation.is_loglikelihood() / config.x_shape_multiple / np.log(2)
+        grad_x = tf.gradients(eval_test_ll, [input_x])[0]
+        grad_x_norm = tf.sqrt(tf.reduce_sum((grad_x ** 2), axis=[-1, -2, -3]))
+
     # derive the optimizer
     with tf.name_scope('optimizing'):
         VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('p_net')
@@ -605,6 +610,17 @@ def main():
                              x_label='bits/dim',
                              fig_name='T_perm_histogram_{}'.format(epoch))
 
+                    make_diagram(loop, grad_x_norm,
+                                 [cifar_train_flow,
+                                  cifar_test_flow,
+                                  svhn_train_flow,
+                                  svhn_test_flow],
+                                 [input_x, input_y],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='grad_norm_histogram_{}'.format(epoch)
+                                 )
+
                     make_diagram(loop,
                         ele_test_omega_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], [input_x, input_y],
@@ -647,14 +663,13 @@ def main():
                         fig_name='ll_with_complexity_histogram_{}'.format(epoch)
                     )
 
-                    AUC = make_diagram(loop,
+                    make_diagram(loop,
                         -ele_test_kl,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], [input_x, input_y],
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='kl_histogram_{}'.format(epoch)
                     )
-                    loop.collect_metrics(AUC=AUC)
 
                     def get_mcmc_and_origin(origin):
                         mcmc_sample = origin

@@ -3,10 +3,10 @@
 from matplotlib import pyplot
 import numpy as np
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
+import tensorflow as tf
 
 
 def get_ele(op, flow, inputs):
-    import tensorflow as tf
     if not isinstance(inputs, list):
         inputs = [inputs]
     packs = []

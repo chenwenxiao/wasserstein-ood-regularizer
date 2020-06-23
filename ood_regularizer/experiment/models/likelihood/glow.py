@@ -23,6 +23,7 @@ from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch
 
 from utils.data import SplitInfo
 from utils.evaluation import dequantized_bpd
+import torch.autograd as autograd
 
 
 class ExperimentConfig(mltk.Config):
@@ -195,6 +196,22 @@ def main():
                 names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
                        config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
                 fig_name='log_det_histogram')
+
+            def eval_grad_norm(x):
+                x = T.from_numpy(x)
+                x.requires_grad = True
+                ll, outputs = model(x)
+                gradients = autograd.grad(ll, x, grad_outputs=torch.ones(ll.size()).cuda(),
+                              create_graph=True, retain_graph=True)[0]
+                grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
+                return grad_norm
+
+            cifar_train_det, cifar_test_det, svhn_train_det, svhn_test_det = make_diagram_torch(
+                loop, eval_grad_norm,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                fig_name='grad_norm_histogram')
 
             loop.add_metrics(origin_log_prob_histogram=plot_fig(
                 data_list=[cifar_train_ll - cifar_train_det, cifar_test_ll - cifar_test_det,

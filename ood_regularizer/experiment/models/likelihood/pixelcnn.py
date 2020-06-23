@@ -298,6 +298,9 @@ def main():
 
         ele_test_kl = ele_test_omega_ll - ele_test_ll
 
+        grad_x = tf.gradients(ele_test_ll, [input_x])[0]
+        grad_x_norm = tf.sqrt(tf.reduce_sum((grad_x ** 2), axis=[-1, -2, -3]))
+
     # derive the optimizer
     with tf.name_scope('optimizing'):
         theta_params = tf.trainable_variables('p_net')
@@ -391,6 +394,17 @@ def main():
                              x_label='bits/dim',
                              fig_name='T_perm_histogram_{}'.format(epoch))
 
+                    make_diagram(loop, grad_x_norm,
+                                 [cifar_train_flow,
+                                  cifar_test_flow,
+                                  svhn_train_flow,
+                                  svhn_test_flow],
+                                 [input_x],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='grad_norm_histogram_{}'.format(epoch)
+                                 )
+
                     make_diagram(loop,
                         ele_test_omega_ll,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
@@ -425,14 +439,13 @@ def main():
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
 
-                    AUC = make_diagram(loop,
+                    make_diagram(loop,
                         -ele_test_kl,
                         [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='kl_histogram_{}'.format(epoch)
                     )
-                    loop.collect_metrics(AUC=AUC)
                     loop.print_logs()
                     break
 
