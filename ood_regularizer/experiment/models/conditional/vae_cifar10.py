@@ -490,8 +490,6 @@ def main():
                     print('Correct number in cifar test is {}'.format(
                         np.sum(cifar_test_predict == y_test)))
                     svhn_test_predict = get_ele(predict, svhn_test_flow, input_x)
-                    mixed_array_predict = get_ele(
-                        predict, spt.DataFlow.arrays([mixed_array], config.batch_size), input_x)
 
                 if epoch == config.max_epoch + 1:
                     final_cifar_test_ll = np.zeros(len(x_test))
@@ -526,10 +524,6 @@ def main():
                     train_flow = spt.DataFlow.arrays([x_train[y_train == current_class]],
                                                      config.batch_size, shuffle=True,
                                                      skip_incomplete=True)
-                    mixed_test_flow = spt.DataFlow.arrays([mixed_array[mixed_array_predict == current_class]],
-                                                          config.batch_size,
-                                                          shuffle=True,
-                                                          skip_incomplete=True)
                     return train_flow, mixed_test_flow
 
                 if (epoch - config.warm_up_start) % config.test_epoch_freq == 1 and epoch > config.warm_up_start:

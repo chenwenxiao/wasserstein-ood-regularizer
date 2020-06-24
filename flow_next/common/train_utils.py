@@ -6,10 +6,12 @@ import mltk
 import numpy as np
 import tensorkit as tk
 from tensorkit import tensor as T, examples
+from torchvision.models import ResNet
 
 from flow_next.models.glow import Glow
 from utils.data import *
 from utils.evaluation import dequantized_bpd
+import torch
 
 __all__ = ['TrainConfig', 'train_model']
 
@@ -47,7 +49,6 @@ class TrainConfig(mltk.Config):
 
 
 class TrainLRScheduler(tk.optim.lr_scheduler.LRScheduler):
-
     _last_set_lr: Optional[float] = None
     lr: float
     warmup_epochs: Optional[int]
@@ -99,7 +100,7 @@ def train_model(exp: mltk.Experiment,
                 model: Glow,
                 train_dataset: DataSet,
                 test_dataset: DataSet,
-                data_generator = None):
+                data_generator=None):
     train_config: TrainConfig = exp.config.train
 
     # print information of the data
@@ -226,6 +227,99 @@ def train_model(exp: mltk.Experiment,
 
     # do the final test
     plot_samples('final')
+    results = mltk.TestLoop().run(eval_step, test_stream)
+    print('')
+    print(mltk.format_key_values(results, title='Results'))
+
+
+def train_classifier(exp: mltk.Experiment,
+                model: ResNet,
+                train_dataset: DataSet,
+                test_dataset: DataSet,
+                data_generator=None):
+    train_config: TrainConfig = exp.config.train
+
+    # print information of the data
+    print('Train dataset information\n'
+          '*************************')
+    print_dataset_info(train_dataset)
+    print('')
+
+    print('Test dataset information\n'
+          '*************************')
+    print_dataset_info(test_dataset)
+    print('')
+
+    # prepare for the data streams
+    train_stream = train_dataset.get_stream(
+        'train', ['x', 'y'], batch_size=train_config.batch_size,
+        shuffle=True, skip_incomplete=True,
+    )
+    test_stream = test_dataset.get_stream(
+        'test', ['x', 'y'], batch_size=train_config.test_batch_size).to_arrays_stream()
+
+    # print experiment and data information
+    examples.utils.print_experiment_summary(
+        exp, train_data=train_stream, test_data=test_stream)
+
+    # make tensor streams
+    train_stream = tk.utils.as_tensor_stream(train_stream, prefetch=3)
+    test_stream = tk.utils.as_tensor_stream(test_stream, prefetch=3)
+
+    # inspect the model
+    params, param_names = examples.utils.get_params_and_names(model)
+    examples.utils.print_parameters_summary(params, param_names)
+    print('')
+
+    # define the train and evaluate functions
+    def get_batch_output(x, y):
+        pred = model(x)
+        criterion = torch.nn.CrossEntropyLoss()
+        cross_entropy = criterion(pred, y)
+        ret = {'cross_entropy': cross_entropy}
+        return ret
+
+    def train_step(x, y):
+        outputs = get_batch_output(x, y)
+        loss = outputs['cross_entropy']
+        if train_config.l2_reg > 0.:
+            outputs['l2_term'] = train_config.l2_reg * T.nn.l2_regularization(params)
+            loss = loss + outputs['l2_term']
+        outputs['loss'] = loss
+        return outputs
+
+    def eval_step(x, y):
+        with tk.layers.scoped_eval_mode(model), T.no_grad():
+            return get_batch_output(x, y)
+
+    # build the optimizer and the train loop
+    loop = mltk.TrainLoop(max_epoch=train_config.max_epoch)
+    loop.add_callback(mltk.callbacks.StopOnNaN())
+    optimizer = build_optimizer(train_config, tk.layers.iter_parameters(model))
+    lr_scheduler = TrainLRScheduler(
+        optimizer=optimizer,
+        lr=train_config.lr,
+        warmup_epochs=train_config.warmup_epochs,
+        # ratio=train_config.lr_anneal_ratio,
+        # epochs=train_config.lr_anneal_epochs
+    )
+    lr_scheduler.bind(loop)
+    loop.run_after_every(
+        lambda: loop.test().run(eval_step, test_stream),
+        epochs=train_config.test_epoch_freq
+    )
+
+    # train the model
+    tk.layers.set_train_mode(model, True)
+    examples.utils.fit_model(
+        loop=loop,
+        optimizer=optimizer,
+        fn=train_step,
+        stream=train_stream if data_generator is None else data_generator,
+        global_clip_norm=train_config.grad_global_clip_norm,
+    )
+
+    # do the final test
     results = mltk.TestLoop().run(eval_step, test_stream)
     print('')
     print(mltk.format_key_values(results, title='Results'))
