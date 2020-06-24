@@ -134,7 +134,6 @@ def main():
         y_test = cifar_test_dataset.get_stream('test', ['y'], config.batch_size).get_arrays()[0]
         svhn_train = svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
         svhn_test = svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
-        mixed_array = np.concatenate([x_test, svhn_test])
 
         if restore_dir is None:
             classifier = models.resnet34(num_classes=config.class_num)
