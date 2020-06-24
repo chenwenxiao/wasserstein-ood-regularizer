@@ -156,14 +156,14 @@ def main():
                                                skip_incomplete=True)
             tmp_train_flow = ArraysDataStream([x_train], config.test_batch_size, shuffle=True, skip_incomplete=True)
 
-            @torch.no_grad
+            @torch.no_grad()
             def eval_ll(x):
                 x = T.from_numpy(x)
                 ll, outputs = model(x)
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
-            @torch.no_grad
+            @torch.no_grad()
             def eval_without_batch_norm_ll(x):
                 x = T.from_numpy(x)
                 ll, outputs = model(x)

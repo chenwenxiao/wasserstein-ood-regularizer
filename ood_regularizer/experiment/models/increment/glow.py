@@ -144,7 +144,7 @@ def main():
         torch.save(model, 'model.pkl')
 
         with mltk.TestLoop() as loop:
-            @torch.no_grad
+            @torch.no_grad()
             def eval_ll(x):
                 x = T.from_numpy(x)
                 ll, outputs = model(x)

@@ -154,12 +154,12 @@ def train_model(exp: mltk.Experiment,
         ll = T.reduce_mean(ll)
         bpd = dequantized_bpd(ll, train_dataset.slots['x'])
         ret = {'ll': ll, 'bpd': bpd}
-        for i, output in enumerate(outputs):
-            ret[f'z_ll{i}'] = output.right_log_prob
-            if train_config.debug:
-                z_mu, z_var = T.calculate_mean_and_var(output.right)
-                ret[f'z_mu{i}'] = z_mu
-                ret[f'z_var{i}'] = z_var
+        # for i, output in enumerate(outputs):
+        #     ret[f'z_ll{i}'] = output.right_log_prob
+        #     if train_config.debug:
+        #         z_mu, z_var = T.calculate_mean_and_var(output.right)
+        #         ret[f'z_mu{i}'] = z_mu
+        #         ret[f'z_var{i}'] = z_var
         return ret
 
     def train_step(x):

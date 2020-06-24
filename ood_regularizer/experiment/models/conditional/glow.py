@@ -154,7 +154,7 @@ def main():
             classifier = torch.load(restore_dir + '/classifier.pkl')
 
         with mltk.TestLoop() as loop:
-            @torch.no_grad
+            @torch.no_grad()
             def eval_predict(x):
                 x = T.from_numpy(x)
                 predict = classifier(x)
@@ -166,7 +166,7 @@ def main():
                 np.sum(cifar_test_predict == y_test)))
             svhn_test_predict = get_ele_torch(eval_predict, svhn_test_flow)
 
-            @torch.no_grad
+            @torch.no_grad()
             def eval_ll(x):
                 x = T.from_numpy(x)
                 ll, outputs = model(x)
