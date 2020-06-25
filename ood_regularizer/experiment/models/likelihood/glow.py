@@ -41,7 +41,7 @@ class ExperimentConfig(mltk.Config):
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
-    pretrain = True
+    pretrain = False
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
@@ -79,7 +79,7 @@ class ExperimentConfig(mltk.Config):
         batch_size=64,
         test_batch_size=64,
         test_epoch_freq=10,
-        max_epoch=50,
+        max_epoch=30,
         grad_global_clip_norm=None,
         # grad_global_clip_norm=100.0,
         debug=True
@@ -87,7 +87,7 @@ class ExperimentConfig(mltk.Config):
     model = GlowConfig(
         hidden_conv_activation='relu',
         hidden_conv_channels=[64, 64],
-        depth=6,
+        depth=10,
         levels=3,
     )
     in_dataset = DataSetConfig(name='cifar10')
@@ -219,27 +219,32 @@ def main():
                             config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
                 x_label='bits/dim', fig_name='origin_log_prob_histogram'))
 
-            if not config.pretrain:
-                model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
+            if config.self_ood and restore_checkpoint is not None:
+                model = torch.load(restore_checkpoint + '/omega_model.pkl')
+            else:
+                if not config.pretrain:
+                    model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
-            mixed_array = get_mixed_array(
-                config,
-                cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
-                cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
-                svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
-                svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
-            )
-            shuffle_index = np.arange(0, len(mixed_array))
-            np.random.shuffle(shuffle_index)
-            mixed_steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
-                                           skip_incomplete=True)
+                mixed_array = get_mixed_array(
+                    config,
+                    cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
+                    cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
+                    svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
+                    svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+                )
+                shuffle_index = np.arange(0, len(mixed_array))
+                np.random.shuffle(shuffle_index)
+                mixed_steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
+                                               skip_incomplete=True)
 
-            def data_generator():
-                for [x] in mixed_steam:
-                    yield [T.from_numpy(x)]
+                def data_generator():
+                    for [x] in mixed_steam:
+                        yield [T.from_numpy(x)]
 
-            train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
-                        DataStream.generator(data_generator) if config.use_transductive else None)
+                train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
+                            DataStream.generator(
+                                data_generator) if config.use_transductive and not config.self_ood else None)
+                torch.save(model, restore_checkpoint + '/omega_model.pkl')
 
             make_diagram_torch(
                 loop, eval_ll,
