@@ -10,7 +10,7 @@ from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_mod
 from flow_next.models.glow import GlowConfig, Glow
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
 from ood_regularizer.experiment.models.utils import get_mixed_array
-from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch
+from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch, get_ele_torch
 
 from utils.evaluation import dequantized_bpd
 import torch.autograd as autograd
@@ -62,7 +62,6 @@ class ExperimentConfig(mltk.Config):
     test_epoch_freq = 200
     plot_epoch_freq = 20
     distill_ratio = 1.0
-    distill_epoch = 5000
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -79,7 +78,7 @@ class ExperimentConfig(mltk.Config):
         batch_size=64,
         test_batch_size=64,
         test_epoch_freq=10,
-        max_epoch=30,
+        max_epoch=50,
         grad_global_clip_norm=None,
         # grad_global_clip_norm=100.0,
         debug=True
@@ -87,7 +86,7 @@ class ExperimentConfig(mltk.Config):
     model = GlowConfig(
         hidden_conv_activation='relu',
         hidden_conv_channels=[64, 64],
-        depth=10,
+        depth=6,
         levels=3,
     )
     in_dataset = DataSetConfig(name='cifar10')
@@ -222,8 +221,6 @@ def main():
             if config.self_ood and restore_checkpoint is not None:
                 model = torch.load(restore_checkpoint + '/omega_model.pkl')
             else:
-                if not config.pretrain:
-                    model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
                 mixed_array = get_mixed_array(
                     config,
@@ -232,19 +229,25 @@ def main():
                     svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
                     svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
                 )
-                shuffle_index = np.arange(0, len(mixed_array))
-                np.random.shuffle(shuffle_index)
-                mixed_steam = ArraysDataStream([mixed_array[shuffle_index]], batch_size=config.batch_size, shuffle=True,
-                                               skip_incomplete=True)
+                mixed_stream = ArraysDataStream([mixed_array], batch_size=config.batch_size, shuffle=False,
+                                                skip_incomplete=False)
+                mixed_ll = get_ele_torch(eval_ll, mixed_stream)
+                mixed_stream = ArraysDataStream([mixed_array, mixed_ll], batch_size=config.batch_size, shuffle=True,
+                                                skip_incomplete=True)
+                if not config.pretrain:
+                    model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
                 def data_generator():
-                    for [x] in mixed_steam:
+                    for [x, ll] in mixed_stream:
+                        ll_omega = eval_ll(x)
+                        batch_index = np.argsort(ll - ll_omega)
+                        batch_index = batch_index[len(batch_index) * config.distill_ratio]
+                        x = x[batch_index]
                         yield [T.from_numpy(x)]
 
-                train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
-                            DataStream.generator(
-                                data_generator) if config.use_transductive and not config.self_ood else None)
-                torch.save(model, restore_checkpoint + '/omega_model.pkl')
+                train_model(exp, model, svhn_train_dataset, svhn_test_dataset, DataStream.generator(data_generator))
+
+            torch.save(model, 'omega_model.pkl')
 
             make_diagram_torch(
                 loop, eval_ll,

@@ -624,34 +624,28 @@ def find_largest_batch_size(test_metrics: GraphNodes,
 def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test, normalized=True):
     mixed_array = None
     if config.self_ood:
-        if config.use_transductive:
-            cele_train, cele_validate, cele_test = load_celeba(img_size=32)
+        if config.noise_type == "mutation":
+            random_array = np.random.randint(0, 256, size=cifar_train.shape)
             if normalized:
-                cele_test = (cele_test - 127.5) / 256.0 * 2
-            mixed_array = cele_test
-        else:
-            if config.noise_type == "mutation":
-                random_array = np.random.randint(0, 256, size=cifar_train.shape)
-                if normalized:
-                    random_array = (random_array - 127.5) / 256 * 2.0
-                mixed_array = np.where(np.random.random(size=cifar_train.shape) < config.mutation_rate,
-                                       random_array, cifar_train)
-            elif config.noise_type == "gaussian":
-                if normalized:
-                    cifar_train = cifar_train * 256.0 / 2 + 127.5
-                random_array = np.reshape(np.random.randn(len(cifar_train) * config.x_shape_multiple),
-                                          (-1,) + config.x_shape) * config.mutation_rate * 255
-                mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
-                if normalized:
-                    mixed_array = (mixed_array - 127.5) / 256.0 * 2
-            elif config.noise_type == "unit":
-                if normalized:
-                    cifar_train = cifar_train * 256.0 / 2 + 127.5
-                random_array = np.reshape((np.random.rand(len(cifar_train) * config.x_shape_multiple) * 2 - 1),
-                                          (-1,) + config.x_shape) * config.mutation_rate * 255
-                mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
-                if normalized:
-                    mixed_array = (mixed_array - 127.5) / 256.0 * 2
+                random_array = (random_array - 127.5) / 256 * 2.0
+            mixed_array = np.where(np.random.random(size=cifar_train.shape) < config.mutation_rate,
+                                   random_array, cifar_train)
+        elif config.noise_type == "gaussian":
+            if normalized:
+                cifar_train = cifar_train * 256.0 / 2 + 127.5
+            random_array = np.reshape(np.random.randn(len(cifar_train) * config.x_shape_multiple),
+                                      (-1,) + config.x_shape) * config.mutation_rate * 255
+            mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
+            if normalized:
+                mixed_array = (mixed_array - 127.5) / 256.0 * 2
+        elif config.noise_type == "unit":
+            if normalized:
+                cifar_train = cifar_train * 256.0 / 2 + 127.5
+            random_array = np.reshape((np.random.rand(len(cifar_train) * config.x_shape_multiple) * 2 - 1),
+                                      (-1,) + config.x_shape) * config.mutation_rate * 255
+            mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
+            if normalized:
+                mixed_array = (mixed_array - 127.5) / 256.0 * 2
     else:
         if config.use_transductive:
             mixed_array = np.concatenate([cifar_test[:int(len(cifar_test) * config.in_dataset_test_ratio)], svhn_test])
@@ -660,4 +654,9 @@ def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test, norm
         else:
             mixed_array = svhn_train
 
+    shuffle_index = np.arange(0, len(mixed_array))
+    np.random.shuffle(shuffle_index)
+    if hasattr(config, 'mixed_ratio'):
+        shuffle_index = shuffle_index[:int(len(shuffle_index) * config.mixed_ratio)]
+        mixed_array = mixed_array[shuffle_index]
     return mixed_array

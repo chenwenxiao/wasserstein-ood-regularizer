@@ -334,8 +334,6 @@ def main():
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test, normalized=False)
-    np.random.shuffle(mixed_array)
-    mixed_array = mixed_array[:int(config.mixed_ratio * len(mixed_array))]
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
                                           shuffle=True,
                                           skip_incomplete=True)
