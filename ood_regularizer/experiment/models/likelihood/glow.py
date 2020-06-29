@@ -41,7 +41,7 @@ class ExperimentConfig(mltk.Config):
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
-    pretrain = False
+    pretrain = True
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
@@ -61,7 +61,7 @@ class ExperimentConfig(mltk.Config):
     test_batch_size = 64
     test_epoch_freq = 200
     plot_epoch_freq = 20
-    distill_ratio = 1.0
+    distill_ratio = 1.0  # or 0.3
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -221,7 +221,6 @@ def main():
             if config.self_ood and restore_checkpoint is not None:
                 model = torch.load(restore_checkpoint + '/omega_model.pkl')
             else:
-
                 mixed_array = get_mixed_array(
                     config,
                     cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
@@ -241,7 +240,7 @@ def main():
                     for [x, ll] in mixed_stream:
                         ll_omega = eval_ll(x)
                         batch_index = np.argsort(ll - ll_omega)
-                        batch_index = batch_index[len(batch_index) * config.distill_ratio]
+                        batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
                         x = x[batch_index]
                         yield [T.from_numpy(x)]
 

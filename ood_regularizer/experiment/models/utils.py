@@ -657,6 +657,8 @@ def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test, norm
     shuffle_index = np.arange(0, len(mixed_array))
     np.random.shuffle(shuffle_index)
     if hasattr(config, 'mixed_ratio'):
-        shuffle_index = shuffle_index[:int(len(shuffle_index) * config.mixed_ratio)]
+        limit_nummber = int(len(shuffle_index) * config.mixed_ratio)
+        print(limit_nummber)
+        shuffle_index = shuffle_index[:limit_nummber]
         mixed_array = mixed_array[shuffle_index]
     return mixed_array
