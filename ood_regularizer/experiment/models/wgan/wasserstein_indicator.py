@@ -69,7 +69,7 @@ class ExpConfig(spt.Config):
 
     n_critical = 5  # TODO
     # evaluation parameters
-    train_n_pz = 256
+    train_n_pz = 128
     test_n_qz = 10
     test_batch_size = 64
     test_epoch_freq = 100
@@ -187,8 +187,9 @@ def get_all_loss(input_x, input_y):
 
         if config.gradient_penalty_algorithm == 'interpolate':
             # Sample from interpolates
+            batch_size = spt.utils.get_shape(input_x)[0]
             alpha = tf.random_uniform(
-                tf.concat([[config.batch_size], [1] * len(config.x_shape)], axis=0),
+                tf.concat([[batch_size], [1] * len(config.x_shape)], axis=0),
                 minval=0, maxval=1.0
             )
             x = tf.reshape(x, (-1,) + config.x_shape)
@@ -466,12 +467,10 @@ def main():
                             })
                             batch_index = np.argsort(batch_energy)
                             batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
-                            print(batch_index)
                             y = y[batch_index]
                             x_index = np.arange(len(x))
                             np.random.shuffle(x_index)
                             x_index = x_index[:len(batch_index)]
-                            print(x_index)
                             x = x[x_index]
 
                         # spec-training discriminator

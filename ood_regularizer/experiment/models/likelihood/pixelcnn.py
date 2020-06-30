@@ -467,7 +467,7 @@ def main():
                 else:
                     for step, [x, ll] in loop.iter_steps(mixed_test_flow):
                         if config.distill_ratio != 1.0:
-                            ll_omega = session.run([ele_test_omega_ll], feed_dict={
+                            ll_omega = session.run(ele_test_omega_ll, feed_dict={
                                 input_x: x
                             })
                             batch_index = np.argsort(ll - ll_omega)
