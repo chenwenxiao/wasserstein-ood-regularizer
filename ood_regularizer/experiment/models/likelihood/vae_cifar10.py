@@ -551,7 +551,7 @@ def main():
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
                                      skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
-    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
+    mixed_test_flow = spt.DataFlow.arrays([mixed_array, mixed_array], config.batch_size,
                                           shuffle=False, skip_incomplete=False)
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
@@ -705,7 +705,7 @@ def main():
                     break
 
                 if epoch == config.warm_up_start + 1:
-                    mixed_test_kl = get_ele(ele_test_ll, mixed_test_flow, input_x)
+                    mixed_test_kl = get_ele(ele_test_ll, mixed_test_flow, [input_x, input_y])
                     mixed_test_flow = spt.DataFlow.arrays([mixed_array, mixed_test_kl],
                                                           config.batch_size, shuffle=True, skip_incomplete=True)
 

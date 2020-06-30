@@ -57,7 +57,7 @@ class ExpConfig(spt.Config):
     out_dataset = 'svhn'
 
     max_step = None
-    batch_size = 256
+    batch_size = 128
     initial_lr = 0.0001
     lr_anneal_factor = 0.5
     lr_anneal_epoch_freq = []
@@ -408,8 +408,8 @@ def main():
                                      skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
-                                          shuffle=True,
-                                          skip_incomplete=True)
+                                          shuffle=False,
+                                          skip_incomplete=False)
 
     with spt.utils.create_session().as_default() as session, train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
@@ -441,25 +441,39 @@ def main():
 
                 if epoch == config.max_epoch + 1:
                     make_diagram(loop,
-                        ele_gradient_norm,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='gradient_norm_histogram_{}'.format(epoch)
-                    )
+                                 ele_gradient_norm,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='gradient_norm_histogram_{}'.format(epoch)
+                                 )
 
                     make_diagram(loop,
-                        ele_test_energy,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_{}'.format(epoch)
-                    )
+                                 ele_test_energy,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='log_prob_histogram_{}'.format(epoch)
+                                 )
                     loop.print_logs()
                     break
 
                 for step, [x] in loop.iter_steps(train_flow):
                     for [y] in mixed_test_flow:
+                        if config.distill_ratio != 1.0:
+                            batch_energy = session.run(ele_test_energy, feed_dict={
+                                input_x: y
+                            })
+                            batch_index = np.argsort(batch_energy)
+                            batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                            print(batch_index)
+                            y = y[batch_index]
+                            x_index = np.arange(len(x))
+                            np.random.shuffle(x_index)
+                            x_index = x_index[:len(batch_index)]
+                            print(x_index)
+                            x = x[x_index]
+
                         # spec-training discriminator
                         [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
                             [D_train_op, D_loss, G_loss, D_real], feed_dict={
