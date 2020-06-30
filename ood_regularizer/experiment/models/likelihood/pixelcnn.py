@@ -54,6 +54,7 @@ class ExpConfig(spt.Config):
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
+    pretrain = True
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -298,8 +299,8 @@ def main():
 
         ele_test_kl = ele_test_omega_ll - ele_test_ll
 
-        grad_x = tf.gradients(ele_test_ll, [input_x])[0]
-        grad_x_norm = tf.sqrt(tf.reduce_sum((grad_x ** 2), axis=[-1, -2, -3]))
+        # grad_x = tf.gradients(ele_test_ll, [input_x])[0]
+        # grad_x_norm = tf.sqrt(tf.reduce_sum((grad_x ** 2), axis=[-1, -2, -3]))
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
@@ -315,6 +316,10 @@ def main():
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             omega_train_op = omega_optimizer.apply_gradients(omega_grads)
             theta_train_op = theta_optimizer.apply_gradients(theta_grads)
+        copy_ops = []
+        for i in range(len(theta_params)):
+            copy_ops.append(tf.assign(omega_params[i], theta_params[i]))
+        copy_ops = tf.group(*copy_ops)
 
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
@@ -335,8 +340,7 @@ def main():
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test, normalized=False)
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
-                                          shuffle=True,
-                                          skip_incomplete=True)
+                                          shuffle=False, skip_incomplete=False)
 
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
@@ -366,11 +370,10 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
-                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(loop,
-                        ele_test_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(
+                        loop, ele_test_ll, [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                        input_x, names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         fig_name='log_prob_histogram_{}'.format(epoch)
                     )
 
@@ -392,60 +395,68 @@ def main():
                              x_label='bits/dim',
                              fig_name='T_perm_histogram_{}'.format(epoch))
 
-                    make_diagram(loop, grad_x_norm,
-                                 [cifar_train_flow,
-                                  cifar_test_flow,
-                                  svhn_train_flow,
-                                  svhn_test_flow],
-                                 [input_x],
+                    # make_diagram(loop, grad_x_norm,
+                    #              [cifar_train_flow,
+                    #               cifar_test_flow,
+                    #               svhn_train_flow,
+                    #               svhn_test_flow],
+                    #              [input_x],
+                    #              names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                    #                     config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                    #              fig_name='grad_norm_histogram_{}'.format(epoch)
+                    #              )
+
+                    make_diagram(loop,
+                                 ele_test_omega_ll,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='grad_norm_histogram_{}'.format(epoch)
+                                 fig_name='log_prob_mixed_histogram_{}'.format(epoch)
                                  )
 
                     make_diagram(loop,
-                        ele_test_omega_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
-                    )
+                                 ele_test_omega_ll,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='log_prob_mixed_histogram_{}'.format(epoch)
+                                 )
 
                     make_diagram(loop,
-                        ele_test_omega_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_mixed_histogram_{}'.format(epoch)
-                    )
+                                 ele_test_ll + input_complexity,
+                                 [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
+                                  svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
+                                 [input_x, input_complexity],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='ll_with_complexity_histogram_{}'.format(epoch)
+                                 )
 
                     make_diagram(loop,
-                        ele_test_ll + input_complexity,
-                        [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
-                         svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
-                        [input_x, input_complexity],
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='ll_with_complexity_histogram_{}'.format(epoch)
-                    )
+                                 ele_test_ll,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='log_prob_histogram_{}'.format(epoch)
+                                 )
 
                     make_diagram(loop,
-                        ele_test_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_{}'.format(epoch)
-                    )
-
-                    make_diagram(loop,
-                        -ele_test_kl,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='kl_histogram_{}'.format(epoch)
-                    )
+                                 -ele_test_kl,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='kl_histogram_{}'.format(epoch)
+                                 )
                     loop.print_logs()
                     break
+
+                if epoch == config.warm_up_start + 1:
+                    mixed_test_kl = get_ele(ele_test_ll, mixed_test_flow, input_x)
+                    mixed_test_flow = spt.DataFlow.arrays([mixed_array, mixed_test_kl],
+                                                          config.batch_size, shuffle=True, skip_incomplete=True)
+
+                    if config.pretrain:
+                        session.run(copy_ops)
 
                 if epoch <= config.warm_up_start:
                     for step, [x] in loop.iter_steps(train_flow):
@@ -454,7 +465,15 @@ def main():
                         })
                         loop.collect_metrics(theta_loss=batch_theta_loss)
                 else:
-                    for step, [x] in loop.iter_steps(mixed_test_flow):
+                    for step, [x, ll] in loop.iter_steps(mixed_test_flow):
+                        if config.distill_ratio != 1.0:
+                            ll_omega = session.run([ele_test_omega_ll], feed_dict={
+                                input_x: x
+                            })
+                            batch_index = np.argsort(ll - ll_omega)
+                            batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                            x = x[batch_index]
+
                         _, batch_omega_loss = session.run([omega_train_op, omega_loss], feed_dict={
                             input_x: x
                         })
@@ -465,16 +484,6 @@ def main():
 
                 if epoch == config.warm_up_start:
                     learning_rate.set(config.initial_lr)
-
-                if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
-                    # Distill
-                    mixed_array_kl = get_ele(-ele_test_kl, spt.DataFlow.arrays([mixed_array], config.batch_size),
-                                             input_x)
-                    ascent_index = np.argsort(mixed_array_kl, axis=0)
-                    mixed_array = mixed_array[ascent_index[:int(config.distill_ratio * len(mixed_array))]]
-                    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
-                                                          shuffle=True,
-                                                          skip_incomplete=True)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

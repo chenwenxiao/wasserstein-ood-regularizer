@@ -89,8 +89,8 @@ class ExperimentConfig(mltk.Config):
         depth=6,
         levels=3,
     )
-    in_dataset = DataSetConfig(name='cifar10')
-    out_dataset = DataSetConfig(name='svhn')
+    in_dataset = 'cifar10'
+    out_dataset = 'svhn'
 
 
 def main():
@@ -99,8 +99,10 @@ def main():
         exp.make_dirs('plotting')
         config = exp.config
         # prepare for training and testing data
-        x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
-        svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
+        config.in_dataset = DataSetConfig(name=config.in_dataset)
+        config.out_dataset = DataSetConfig(name=config.out_dataset)
+        x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
+        svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
 
         experiment_dict = {
         }
@@ -117,9 +119,9 @@ def main():
         svhn_train_dataset, svhn_test_dataset = make_dataset(config.out_dataset)
         print('SVHN DataSet loaded.')
 
-        cifar_train_flow = cifar_train_dataset.get_stream('train', 'x', config.batch_size)
+        cifar_train_flow = cifar_test_dataset.get_stream('train', 'x', config.batch_size)
         cifar_test_flow = cifar_test_dataset.get_stream('test', 'x', config.batch_size)
-        svhn_train_flow = svhn_train_dataset.get_stream('train', 'x', config.batch_size)
+        svhn_train_flow = svhn_test_dataset.get_stream('train', 'x', config.batch_size)
         svhn_test_flow = svhn_test_dataset.get_stream('test', 'x', config.batch_size)
 
         if restore_checkpoint is not None:
@@ -238,10 +240,11 @@ def main():
 
                 def data_generator():
                     for [x, ll] in mixed_stream:
-                        ll_omega = eval_ll(x)
-                        batch_index = np.argsort(ll - ll_omega)
-                        batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
-                        x = x[batch_index]
+                        if config.distill_ratio != 1.0:
+                            ll_omega = eval_ll(x)
+                            batch_index = np.argsort(ll - ll_omega)
+                            batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                            x = x[batch_index]
                         yield [T.from_numpy(x)]
 
                 train_model(exp, model, svhn_train_dataset, svhn_test_dataset, DataStream.generator(data_generator))
