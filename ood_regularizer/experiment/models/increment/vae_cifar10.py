@@ -428,16 +428,10 @@ def main():
                         else:
                             repeat_epoch = config.mixed_train_epoch
                         for pse_epoch in range(repeat_epoch):
-                            if i < config.batch_size - 1:
-                                train_index = np.random.randint(0, len(x_train), config.batch_size - i - 1)
-                                batch_x = [mixed_array[0:i + 1], x_train[train_index]]
-                                batch_x = np.concatenate(batch_x)
-                                # print(batch_x.shape)
-                            else:
-                                mixed_index = np.random.randint(0, i, config.batch_size)
-                                mixed_index[-1] = i
-                                batch_x = mixed_array[mixed_index]
-                                # print(batch_x.shape)
+                            mixed_index = np.random.randint(0, i + 1, config.batch_size)
+                            mixed_index[-1] = i
+                            batch_x = mixed_array[mixed_index]
+                            # print(batch_x.shape)
                             _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
                                 input_x: batch_x
                             })

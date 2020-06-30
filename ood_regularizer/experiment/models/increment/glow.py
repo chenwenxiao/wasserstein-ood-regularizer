@@ -97,8 +97,8 @@ class ExperimentConfig(mltk.Config):
         depth=6,
         levels=3,
     )
-    in_dataset = DataSetConfig(name='cifar10')
-    out_dataset = DataSetConfig(name='svhn')
+    in_dataset = 'cifar10'
+    out_dataset = 'svhn'
 
 
 def main():
@@ -107,6 +107,8 @@ def main():
         exp.make_dirs('plotting')
         config = exp.config
         # prepare for training and testing data
+        config.in_dataset = DataSetConfig(name=config.in_dataset)
+        config.out_dataset = DataSetConfig(name=config.out_dataset)
         x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
@@ -125,9 +127,9 @@ def main():
         svhn_train_dataset, svhn_test_dataset = make_dataset(config.out_dataset)
         print('SVHN DataSet loaded.')
 
-        cifar_train_flow = cifar_train_dataset.get_stream('train', 'x', config.batch_size)
+        cifar_train_flow = cifar_test_dataset.get_stream('train', 'x', config.batch_size)
         cifar_test_flow = cifar_test_dataset.get_stream('test', 'x', config.batch_size)
-        svhn_train_flow = svhn_train_dataset.get_stream('train', 'x', config.batch_size)
+        svhn_train_flow = svhn_test_dataset.get_stream('train', 'x', config.batch_size)
         svhn_test_flow = svhn_test_dataset.get_stream('test', 'x', config.batch_size)
 
         if restore_checkpoint is not None:
@@ -181,16 +183,17 @@ def main():
                     else:
                         repeat_epoch = config.mixed_train_epoch
                     for pse_epoch in range(repeat_epoch):
-                        if i < config.batch_size - 1:
-                            train_index = np.random.randint(0, len(x_train), config.batch_size - i - 1)
-                            batch_x = [mixed_array[0:i + 1], x_train[train_index]]
-                            batch_x = np.concatenate(batch_x)
-                            # print(batch_x.shape)
-                        else:
-                            mixed_index = np.random.randint(0, i, config.batch_size)
-                            mixed_index[-1] = i
-                            batch_x = mixed_array[mixed_index]
-                            # print(batch_x.shape)
+                        mixed_index = np.random.randint(0, i + 1, config.batch_size)
+                        mixed_index[-1] = i
+                        batch_x = mixed_array[mixed_index]
+                        ll = mixed_ll[mixed_index]
+                        # print(batch_x.shape)
+
+                        if config.distill_ratio != 1.0:
+                            ll_omega = eval_ll(batch_x)
+                            batch_index = np.argsort(ll - ll_omega)
+                            batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                            batch_x = batch_x[batch_index]
                         yield [T.from_numpy(batch_x)]
 
                     mixed_kl.append(eval_ll(mixed_array[i: i + 1]))

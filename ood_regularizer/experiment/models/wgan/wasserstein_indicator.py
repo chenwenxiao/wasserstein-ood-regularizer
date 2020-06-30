@@ -461,7 +461,7 @@ def main():
 
                 for step, [x] in loop.iter_steps(train_flow):
                     for [y] in mixed_test_flow:
-                        if config.distill_ratio != 1.0:
+                        if config.distill_ratio != 1.0 and epoch > config.distill_epoch:
                             batch_energy = session.run(ele_test_energy, feed_dict={
                                 input_x: y
                             })
@@ -491,16 +491,6 @@ def main():
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
-
-                if epoch > config.warm_up_start and epoch % config.distill_epoch == 0:
-                    # Distill
-                    mixed_array_kl = get_ele(ele_test_energy, spt.DataFlow.arrays([mixed_array], config.batch_size),
-                                             input_x)
-                    ascent_index = np.argsort(mixed_array_kl, axis=0)
-                    mixed_array = mixed_array[ascent_index[:int(config.distill_ratio * len(mixed_array))]]
-                    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
-                                                          shuffle=True,
-                                                          skip_incomplete=True)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

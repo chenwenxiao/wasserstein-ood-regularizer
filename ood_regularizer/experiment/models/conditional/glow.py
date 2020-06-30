@@ -93,8 +93,8 @@ class ExperimentConfig(mltk.Config):
         depth=6,
         levels=3,
     )
-    in_dataset = DataSetConfig(name='cifar10')
-    out_dataset = DataSetConfig(name='svhn')
+    in_dataset = 'cifar10'
+    out_dataset = 'svhn'
 
 
 def main():
@@ -103,6 +103,8 @@ def main():
         exp.make_dirs('plotting')
         config = exp.config
         # prepare for training and testing data
+        config.in_dataset = DataSetConfig(name=config.in_dataset)
+        config.out_dataset = DataSetConfig(name=config.out_dataset)
         x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
@@ -122,9 +124,9 @@ def main():
         print('SVHN DataSet loaded.')
         config.class_num = cifar_train_dataset.slots['y'].max_val + 1
 
-        cifar_train_flow = cifar_train_dataset.get_stream('train', 'x', config.batch_size)
+        cifar_train_flow = cifar_test_dataset.get_stream('train', 'x', config.batch_size)
         cifar_test_flow = cifar_test_dataset.get_stream('test', 'x', config.batch_size)
-        svhn_train_flow = svhn_train_dataset.get_stream('train', 'x', config.batch_size)
+        svhn_train_flow = svhn_test_dataset.get_stream('train', 'x', config.batch_size)
         svhn_test_flow = svhn_test_dataset.get_stream('test', 'x', config.batch_size)
 
         x_train = cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
