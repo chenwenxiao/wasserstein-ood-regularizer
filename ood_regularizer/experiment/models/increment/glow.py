@@ -193,6 +193,7 @@ def main():
                             ll_omega = eval_ll(batch_x)
                             batch_index = np.argsort(ll - ll_omega)
                             batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                            batch_index[-1] = -1
                             batch_x = batch_x[batch_index]
                         yield [T.from_numpy(batch_x)]
 

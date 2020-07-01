@@ -296,7 +296,7 @@ def main():
                     # if restore_checkpoint is not None:
                     #     loop.make_checkpoint()
                     print('Starting testing')
-                    for i in range(0, len(mixed_array)):
+                    for i in range(0, len(mixed_array), config.mixed_train_skip):
                         # loop._checkpoint_saver.restore_latest()
                         if config.dynamic_epochs:
                             repeat_epoch = int(
@@ -305,8 +305,8 @@ def main():
                         else:
                             repeat_epoch = config.mixed_train_epoch
                         for pse_epoch in range(repeat_epoch):
-                            mixed_index = np.random.randint(0, i + 1, config.batch_size)
-                            mixed_index[-1] = i
+                            mixed_index = np.random.randint(0, min(i + config.mixed_train_skip, len(mixed_array)),
+                                                            config.batch_size)
                             batch_x = mixed_array[mixed_index]
                             # print(batch_x.shape)
 
@@ -322,9 +322,9 @@ def main():
                             _, batch_VAE_loss = session.run([theta_train_op, theta_loss], feed_dict={
                                 input_x: batch_x
                             })
-                        loop.collect_metrics(theta_loss=batch_VAE_loss)
+                            loop.collect_metrics(theta_loss=batch_VAE_loss)
                         mixed_kl.append(session.run(ele_test_ll, feed_dict={
-                            input_x: mixed_array[i: i + 1]
+                            input_x: mixed_array[i: i + config.mixed_train_skip]
                         }))
                         print(repeat_epoch, len(mixed_kl))
                         loop.print_logs()

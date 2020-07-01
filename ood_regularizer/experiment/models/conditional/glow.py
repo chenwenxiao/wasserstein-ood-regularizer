@@ -174,6 +174,31 @@ def main():
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
+            def eval_odin(x):
+                x = T.from_numpy(x)
+                x.requires_grad = True
+                S = torch.softmax(classifier(x) / config.odin_T, dim=-1)
+                S = T.reduce_max(S, axis=[-1])
+                print(S.size())
+                log_S = torch.log(S)
+                gradients = autograd.grad(-log_S, x, grad_outputs=torch.ones(log_S.size()).cuda(),
+                                          create_graph=True, retain_graph=True)[0]
+                print(gradients.size())
+                sign = torch.sign(gradients)
+                x_hat = x - config.odin_epsilon * sign
+
+                odin = torch.softmax(classifier(x_hat) / config.odin_T, dim=-1)
+                odin = T.reduce_max(odin, axis=[-1])
+                return T.to_numpy(odin)
+
+            make_diagram_torch(
+                loop, eval_odin,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                fig_name='odin_histogram'
+            )
+
             final_cifar_test_ll = np.zeros(len(x_test))
             final_svhn_test_ll = np.zeros(len(svhn_test))
             for current_class in range(0, config.class_num):
