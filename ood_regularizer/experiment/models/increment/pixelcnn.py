@@ -53,6 +53,7 @@ class ExpConfig(spt.Config):
     mixed_train_skip = 1
     dynamic_epochs = True
     in_dataset_test_ratio = 1.0
+    distill_ratio = 1.0
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -308,6 +309,16 @@ def main():
                             mixed_index[-1] = i
                             batch_x = mixed_array[mixed_index]
                             # print(batch_x.shape)
+
+                            if config.distill_ratio != 1.0:
+                                ll = mixed_ll[mixed_index]
+                                ll_omega = session.run(ele_test_ll, feed_dict={
+                                    input_x: batch_x
+                                })
+                                batch_index = np.argsort(ll - ll_omega)
+                                batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                                batch_x = batch_x[batch_index]
+
                             _, batch_VAE_loss = session.run([theta_train_op, theta_loss], feed_dict={
                                 input_x: batch_x
                             })

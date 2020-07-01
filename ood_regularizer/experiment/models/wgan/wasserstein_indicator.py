@@ -409,8 +409,8 @@ def main():
                                      skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
     mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size,
-                                          shuffle=False,
-                                          skip_incomplete=False)
+                                          shuffle=True,
+                                          skip_incomplete=True)
 
     with spt.utils.create_session().as_default() as session, train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
