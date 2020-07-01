@@ -461,7 +461,7 @@ def main():
 
                 for step, [x] in loop.iter_steps(train_flow):
                     for [y] in mixed_test_flow:
-                        if config.distill_ratio != 1.0 and epoch > config.distill_epoch:
+                        if config.distill_ratio != 1.0 and epoch > config.distill_epoch and config.use_transductive:
                             batch_energy = session.run(ele_test_energy, feed_dict={
                                 input_x: y
                             })

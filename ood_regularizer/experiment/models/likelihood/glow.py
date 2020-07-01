@@ -240,7 +240,7 @@ def main():
 
                 def data_generator():
                     for [x, ll] in mixed_stream:
-                        if config.distill_ratio != 1.0:
+                        if config.distill_ratio != 1.0 and config.use_transductive:
                             ll_omega = eval_ll(x)
                             batch_index = np.argsort(ll - ll_omega)
                             batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]

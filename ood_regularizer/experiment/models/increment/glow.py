@@ -47,7 +47,7 @@ class ExperimentConfig(mltk.Config):
     use_transductive = True
     mixed_train = False
     mixed_train_epoch = 20
-    mixed_train_skip = 1
+    mixed_train_skip = 100
     dynamic_epochs = True
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
@@ -175,7 +175,7 @@ def main():
                                                                shuffle=False, skip_incomplete=False))
 
             def data_generator():
-                for i in range(0, len(mixed_array)):
+                for i in range(0, len(mixed_array), config.mixed_train_skip):
                     if config.dynamic_epochs:
                         repeat_epoch = int(
                             config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))
@@ -183,8 +183,8 @@ def main():
                     else:
                         repeat_epoch = config.mixed_train_epoch
                     for pse_epoch in range(repeat_epoch):
-                        mixed_index = np.random.randint(0, i + 1, config.batch_size)
-                        mixed_index[-1] = i
+                        mixed_index = np.random.randint(0, min(len(mixed_array), i + config.mixed_train_skip),
+                                                        config.batch_size)
                         batch_x = mixed_array[mixed_index]
                         ll = mixed_ll[mixed_index]
                         # print(batch_x.shape)
@@ -193,11 +193,10 @@ def main():
                             ll_omega = eval_ll(batch_x)
                             batch_index = np.argsort(ll - ll_omega)
                             batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
-                            batch_index[-1] = -1
                             batch_x = batch_x[batch_index]
                         yield [T.from_numpy(batch_x)]
 
-                    mixed_kl.append(eval_ll(mixed_array[i: i + 1]))
+                    mixed_kl.append(eval_ll(mixed_array[i: i + config.mixed_train_skip]))
                     print(repeat_epoch, len(mixed_kl))
 
             exp.config.train.max_epoch = 1
