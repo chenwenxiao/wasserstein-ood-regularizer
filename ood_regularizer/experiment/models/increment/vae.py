@@ -434,7 +434,7 @@ def main():
                             batch_x = mixed_array[mixed_index]
                             # print(batch_x.shape)
 
-                            if config.distill_ratio != 1.0:
+                            if config.distill_ratio != 1.0 and i > 0.5 * len(mixed_array):
                                 ll = mixed_ll[mixed_index]
                                 ll_omega = session.run(ele_test_ll, feed_dict={
                                     input_x: batch_x

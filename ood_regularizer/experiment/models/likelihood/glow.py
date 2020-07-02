@@ -62,6 +62,7 @@ class ExperimentConfig(mltk.Config):
     test_epoch_freq = 200
     plot_epoch_freq = 20
     distill_ratio = 1.0  # or 0.3
+    distill_epoch = 20
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -91,6 +92,9 @@ class ExperimentConfig(mltk.Config):
     )
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
+
+
+epoch_counter = 0
 
 
 def main():
@@ -225,10 +229,10 @@ def main():
             else:
                 mixed_array = get_mixed_array(
                     config,
-                    cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
-                    cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
-                    svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0],
-                    svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+                    cifar_train_flow.get_arrays()[0],
+                    cifar_test_flow.get_arrays()[0],
+                    svhn_train_flow.get_arrays()[0],
+                    svhn_test_flow.get_arrays()[0]
                 )
                 mixed_stream = ArraysDataStream([mixed_array], batch_size=config.batch_size, shuffle=False,
                                                 skip_incomplete=False)
@@ -239,15 +243,21 @@ def main():
                     model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
                 def data_generator():
+                    global epoch_counter
+                    epoch_counter = epoch_counter + 1
+                    print('epoch_counter = {}'.format(epoch_counter))
                     for [x, ll] in mixed_stream:
-                        if config.distill_ratio != 1.0 and config.use_transductive:
+                        if config.distill_ratio != 1.0 and config.use_transductive and epoch_counter > config.distill_epoch:
                             ll_omega = eval_ll(x)
                             batch_index = np.argsort(ll - ll_omega)
                             batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
                             x = x[batch_index]
                         yield [T.from_numpy(x)]
 
-                train_model(exp, model, svhn_train_dataset, svhn_test_dataset, DataStream.generator(data_generator))
+                if config.use_transductive or config.self_ood:
+                    train_model(exp, model, svhn_train_dataset, svhn_test_dataset, DataStream.generator(data_generator))
+                else:
+                    train_model(exp, model, svhn_train_dataset, svhn_test_dataset)
 
             torch.save(model, 'omega_model.pkl')
 

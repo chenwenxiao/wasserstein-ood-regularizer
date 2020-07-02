@@ -76,7 +76,7 @@ class ExpConfig(spt.Config):
     test_epoch_freq = 200
     plot_epoch_freq = 20
     distill_ratio = 1.0
-    distill_epoch = 5000
+    distill_epoch = 60
 
     epsilon = -20.0
     min_logstd_of_q = -3.0
@@ -466,7 +466,7 @@ def main():
                         loop.collect_metrics(theta_loss=batch_theta_loss)
                 else:
                     for step, [x, ll] in loop.iter_steps(mixed_test_flow):
-                        if config.distill_ratio != 1.0 and config.use_transductive:
+                        if config.distill_ratio != 1.0 and config.use_transductive and epoch > config.distill_epoch:
                             ll_omega = session.run(ele_test_omega_ll, feed_dict={
                                 input_x: x
                             })

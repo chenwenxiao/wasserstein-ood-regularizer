@@ -152,17 +152,8 @@ def main():
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
-            cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll = make_diagram_torch(
-                loop, eval_ll,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                fig_name='log_prob_histogram'
-            )
-
-            x_train = cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
-            x_test = cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
-            svhn_test = svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+            x_test = cifar_test_flow.get_arrays()[0],
+            svhn_test = svhn_test_flow.get_arrays()[0]
             mixed_array = np.concatenate([
                 x_test, svhn_test
             ])
@@ -189,7 +180,7 @@ def main():
                         ll = mixed_ll[mixed_index]
                         # print(batch_x.shape)
 
-                        if config.distill_ratio != 1.0:
+                        if config.distill_ratio != 1.0 and i > 0.5 * len(mixed_array):
                             ll_omega = eval_ll(batch_x)
                             batch_index = np.argsort(ll - ll_omega)
                             batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
