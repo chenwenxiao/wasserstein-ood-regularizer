@@ -49,8 +49,8 @@ class ExpConfig(spt.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 20
-    mixed_train_skip = 1
+    mixed_train_epoch = 500
+    mixed_train_skip = 100
     dynamic_epochs = True
     in_dataset_test_ratio = 1.0
     distill_ratio = 1.0
