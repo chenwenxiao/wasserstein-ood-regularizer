@@ -115,9 +115,9 @@ def main():
         print('restore model from {}'.format(restore_checkpoint))
 
         # load the dataset
-        cifar_train_dataset, cifar_test_dataset = make_dataset(config.in_dataset)
+        cifar_train_dataset, cifar_test_dataset, cifar_dataset = make_dataset(config.in_dataset)
         print('CIFAR DataSet loaded.')
-        svhn_train_dataset, svhn_test_dataset = make_dataset(config.out_dataset)
+        svhn_train_dataset, svhn_test_dataset, svhn_dataset = make_dataset(config.out_dataset)
         print('SVHN DataSet loaded.')
 
         cifar_train_flow = cifar_test_dataset.get_stream('train', 'x', config.batch_size)
@@ -148,7 +148,7 @@ def main():
         model.apply(set_train_mode)
         tk.layers.set_eval_mode(model)
         with mltk.TestLoop() as loop:
-            x_train = cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
+            x_train = cifar_test_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
             x_test = cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
             svhn_test = svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
             mixed_array = np.concatenate([

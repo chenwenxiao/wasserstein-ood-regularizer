@@ -140,7 +140,8 @@ def train_model(exp: mltk.Experiment,
 
     images = image_array_to_rgb(init_x, train_dataset.slots['x'])
     images = make_images_grid(images, n_cols=10)
-    save_image_to_file(images, exp.make_parent(f'plotting/initialization.jpg'))  # save the initialization samples
+    save_image_to_file(images,
+                       exp.make_parent(f'plotting/samples/initialization.jpg'))  # save the initialization samples
 
     with T.no_grad():
         [init_ll, init_outputs] = model.initialize(init_x)
@@ -192,7 +193,7 @@ def train_model(exp: mltk.Experiment,
             images = T.to_numpy(images)
             images = image_array_to_rgb(images, train_dataset.slots['x'])
             images = make_images_grid(images, n_cols=10)
-            save_image_to_file(images, exp.make_parent(f'plotting/{epoch}{suffix}.jpg'))
+            save_image_to_file(images, exp.make_parent(f'plotting/samples/{epoch}{suffix}.jpg'))
 
         f(100, None, '')
         f(10, train_config.plot_temperatures, '_t')
@@ -233,11 +234,11 @@ def train_model(exp: mltk.Experiment,
 
 
 def train_classifier(exp: mltk.Experiment,
-                model: ResNet,
-                train_dataset: DataSet,
-                test_dataset: DataSet,
-                data_generator=None):
-    train_config: TrainConfig = exp.config.train
+                     model: ResNet,
+                     train_dataset: DataSet,
+                     test_dataset: DataSet,
+                     data_generator=None):
+    train_config: TrainConfig = exp.config.classifier_train
 
     # print information of the data
     print('Train dataset information\n'
@@ -275,7 +276,7 @@ def train_classifier(exp: mltk.Experiment,
     def get_batch_output(x, y):
         pred = model(x)
         criterion = torch.nn.CrossEntropyLoss()
-        cross_entropy = criterion(pred, y)
+        cross_entropy = criterion(pred, y.long())
         ret = {'cross_entropy': cross_entropy}
         return ret
 

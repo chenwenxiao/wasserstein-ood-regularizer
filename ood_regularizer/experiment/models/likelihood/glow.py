@@ -6,14 +6,16 @@ import sys
 import torch
 import numpy as np
 
-from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model
+from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model, get_mapper
 from flow_next.models.glow import GlowConfig, Glow
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch, get_ele_torch
+from utils.data.mappers import ArrayMapperList
 
 from utils.evaluation import dequantized_bpd
 import torch.autograd as autograd
+from imgaug import augmenters as iaa
 
 
 class ExperimentConfig(mltk.Config):
@@ -61,7 +63,7 @@ class ExperimentConfig(mltk.Config):
     test_batch_size = 64
     test_epoch_freq = 200
     plot_epoch_freq = 20
-    distill_ratio = 1.0  # or 0.3
+    distill_ratio = 0.5  # or 0.3
     distill_epoch = 20
 
     epsilon = -20.0
@@ -86,8 +88,8 @@ class ExperimentConfig(mltk.Config):
     )
     model = GlowConfig(
         hidden_conv_activation='relu',
-        hidden_conv_channels=[64, 64],
-        depth=6,
+        hidden_conv_channels=[128, 128],
+        depth=10,
         levels=3,
     )
     in_dataset = 'cifar10'
@@ -105,8 +107,8 @@ def main():
         # prepare for training and testing data
         config.in_dataset = DataSetConfig(name=config.in_dataset)
         config.out_dataset = DataSetConfig(name=config.out_dataset)
-        x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
-        svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
+        x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
+        svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
         }
@@ -118,9 +120,9 @@ def main():
         print('restore model from {}'.format(restore_checkpoint))
 
         # load the dataset
-        cifar_train_dataset, cifar_test_dataset = make_dataset(config.in_dataset)
+        cifar_train_dataset, cifar_test_dataset, cifar_dataset = make_dataset(config.in_dataset)
         print('CIFAR DataSet loaded.')
-        svhn_train_dataset, svhn_test_dataset = make_dataset(config.out_dataset)
+        svhn_train_dataset, svhn_test_dataset, svhn_dataset = make_dataset(config.out_dataset)
         print('SVHN DataSet loaded.')
 
         cifar_train_flow = cifar_test_dataset.get_stream('train', 'x', config.batch_size)
@@ -229,16 +231,22 @@ def main():
             else:
                 mixed_array = get_mixed_array(
                     config,
-                    cifar_train_flow.get_arrays()[0],
-                    cifar_test_flow.get_arrays()[0],
-                    svhn_train_flow.get_arrays()[0],
-                    svhn_test_flow.get_arrays()[0]
+                    cifar_dataset.get_array('train', 'x'),
+                    cifar_dataset.get_array('test', 'x'),
+                    svhn_dataset.get_array('train', 'x'),
+                    svhn_dataset.get_array('test', 'x')
                 )
-                mixed_stream = ArraysDataStream([mixed_array], batch_size=config.batch_size, shuffle=False,
-                                                skip_incomplete=False)
+                print(mixed_array.shape)
+                train_mapper = get_mapper(config.in_dataset, training=False)
+                train_mapper.fit(cifar_dataset.slots['x'])
+                mixed_stream = ArraysDataStream(
+                    [mixed_array], batch_size=config.batch_size, shuffle=False,
+                    skip_incomplete=False).map(
+                    lambda x: train_mapper.transform(x))
                 mixed_ll = get_ele_torch(eval_ll, mixed_stream)
                 mixed_stream = ArraysDataStream([mixed_array, mixed_ll], batch_size=config.batch_size, shuffle=True,
                                                 skip_incomplete=True)
+                mappers = get_mapper(config.in_dataset, training=True)
                 if not config.pretrain:
                     model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
@@ -247,6 +255,7 @@ def main():
                     epoch_counter = epoch_counter + 1
                     print('epoch_counter = {}'.format(epoch_counter))
                     for [x, ll] in mixed_stream:
+                        x = mappers.transform(x)
                         if config.distill_ratio != 1.0 and config.use_transductive and epoch_counter > config.distill_epoch:
                             ll_omega = eval_ll(x)
                             batch_index = np.argsort(ll - ll_omega)

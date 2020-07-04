@@ -15,7 +15,7 @@ from tfsnippet.examples.utils import (MLResults,
                                       print_with_title)
 import numpy as np
 
-from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model
+from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model, get_mapper
 from flow_next.models.glow import GlowConfig, Glow
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
 from ood_regularizer.experiment.models.utils import get_mixed_array
@@ -68,7 +68,7 @@ class ExperimentConfig(mltk.Config):
     test_batch_size = 64
     test_epoch_freq = 200
     plot_epoch_freq = 20
-    distill_ratio = 1.0
+    distill_ratio = 0.3
     distill_epoch = 5000
 
     epsilon = -20.0
@@ -122,9 +122,9 @@ def main():
         print('restore model from {}'.format(restore_checkpoint))
 
         # load the dataset
-        cifar_train_dataset, cifar_test_dataset = make_dataset(config.in_dataset)
+        cifar_train_dataset, cifar_test_dataset, cifar_dataset = make_dataset(config.in_dataset)
         print('CIFAR DataSet loaded.')
-        svhn_train_dataset, svhn_test_dataset = make_dataset(config.out_dataset)
+        svhn_train_dataset, svhn_test_dataset, svhn_dataset = make_dataset(config.out_dataset)
         print('SVHN DataSet loaded.')
 
         cifar_train_flow = cifar_test_dataset.get_stream('train', 'x', config.batch_size)
@@ -152,7 +152,7 @@ def main():
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
-            x_test = cifar_test_flow.get_arrays()[0],
+            x_test = cifar_test_flow.get_arrays()[0]
             svhn_test = svhn_test_flow.get_arrays()[0]
             mixed_array = np.concatenate([
                 x_test, svhn_test
@@ -162,8 +162,15 @@ def main():
             mixed_array = mixed_array[index]
             mixed_kl = []
 
-            mixed_ll = get_ele_torch(eval_ll, ArraysDataStream([mixed_array], batch_size=config.batch_size,
-                                                               shuffle=False, skip_incomplete=False))
+            test_mapper = get_mapper(config.in_dataset, training=False)
+            train_mapper = get_mapper(config.in_dataset, training=True)
+            test_mapper.fit(cifar_dataset.slots['x'])
+            train_mapper.fit(cifar_dataset.slots['x'])
+            mixed_stream = ArraysDataStream(
+                [mixed_array], batch_size=config.batch_size, shuffle=False,
+                skip_incomplete=False).map(lambda x: test_mapper.transform(x))
+
+            mixed_ll = get_ele_torch(eval_ll, mixed_stream)
 
             def data_generator():
                 for i in range(0, len(mixed_array), config.mixed_train_skip):
@@ -177,10 +184,11 @@ def main():
                         mixed_index = np.random.randint(0, min(len(mixed_array), i + config.mixed_train_skip),
                                                         config.batch_size)
                         batch_x = mixed_array[mixed_index]
+                        batch_x = train_mapper.transform(batch_x)
                         ll = mixed_ll[mixed_index]
                         # print(batch_x.shape)
 
-                        if config.distill_ratio != 1.0 and i > 0.5 * len(mixed_array):
+                        if config.distill_ratio != 1.0:
                             ll_omega = eval_ll(batch_x)
                             batch_index = np.argsort(ll - ll_omega)
                             batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
@@ -200,7 +208,7 @@ def main():
             svhn_kl = mixed_kl[index >= len(x_test)]
             loop.add_metrics(kl_histogram=plot_fig([-cifar_kl, -svhn_kl],
                                                    ['red', 'green'],
-                                                   [config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                                   [config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                                                    'log(bit/dims)',
                                                    'kl_histogram', auc_pair=(0, 1)))
 

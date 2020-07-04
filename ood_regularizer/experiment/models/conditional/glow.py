@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import mltk
 from mltk.data import ArraysDataStream, DataStream
+import tensorkit as tk
 from tensorkit import tensor as T
 import sys
 import torch
 import numpy as np
 
-from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model
+from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model, ImageAugmentationMapper, get_mapper
 from flow_next.common.train_utils import train_classifier
 from flow_next.models.glow import GlowConfig, Glow
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
@@ -16,6 +17,7 @@ from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch, get_e
 from utils.evaluation import dequantized_bpd
 import torch.autograd as autograd
 import torchvision.models as models
+from imgaug import augmenters as iaa
 
 
 class ExperimentConfig(mltk.Config):
@@ -76,6 +78,17 @@ class ExperimentConfig(mltk.Config):
     extra_stride = 2
     class_num = 10
 
+    classifier_train = TrainConfig(
+        optimizer='adamax',
+        init_batch_size=128,
+        batch_size=64,
+        test_batch_size=64,
+        test_epoch_freq=10,
+        max_epoch=200,
+        grad_global_clip_norm=None,
+        # grad_global_clip_norm=100.0,
+        debug=True
+    )
     train = TrainConfig(
         optimizer='adamax',
         init_batch_size=128,
@@ -118,9 +131,9 @@ def main():
         print('restore model from {}'.format(restore_dir))
 
         # load the dataset
-        cifar_train_dataset, cifar_test_dataset = make_dataset(config.in_dataset)
+        cifar_train_dataset, cifar_test_dataset, cifar_dataset = make_dataset(config.in_dataset)
         print('CIFAR DataSet loaded.')
-        svhn_train_dataset, svhn_test_dataset = make_dataset(config.out_dataset)
+        svhn_train_dataset, svhn_test_dataset, svhn_dataset = make_dataset(config.out_dataset)
         print('SVHN DataSet loaded.')
         config.class_num = cifar_train_dataset.slots['y'].max_val + 1
 
@@ -129,25 +142,28 @@ def main():
         svhn_train_flow = svhn_test_dataset.get_stream('train', 'x', config.batch_size)
         svhn_test_flow = svhn_test_dataset.get_stream('test', 'x', config.batch_size)
 
-        x_train = cifar_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
-        y_train = cifar_train_dataset.get_stream('train', ['y'], config.batch_size).get_arrays()[0]
-        x_test = cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
-        y_test = cifar_test_dataset.get_stream('test', ['y'], config.batch_size).get_arrays()[0]
-        svhn_train = svhn_train_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
-        svhn_test = svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+        x_train = cifar_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
+        y_train = cifar_dataset.get_stream('train', ['y'], config.batch_size).get_arrays()[0]
+        x_test = cifar_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+        y_test = cifar_dataset.get_stream('test', ['y'], config.batch_size).get_arrays()[0]
+        svhn_train = svhn_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
+        svhn_test = svhn_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
 
         if restore_dir is None:
-            classifier = models.resnet34(num_classes=config.class_num)
+            classifier = models.resnet34(num_classes=config.class_num).cuda()
             train_classifier(exp, classifier, cifar_train_dataset, cifar_test_dataset)
             torch.save(classifier, 'classifier.pkl')
 
-            # construct the model
-            model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
-            print('Model constructed.')
-
             for current_class in range(config.class_num):
+                # construct the model
+                model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
+                print('Model constructed.')
                 current_class_stream = ArraysDataStream([x_train[y_train == current_class]], config.batch_size,
                                                         shuffle=True, skip_incomplete=True)
+                mapper = get_mapper(config.in_dataset, training=True)
+                mapper.fit(cifar_dataset.slots['x'])
+                current_class_stream = current_class_stream.map(lambda x: mapper.transform(x))
+                current_class_stream = tk.utils.as_tensor_stream(current_class_stream, prefetch=3)
                 # train the model
                 train_model(exp, model, cifar_train_dataset, cifar_test_dataset, current_class_stream)
                 torch.save(model, 'model_{}.pkl'.format(current_class))

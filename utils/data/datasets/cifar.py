@@ -13,7 +13,6 @@ __all__ = ['Cifar10', 'Cifar100', 'SVHN', 'TinyImagenet', 'Imagenet', 'ISUN', 'L
 
 
 class BaseCifar(ArrayDataSet):
-
     name: str
 
     def __init__(self, val_split: Optional[float] = None):
@@ -66,23 +65,30 @@ class Cifar10(BaseCifar):
 class Cifar100(BaseCifar):
     name: str = 'cifar100'
 
+
 class SVHN(BaseCifar):
     name: str = 'svhn'
+
 
 class CelebA(BaseCifar):
     name: str = 'celeba'
 
+
 class TinyImagenet(BaseCifar):
     name: str = 'tinyimagenet'
+
 
 class Imagenet(BaseCifar):
     name: str = 'imagenet'
 
+
 class ISUN(BaseCifar):
     name: str = 'isun'
 
+
 class SUN(BaseCifar):
     name: str = 'sun'
+
 
 class LSUN(BaseCifar):
     name: str = 'lsun'

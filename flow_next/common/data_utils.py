@@ -6,12 +6,14 @@ import numpy as np
 from imgaug import augmenters as iaa
 
 from utils.data import *
+from utils.data.mappers import ArrayMapperList
 
 __all__ = [
     'InMemoryDataSetName',
     'DataSetConfig',
     'ImageAugmentationMapper',
     'make_dataset',
+    'get_mapper'
 ]
 
 
@@ -38,7 +40,7 @@ class DataSetConfig(mltk.Config):
     mmap_dir: Optional[str] = None
     """Root directory of mmap dataset."""
 
-    enable_grayscale_to_rgb: bool = True
+    enable_grayscale_to_rgb: bool = False
     """Convert grayscale images to RGB images (if required by the dataset)."""
 
     enable_train_aug: bool = True
@@ -75,7 +77,7 @@ class ImageAugmentationMapper(mappers.ArrayMapper):
         return array
 
 
-def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet]:
+def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet, DataSet]:
     """
     Construct train and test dataset objects according to the config.
 
@@ -115,10 +117,19 @@ def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet]:
     elif config.name == InMemoryDataSetName.TINYIMAGENET:
         dataset = TinyImagenet()
 
+    train_dataset = dataset.apply_mappers(x=get_mapper(config, training=True))
+
+    # test dataset
+    test_dataset = dataset.apply_mappers(x=get_mapper(config, training=False))
+
+    return train_dataset, test_dataset, dataset
+
+
+def get_mapper(config, training=False):
     # assemble the pipelines
     def common_mappers():
         m = []
-        if dataset.name in ('mnist', 'fashion_mnist', 'kmnist', 'omniglot', 'not_mnist'):
+        if config.name in ('mnist', 'fashion_mnist', 'kmnist', 'omniglot', 'not_mnist'):
             m.append(mappers.Pad([(2, 2), (2, 2), (0, 0)]))  # pad to 32x32x1
             if config.enable_grayscale_to_rgb:
                 m.append(mappers.GrayscaleToRGB())  # copy to 32x32x3
@@ -131,19 +142,15 @@ def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet]:
 
     # train dataset
     m = []
-    if config.enable_train_aug:
-        print('Affine augmentation added.')
-        aug = iaa.Affine(
-            translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
-            # order=3,  # turn on this if not just translation
-            mode='edge',
-            backend='cv2'
-        )
-        m.append(ImageAugmentationMapper(aug))
+    if training:
+        if config.enable_train_aug:
+            print('Affine augmentation added.')
+            aug = iaa.Affine(
+                translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
+                # order=3,  # turn on this if not just translation
+                mode='edge',
+                backend='cv2'
+            )
+            m.append(ImageAugmentationMapper(aug))
     m.extend(common_mappers())
-    train_dataset = dataset.apply_mappers(x=m)
-
-    # test dataset
-    test_dataset = dataset.apply_mappers(x=common_mappers())
-
-    return train_dataset, test_dataset
+    return ArrayMapperList(m)
