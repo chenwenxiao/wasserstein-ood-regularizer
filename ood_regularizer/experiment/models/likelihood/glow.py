@@ -89,7 +89,7 @@ class ExperimentConfig(mltk.Config):
     model = GlowConfig(
         hidden_conv_activation='relu',
         hidden_conv_channels=[128, 128],
-        depth=10,
+        depth=6,
         levels=3,
     )
     in_dataset = 'cifar10'
@@ -234,19 +234,20 @@ def main():
                     cifar_dataset.get_array('train', 'x'),
                     cifar_dataset.get_array('test', 'x'),
                     svhn_dataset.get_array('train', 'x'),
-                    svhn_dataset.get_array('test', 'x')
+                    svhn_dataset.get_array('test', 'x'), normalized=False
                 )
                 print(mixed_array.shape)
-                train_mapper = get_mapper(config.in_dataset, training=False)
+                test_mapper = get_mapper(config.in_dataset, training=False)
+                train_mapper = get_mapper(config.in_dataset, training=True)
+                test_mapper.fit(cifar_dataset.slots['x'])
                 train_mapper.fit(cifar_dataset.slots['x'])
                 mixed_stream = ArraysDataStream(
                     [mixed_array], batch_size=config.batch_size, shuffle=False,
                     skip_incomplete=False).map(
-                    lambda x: train_mapper.transform(x))
+                    lambda x: test_mapper.transform(x))
                 mixed_ll = get_ele_torch(eval_ll, mixed_stream)
                 mixed_stream = ArraysDataStream([mixed_array, mixed_ll], batch_size=config.batch_size, shuffle=True,
                                                 skip_incomplete=True)
-                mappers = get_mapper(config.in_dataset, training=True)
                 if not config.pretrain:
                     model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
 
@@ -255,7 +256,7 @@ def main():
                     epoch_counter = epoch_counter + 1
                     print('epoch_counter = {}'.format(epoch_counter))
                     for [x, ll] in mixed_stream:
-                        x = mappers.transform(x)
+                        x = train_mapper.transform(x)
                         if config.distill_ratio != 1.0 and config.use_transductive and epoch_counter > config.distill_epoch:
                             ll_omega = eval_ll(x)
                             batch_index = np.argsort(ll - ll_omega)
@@ -266,7 +267,7 @@ def main():
                 if config.use_transductive or config.self_ood:
                     train_model(exp, model, svhn_train_dataset, svhn_test_dataset, DataStream.generator(data_generator))
                 else:
-                    train_model(exp, model, svhn_train_dataset, svhn_test_dataset)
+                    train_model(exp, model, svhn_train_dataset, svhtest_dataset)
 
             torch.save(model, 'omega_model.pkl')
 

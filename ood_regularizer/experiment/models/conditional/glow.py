@@ -78,6 +78,9 @@ class ExperimentConfig(mltk.Config):
     extra_stride = 2
     class_num = 10
 
+    odin_T = 1000
+    odin_epsilon = 0.0012 * 2  # multiple 2 for the normalization [-1, 1] instead of [0, 1] in ODIN
+
     classifier_train = TrainConfig(
         optimizer='adamax',
         init_batch_size=128,
@@ -151,7 +154,22 @@ def main():
 
         if restore_dir is None:
             classifier = models.resnet34(num_classes=config.class_num).cuda()
-            train_classifier(exp, classifier, cifar_train_dataset, cifar_test_dataset)
+            train_classifier(exp, classifier, cifar_test_dataset, cifar_test_dataset)
+
+            @torch.no_grad()
+            def eval_predict(x):
+                x = T.from_numpy(x)
+                predict = classifier(x)
+                predict = T.argmax(predict, axis=-1)
+                return T.to_numpy(predict)
+
+            cifar_test_predict = get_ele_torch(eval_predict, cifar_test_flow)
+            print('Correct number in cifar test is {}'.format(
+                np.sum(cifar_test_predict == y_test)))
+            cifar_train_predict = get_ele_torch(eval_predict, cifar_train_flow)
+            print('Correct number in cifar train is {}'.format(
+                np.sum(cifar_train_predict == y_train)))
+
             torch.save(classifier, 'classifier.pkl')
 
             for current_class in range(config.class_num):
@@ -178,9 +196,6 @@ def main():
                 predict = T.reduce_max(predict, axis=[-1])
                 return T.to_numpy(predict)
 
-            cifar_test_predict = get_ele_torch(eval_predict, cifar_test_flow)
-            print('Correct number in cifar test is {}'.format(
-                np.sum(cifar_test_predict == y_test)))
             svhn_test_predict = get_ele_torch(eval_predict, svhn_test_flow)
 
             @torch.no_grad()
@@ -227,20 +242,24 @@ def main():
                 else:
                     model = torch.load(restore_dir + '/model_{}.pkl'.format(current_class))
 
-                cifar_test_ll = get_ele_torch(eval_ll, ArraysDataStream([
-                    x_test[cifar_mask]
-                ], config.test_batch_size, False, False))
-                svhn_test_ll = get_ele_torch(eval_ll, ArraysDataStream([
-                    svhn_test[svhn_mask]
-                ], config.test_batch_siz, False, False))
+                test_mapper = get_mapper(config.in_dataset, training=False)
+                test_mapper.fit(cifar_dataset.slots['x'])
+                if np.sum(cifar_mask) > 0:
+                    cifar_test_ll = get_ele_torch(eval_ll, ArraysDataStream([
+                        x_test[cifar_mask]
+                    ], config.test_batch_size, False, False).map(lambda x: test_mapper.transform(x)))
+                    final_cifar_test_ll[cifar_mask] = cifar_test_ll
 
-                final_cifar_test_ll[cifar_mask] = cifar_test_ll
-                final_svhn_test_ll[svhn_mask] = svhn_test_ll
+                if np.sum(svhn_mask) > 0:
+                    svhn_test_ll = get_ele_torch(eval_ll, ArraysDataStream([
+                        svhn_test[svhn_mask]
+                    ], config.test_batch_size, False, False).map(lambda x: test_mapper.transform(x)))
+                    final_svhn_test_ll[svhn_mask] = svhn_test_ll
 
             loop.add_metrics(log_prob_histogram=plot_fig(
                 [final_cifar_test_ll, final_svhn_test_ll],
                 color_list=['red', 'green'],
-                label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'], x_label='log(bit/dims)',
+                label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'], x_label='log(bit/dims)',
                 fig_name='log_prob_histogram', auc_pair=(0, 1)
             ))
 

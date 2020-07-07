@@ -200,16 +200,18 @@ def main():
             svhn_r1 = permutation_test(svhn_test_flow, config.mixed_ratio1)
             svhn_r2 = permutation_test(svhn_test_flow, config.mixed_ratio2)
 
-            loop.add_metrics(batch_norm_log_pro_histogram=plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
-                                                                   ['red', 'salmon', 'green', 'lightgreen'],
-                                                                   ['CIFAR-10 r1', 'CIFAR-10 r2', 'SVHN r1', 'SVHN r2'],
-                                                                   'log(bit/dims)',
-                                                                   'batch_norm_log_pro_histogram', auc_pair=(0, 2)))
+            loop.add_metrics(batch_norm_log_pro_histogram=plot_fig(
+                [cifar_r1, cifar_r2, svhn_r1, svhn_r2],
+                ['red', 'salmon', 'green', 'lightgreen'],
+                [config.in_dataset.name + ' r1', config.in_dataset.name + ' r2',
+                 config.out_dataset.name + ' r1', config.out_dataset.name + ' r2'],
+                'log(bit/dims)',
+                'batch_norm_log_pro_histogram', auc_pair=(0, 2)))
 
             loop.add_metrics(batch_norm_r1_r2_log_pro_histogram=plot_fig([cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
                                                                          ['red', 'green'],
-                                                                         [config.in_dataset + ' test',
-                                                                          config.out_dataset + ' test'],
+                                                                         [config.in_dataset.name + ' test',
+                                                                          config.out_dataset.name + ' test'],
                                                                          'log(bit/dims)',
                                                                          'batch_norm_r1-r2_log_pro_histogram',
                                                                          auc_pair=(0, 1)))
@@ -217,8 +219,8 @@ def main():
             make_diagram_torch(loop,
                                eval_ll,
                                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                               names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                      config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                               names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                                      config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
                                fig_name='log_prob_histogram_with_batch_norm'
                                )
 
@@ -226,8 +228,8 @@ def main():
             make_diagram_torch(loop,
                                eval_without_batch_norm_ll,
                                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                               names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                      config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                               names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                                      config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
                                fig_name='log_prob_histogram_without_batch_norm'
                                )
 

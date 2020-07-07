@@ -49,6 +49,7 @@ class ExperimentConfig(mltk.Config):
     mixed_train_epoch = 100
     mixed_train_skip = 100
     dynamic_epochs = True
+    retrain_for_batch = False
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
@@ -172,8 +173,8 @@ def main():
 
             mixed_ll = get_ele_torch(eval_ll, mixed_stream)
 
-            def data_generator():
-                for i in range(0, len(mixed_array), config.mixed_train_skip):
+            for i in range(0, len(mixed_array), config.mixed_train_skip):
+                def data_generator():
                     if config.dynamic_epochs:
                         repeat_epoch = int(
                             config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))
@@ -181,7 +182,8 @@ def main():
                     else:
                         repeat_epoch = config.mixed_train_epoch
                     for pse_epoch in range(repeat_epoch):
-                        mixed_index = np.random.randint(0, min(len(mixed_array), i + config.mixed_train_skip),
+                        mixed_index = np.random.randint(i if config.retrain_for_batch else 0,
+                                                        min(len(mixed_array), i + config.mixed_train_skip),
                                                         config.batch_size)
                         batch_x = mixed_array[mixed_index]
                         batch_x = train_mapper.transform(batch_x)
@@ -198,9 +200,10 @@ def main():
                     mixed_kl.append(eval_ll(mixed_array[i: i + config.mixed_train_skip]))
                     print(repeat_epoch, len(mixed_kl))
 
-            exp.config.train.max_epoch = 1
-            train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
-                        DataStream.generator(data_generator))
+                exp.config.train.max_epoch = 1
+                model = torch.load('model.pkl')
+                train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
+                            DataStream.generator(data_generator))
 
             mixed_kl = np.concatenate(mixed_kl)
             mixed_kl = mixed_kl - mixed_ll
@@ -208,7 +211,8 @@ def main():
             svhn_kl = mixed_kl[index >= len(x_test)]
             loop.add_metrics(kl_histogram=plot_fig([-cifar_kl, -svhn_kl],
                                                    ['red', 'green'],
-                                                   [config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                                                   [config.in_dataset.name + ' Test',
+                                                    config.out_dataset.name + ' Test'],
                                                    'log(bit/dims)',
                                                    'kl_histogram', auc_pair=(0, 1)))
 

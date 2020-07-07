@@ -40,7 +40,7 @@ class DataSetConfig(mltk.Config):
     mmap_dir: Optional[str] = None
     """Root directory of mmap dataset."""
 
-    enable_grayscale_to_rgb: bool = False
+    enable_grayscale_to_rgb: bool = True
     """Convert grayscale images to RGB images (if required by the dataset)."""
 
     enable_train_aug: bool = True
@@ -125,7 +125,7 @@ def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet, DataSet]:
     return train_dataset, test_dataset, dataset
 
 
-def get_mapper(config, training=False):
+def get_mapper(config: DataSetConfig, training=False):
     # assemble the pipelines
     def common_mappers():
         m = []

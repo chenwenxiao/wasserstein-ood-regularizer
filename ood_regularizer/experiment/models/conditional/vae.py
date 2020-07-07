@@ -498,15 +498,17 @@ def main():
                         pse_epoch = config.warm_up_start + (current_class + 1) * config.test_epoch_freq
                         loop._checkpoint_saver.restore(os.path.join(
                             restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(pse_epoch)))
-                        cifar_test_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([
-                            x_test[cifar_mask]
-                        ], config.test_batch_size), input_x)
-                        svhn_test_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([
-                            svhn_test[svhn_mask]
-                        ], config.test_batch_size), input_x)
+                        if np.sum(cifar_mask) > 0:
+                            cifar_test_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([
+                                x_test[cifar_mask]
+                            ], config.test_batch_size), input_x)
+                            final_cifar_test_ll[cifar_mask] = cifar_test_ll
 
-                        final_cifar_test_ll[cifar_mask] = cifar_test_ll
-                        final_svhn_test_ll[svhn_mask] = svhn_test_ll
+                        if np.sum(svhn_mask) > 0:
+                            svhn_test_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([
+                                svhn_test[svhn_mask]
+                            ], config.test_batch_size), input_x)
+                            final_svhn_test_ll[svhn_mask] = svhn_test_ll
 
                     plot_fig(
                         [final_cifar_test_ll, final_svhn_test_ll],

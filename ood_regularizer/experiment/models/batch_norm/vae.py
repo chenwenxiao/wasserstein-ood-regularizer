@@ -466,7 +466,8 @@ def main():
 
                     plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
                              ['red', 'salmon', 'green', 'lightgreen'],
-                             ['CIFAR-10 r1', 'CIFAR-10 r2', 'SVHN r1', 'SVHN r2'], 'log(bit/dims)',
+                             [config.in_dataset + ' r1', config.in_dataset + ' r2',
+                              config.out_dataset + ' r1', config.out_dataset + ' r2'], 'log(bit/dims)',
                              'batch_norm_log_pro_histogram', auc_pair=(0, 2))
                     AUC = plot_fig([cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
                                    ['red', 'green'],
