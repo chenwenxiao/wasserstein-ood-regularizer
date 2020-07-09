@@ -267,7 +267,7 @@ def main():
                 if config.use_transductive or config.self_ood:
                     train_model(exp, model, svhn_train_dataset, svhn_test_dataset, DataStream.generator(data_generator))
                 else:
-                    train_model(exp, model, svhn_train_dataset, svhtest_dataset)
+                    train_model(exp, model, svhn_train_dataset, svhn_test_dataset)
 
             torch.save(model, 'omega_model.pkl')
 

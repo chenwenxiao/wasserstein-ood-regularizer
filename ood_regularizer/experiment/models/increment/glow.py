@@ -46,8 +46,8 @@ class ExperimentConfig(mltk.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 100
-    mixed_train_skip = 100
+    mixed_train_epoch = 1000
+    mixed_train_skip = 1000
     dynamic_epochs = True
     retrain_for_batch = False
 
@@ -69,7 +69,7 @@ class ExperimentConfig(mltk.Config):
     test_batch_size = 64
     test_epoch_freq = 200
     plot_epoch_freq = 20
-    distill_ratio = 0.3
+    distill_ratio = 0.5
     distill_epoch = 5000
 
     epsilon = -20.0
@@ -94,7 +94,7 @@ class ExperimentConfig(mltk.Config):
     )
     model = GlowConfig(
         hidden_conv_activation='relu',
-        hidden_conv_channels=[64, 64],
+        hidden_conv_channels=[128, 128],
         depth=6,
         levels=3,
     )
@@ -114,6 +114,8 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/19/d5/02c52d867e43bf2540f5',
+            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/b6/d5/02732c28dc8d203540f5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -134,7 +136,7 @@ def main():
         svhn_test_flow = svhn_test_dataset.get_stream('test', 'x', config.batch_size)
 
         if restore_checkpoint is not None:
-            model = torch.load(restore_checkpoint)
+            model = torch.load(restore_checkpoint + '/model.pkl')
         else:
             # construct the model
             model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
@@ -153,8 +155,8 @@ def main():
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
-            x_test = cifar_test_flow.get_arrays()[0]
-            svhn_test = svhn_test_flow.get_arrays()[0]
+            x_test = cifar_dataset.get_array('test', 'x')
+            svhn_test = svhn_dataset.get_array('test', 'x')
             mixed_array = np.concatenate([
                 x_test, svhn_test
             ])
@@ -169,41 +171,44 @@ def main():
             train_mapper.fit(cifar_dataset.slots['x'])
             mixed_stream = ArraysDataStream(
                 [mixed_array], batch_size=config.batch_size, shuffle=False,
-                skip_incomplete=False).map(lambda x: test_mapper.transform(x))
+                skip_incomplete=False).map(
+                lambda x: test_mapper.transform(x))
 
             mixed_ll = get_ele_torch(eval_ll, mixed_stream)
 
             for i in range(0, len(mixed_array), config.mixed_train_skip):
                 def data_generator():
-                    if config.dynamic_epochs:
-                        repeat_epoch = int(
-                            config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))
-                        repeat_epoch = max(1, repeat_epoch)
-                    else:
-                        repeat_epoch = config.mixed_train_epoch
-                    for pse_epoch in range(repeat_epoch):
-                        mixed_index = np.random.randint(i if config.retrain_for_batch else 0,
-                                                        min(len(mixed_array), i + config.mixed_train_skip),
-                                                        config.batch_size)
-                        batch_x = mixed_array[mixed_index]
-                        batch_x = train_mapper.transform(batch_x)
-                        ll = mixed_ll[mixed_index]
-                        # print(batch_x.shape)
+                    mixed_index = np.random.randint(i if config.retrain_for_batch else 0,
+                                                    min(len(mixed_array), i + config.mixed_train_skip),
+                                                    config.batch_size)
+                    batch_x = mixed_array[mixed_index]
+                    batch_x = train_mapper.transform(batch_x)
+                    ll = mixed_ll[mixed_index]
+                    # print(batch_x.shape)
 
-                        if config.distill_ratio != 1.0:
-                            ll_omega = eval_ll(batch_x)
-                            batch_index = np.argsort(ll - ll_omega)
-                            batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
-                            batch_x = batch_x[batch_index]
-                        yield [T.from_numpy(batch_x)]
+                    if config.distill_ratio != 1.0:
+                        ll_omega = eval_ll(batch_x)
+                        batch_index = np.argsort(ll - ll_omega)
+                        batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                        batch_x = batch_x[batch_index]
+                    yield [T.from_numpy(batch_x)]
 
-                    mixed_kl.append(eval_ll(mixed_array[i: i + config.mixed_train_skip]))
-                    print(repeat_epoch, len(mixed_kl))
+                if config.dynamic_epochs:
+                    repeat_epoch = int(
+                        config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))
+                    repeat_epoch = max(1, repeat_epoch)
+                else:
+                    repeat_epoch = config.mixed_train_epoch
 
-                exp.config.train.max_epoch = 1
-                model = torch.load('model.pkl')
+                exp.config.train.max_epoch = repeat_epoch
+                exp.config.train.test_epoch_freq = exp.config.train.max_epoch + 1
+                if config.retrain_for_batch:
+                    model = torch.load('model.pkl')
                 train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
                             DataStream.generator(data_generator))
+
+                mixed_kl.append(eval_ll(
+                    test_mapper.transform(mixed_array[i: i + config.mixed_train_skip])))
 
             mixed_kl = np.concatenate(mixed_kl)
             mixed_kl = mixed_kl - mixed_ll

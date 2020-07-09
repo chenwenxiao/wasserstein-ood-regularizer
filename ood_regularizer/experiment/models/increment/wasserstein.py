@@ -51,6 +51,7 @@ class ExpConfig(spt.Config):
     mixed_train_skip = 100
     mixed_mean_times = 10
     dynamic_epochs = True
+    retrain_for_batch = False
     use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
     self_ood = False
     mixed_ratio = 1.0
@@ -448,10 +449,11 @@ def main():
                 if epoch > config.max_epoch:
                     mixed_kl = []
                     # if restore_checkpoint is not None:
-                    #     loop.make_checkpoint()
+                    loop.make_checkpoint()
                     print('Starting testing')
                     for i in range(0, len(mixed_array), config.mixed_train_skip):
-                        # loop._checkpoint_saver.restore_latest()
+                        if config.retrain_for_batch:
+                            loop._checkpoint_saver.restore_latest()
                         if config.dynamic_epochs:
                             repeat_epoch = int(
                                 config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))

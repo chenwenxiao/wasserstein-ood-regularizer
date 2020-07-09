@@ -105,7 +105,7 @@ class ExperimentConfig(mltk.Config):
     )
     model = GlowConfig(
         hidden_conv_activation='relu',
-        hidden_conv_channels=[64, 64],
+        hidden_conv_channels=[128, 128],
         depth=6,
         levels=3,
     )
@@ -125,6 +125,7 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/29/d5/02279d802d3a660250f5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -193,9 +194,12 @@ def main():
             def eval_predict(x):
                 x = T.from_numpy(x)
                 predict = classifier(x)
-                predict = T.reduce_max(predict, axis=[-1])
+                odin = T.reduce_max(torch.softmax(predict, dim=-1), axis=[-1])
+                print(T.reduce_mean(odin))
+                predict = T.argmax(predict, axis=-1)
                 return T.to_numpy(predict)
 
+            cifar_test_predict = get_ele_torch(eval_predict, cifar_test_flow)
             svhn_test_predict = get_ele_torch(eval_predict, svhn_test_flow)
 
             @torch.no_grad()
@@ -210,16 +214,14 @@ def main():
                 x.requires_grad = True
                 S = torch.softmax(classifier(x) / config.odin_T, dim=-1)
                 S = T.reduce_max(S, axis=[-1])
-                print(S.size())
                 log_S = torch.log(S)
                 gradients = autograd.grad(-log_S, x, grad_outputs=torch.ones(log_S.size()).cuda(),
                                           create_graph=True, retain_graph=True)[0]
-                print(gradients.size())
                 sign = torch.sign(gradients)
                 x_hat = x - config.odin_epsilon * sign
 
                 odin = torch.softmax(classifier(x_hat) / config.odin_T, dim=-1)
-                odin = T.reduce_max(odin, axis=[-1])
+
                 return T.to_numpy(odin)
 
             make_diagram_torch(
