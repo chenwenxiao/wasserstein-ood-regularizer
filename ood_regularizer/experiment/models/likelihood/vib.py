@@ -158,7 +158,7 @@ def p_net(observed=None, n_z=None):
         h_z = spt.layers.dense(z, 500)
         logits = spt.layers.dense(h_z, config.class_num)
 
-    y = net.add('y', spt.Categorical(logits=logits), group_ndims=1)
+    y = net.add('y', spt.Categorical(logits=logits))
     return net
 
 
@@ -269,7 +269,7 @@ def main():
     input_complexity = tf.placeholder(
         dtype=tf.float32, shape=(None,), name='input_complexity')
     input_y = tf.placeholder(
-        dtype=tf.float32, shape=(None,), name='input_y')
+        dtype=tf.int32, shape=(None,), name='input_y')
     warm_up = tf.placeholder(
         dtype=tf.float32, shape=(), name='warm_up')
     learning_rate = spt.AnnealingVariable(
@@ -281,26 +281,31 @@ def main():
         train_q_net = q_net(input_x, n_z=config.train_n_qz)
         train_p_net = p_net(observed={'x': input_x, 'z': train_q_net['z']},
                             n_z=config.train_n_qz)
-        VAE_loss = get_all_loss(train_q_net, train_p_net)
+        VAE_loss = get_all_loss(train_q_net, train_p_net, warm_up)
 
         VAE_loss += tf.losses.get_regularization_loss()
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
         test_q_net = q_net(input_x, n_z=config.test_n_qz)
+        print(test_q_net['z'])
         test_chain = test_q_net.chain(p_net, observed={'y': input_y}, n_z=config.test_n_qz, latent_axis=0)
+        print(test_chain.model['y'].log_prob())
         ele_test_recon = tf.reduce_mean(test_chain.model['y'].log_prob(), axis=0) / config.x_shape_multiple / np.log(2)
+        print(ele_test_recon)
         ele_test_entropy = []
         for i in range(config.class_num):
-            fake_y = tf.ones_like(input_y) * i
+            fake_y = tf.ones_like(input_y, dtype=tf.int32) * i
             ele_test_entropy.append(tf.reduce_mean(test_chain.model['y'].distribution.log_prob(given=fake_y), axis=0))
-        ele_test_entropy = tf.stack(ele_test_entropy, axis=-1)
+        ele_test_entropy = tf.stack(ele_test_entropy, axis=-1)  # [batch_size, class_num]
+        ele_test_predict = tf.argmax(ele_test_entropy, axis=-1)
         ele_test_entropy = tf.reduce_sum(-tf.exp(ele_test_entropy) * ele_test_entropy, axis=-1)
 
         test_recon = tf.reduce_mean(
             ele_test_recon
         )
         ele_test_ll = test_chain.vi.evaluation.is_loglikelihood() / config.x_shape_multiple / np.log(2)
+        print(ele_test_ll)
         test_nll = -tf.reduce_mean(
             ele_test_ll
         )
@@ -330,7 +335,14 @@ def main():
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
-        restore_checkpoint = None
+        experiment_dict = {
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/1a/d5/02c52d867e43747d70f5/checkpoint/checkpoint/checkpoint.dat-78000'
+        }
+        print(experiment_dict)
+        if config.in_dataset in experiment_dict:
+            restore_checkpoint = experiment_dict[config.in_dataset]
+        else:
+            restore_checkpoint = None
 
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
@@ -354,8 +366,25 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
+                    cifar_train_predict = get_ele(ele_test_predict, cifar_train_flow, [input_x, input_y])
+                    cifar_test_predict = get_ele(ele_test_predict, cifar_test_flow, [input_x, input_y])
+
+                    print('Correct number in cifar test is {}'.format(
+                        np.sum(cifar_test_predict == y_test)))
+                    print('Correct number in cifar train is {}'.format(
+                        np.sum(cifar_train_predict == y_train)))
+
                     make_diagram(loop,
                                  ele_test_recon,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x, input_y],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='recon_histogram_{}'.format(epoch)
+                                 )
+
+                    make_diagram(loop,
+                                 ele_test_entropy,
                                  [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',

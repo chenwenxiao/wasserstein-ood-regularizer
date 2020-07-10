@@ -46,8 +46,8 @@ class ExperimentConfig(mltk.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 1000
-    mixed_train_skip = 1000
+    mixed_train_epoch = 1024
+    mixed_train_skip = 1024
     dynamic_epochs = True
     retrain_for_batch = False
 

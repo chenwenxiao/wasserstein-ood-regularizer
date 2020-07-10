@@ -119,8 +119,9 @@ def train_model(exp: mltk.Experiment,
         'train', ['x'], batch_size=train_config.batch_size,
         shuffle=True, skip_incomplete=True,
     )
-    test_stream = test_dataset.get_stream(
-        'test', ['x'], batch_size=train_config.test_batch_size).to_arrays_stream()
+    if test_dataset is not None:
+        test_stream = test_dataset.get_stream(
+            'test', ['x'], batch_size=train_config.test_batch_size).to_arrays_stream()
 
     # print experiment and data information
     examples.utils.print_experiment_summary(
@@ -128,7 +129,8 @@ def train_model(exp: mltk.Experiment,
 
     # make tensor streams
     train_stream = tk.utils.as_tensor_stream(train_stream, prefetch=3)
-    test_stream = tk.utils.as_tensor_stream(test_stream, prefetch=3)
+    if test_dataset is not None:
+        test_stream = tk.utils.as_tensor_stream(test_stream, prefetch=3)
 
     # inspect the model
     params, param_names = examples.utils.get_params_and_names(model)
@@ -228,7 +230,8 @@ def train_model(exp: mltk.Experiment,
 
     # do the final test
     plot_samples('final')
-    results = mltk.TestLoop().run(eval_step, test_stream)
+    if test_dataset is not None:
+        results = mltk.TestLoop().run(eval_step, test_stream)
     print('')
     print(mltk.format_key_values(results, title='Results'))
 
@@ -256,8 +259,9 @@ def train_classifier(exp: mltk.Experiment,
         'train', ['x', 'y'], batch_size=train_config.batch_size,
         shuffle=True, skip_incomplete=True,
     )
-    test_stream = test_dataset.get_stream(
-        'test', ['x', 'y'], batch_size=train_config.test_batch_size).to_arrays_stream()
+    if test_dataset is not None:
+        test_stream = test_dataset.get_stream(
+            'test', ['x', 'y'], batch_size=train_config.test_batch_size).to_arrays_stream()
 
     # print experiment and data information
     examples.utils.print_experiment_summary(
@@ -265,7 +269,9 @@ def train_classifier(exp: mltk.Experiment,
 
     # make tensor streams
     train_stream = tk.utils.as_tensor_stream(train_stream, prefetch=3)
-    test_stream = tk.utils.as_tensor_stream(test_stream, prefetch=3)
+
+    if test_dataset is not None:
+        test_stream = tk.utils.as_tensor_stream(test_stream, prefetch=3)
 
     # inspect the model
     params, param_names = examples.utils.get_params_and_names(model)
@@ -321,6 +327,7 @@ def train_classifier(exp: mltk.Experiment,
     )
 
     # do the final test
-    results = mltk.TestLoop().run(eval_step, test_stream)
+    if test_dataset is not None:
+        results = mltk.TestLoop().run(eval_step, test_stream)
     print('')
     print(mltk.format_key_values(results, title='Results'))
