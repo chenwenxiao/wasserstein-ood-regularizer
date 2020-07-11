@@ -7,7 +7,7 @@ import sys
 import torch
 import numpy as np
 
-from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model
+from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model, get_mapper
 from flow_next.models.glow import GlowConfig, Glow
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
 from ood_regularizer.experiment.models.utils import get_mixed_array
@@ -106,6 +106,7 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/f9/d5/02c52d867e433e8c70f5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -148,15 +149,23 @@ def main():
         model.apply(set_train_mode)
         tk.layers.set_eval_mode(model)
         with mltk.TestLoop() as loop:
-            x_train = cifar_test_dataset.get_stream('train', ['x'], config.batch_size).get_arrays()[0]
-            x_test = cifar_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0],
-            svhn_test = svhn_test_dataset.get_stream('test', ['x'], config.batch_size).get_arrays()[0]
+            x_train = cifar_dataset.get_array('train', 'x')
+            y_train = cifar_dataset.get_array('train', 'y')
+            x_test = cifar_dataset.get_array('test', 'x')
+            y_test = cifar_dataset.get_array('test', 'y')
+            svhn_train = svhn_dataset.get_array('train', 'x')
+            svhn_test = svhn_dataset.get_array('test', 'x')
+
+            test_mapper = get_mapper(config.in_dataset, training=False)
+            test_mapper.fit(cifar_dataset.slots['x'])
+
             mixed_array = np.concatenate([
                 x_test, svhn_test
             ])
             mixed_test_flow = ArraysDataStream([mixed_array], config.test_batch_size, shuffle=True,
-                                               skip_incomplete=True)
-            tmp_train_flow = ArraysDataStream([x_train], config.test_batch_size, shuffle=True, skip_incomplete=True)
+                                               skip_incomplete=True).map(lambda x: test_mapper.transform(x))
+            tmp_train_flow = ArraysDataStream([x_train], config.test_batch_size, shuffle=True,
+                                              skip_incomplete=True).map(lambda x: test_mapper.transform(x))
 
             @torch.no_grad()
             def eval_ll(x):

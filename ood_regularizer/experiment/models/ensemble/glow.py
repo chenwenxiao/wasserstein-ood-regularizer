@@ -77,6 +77,7 @@ class ExperimentConfig(mltk.Config):
     x_shape_multiple = 3072
     extra_stride = 2
     class_num = 10
+    ensemble_times = 5
 
     odin_T = 1000
     odin_epsilon = 0.0012 * 2  # multiple 2 for the normalization [-1, 1] instead of [0, 1] in ODIN
@@ -154,53 +155,15 @@ def main():
         svhn_test = svhn_dataset.get_array('test', 'x')
 
         if restore_dir is None:
-            classifier = models.resnet34(num_classes=config.class_num).cuda()
-            train_classifier(exp, classifier, cifar_test_dataset, cifar_test_dataset)
-
-            @torch.no_grad()
-            def eval_predict(x):
-                x = T.from_numpy(x)
-                predict = classifier(x)
-                predict = T.argmax(predict, axis=-1)
-                return T.to_numpy(predict)
-
-            cifar_test_predict = get_ele_torch(eval_predict, cifar_test_flow)
-            print('Correct number in cifar test is {}'.format(
-                np.sum(cifar_test_predict == y_test)))
-            cifar_train_predict = get_ele_torch(eval_predict, cifar_train_flow)
-            print('Correct number in cifar train is {}'.format(
-                np.sum(cifar_train_predict == y_train)))
-
-            torch.save(classifier, 'classifier.pkl')
-
-            for current_class in range(config.class_num):
+            for current_class in range(config.ensemble_times):
                 # construct the model
                 model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
                 print('Model constructed.')
-                current_class_stream = ArraysDataStream([x_train[y_train == current_class]], config.batch_size,
-                                                        shuffle=True, skip_incomplete=True)
-                mapper = get_mapper(config.in_dataset, training=True)
-                mapper.fit(cifar_dataset.slots['x'])
-                current_class_stream = current_class_stream.map(lambda x: mapper.transform(x))
-                current_class_stream = tk.utils.as_tensor_stream(current_class_stream, prefetch=3)
                 # train the model
-                train_model(exp, model, cifar_train_dataset, cifar_test_dataset, current_class_stream)
+                train_model(exp, model, cifar_train_dataset, cifar_test_dataset)
                 torch.save(model, 'model_{}.pkl'.format(current_class))
-        else:
-            classifier = torch.load(restore_dir + '/classifier.pkl')
 
         with mltk.TestLoop() as loop:
-            @torch.no_grad()
-            def eval_predict(x):
-                x = T.from_numpy(x)
-                predict = classifier(x)
-                odin = T.reduce_max(torch.softmax(predict, dim=-1), axis=[-1])
-                print(T.reduce_mean(odin))
-                predict = T.argmax(predict, axis=-1)
-                return T.to_numpy(predict)
-
-            cifar_test_predict = get_ele_torch(eval_predict, cifar_test_flow)
-            svhn_test_predict = get_ele_torch(eval_predict, svhn_test_flow)
 
             @torch.no_grad()
             def eval_ll(x):
@@ -209,62 +172,76 @@ def main():
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
-            def eval_odin(x):
-                x = T.from_numpy(x)
-                x.requires_grad = True
-                S = torch.softmax(classifier(x) / config.odin_T, dim=-1)
-                S = T.reduce_max(S, axis=[-1])
-                log_S = torch.log(S)
-                gradients = autograd.grad(-log_S, x, grad_outputs=torch.ones(log_S.size()).cuda(),
-                                          create_graph=True, retain_graph=True)[0]
-                sign = torch.sign(gradients)
-                x_hat = x - config.odin_epsilon * sign
-
-                odin = torch.softmax(classifier(x_hat) / config.odin_T, dim=-1)
-
-                return T.to_numpy(odin)
-
-            make_diagram_torch(
-                loop, eval_odin,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                fig_name='odin_histogram'
-            )
-
-            final_cifar_test_ll = np.zeros(len(x_test))
-            final_svhn_test_ll = np.zeros(len(svhn_test))
-            for current_class in range(0, config.class_num):
-                cifar_mask = cifar_test_predict == current_class
-                svhn_mask = svhn_test_predict == current_class
-                pse_epoch = config.warm_up_start + (current_class + 1) * config.test_epoch_freq
-
+            final_cifar_train_ll = []
+            final_cifar_test_ll = []
+            final_svhn_train_ll = []
+            final_svhn_test_ll = []
+            for current_class in range(0, config.ensemble_times):
                 if restore_dir is None:
                     model = torch.load('model_{}.pkl'.format(current_class))
                 else:
                     model = torch.load(restore_dir + '/model_{}.pkl'.format(current_class))
 
-                test_mapper = get_mapper(config.in_dataset, training=False)
-                test_mapper.fit(cifar_dataset.slots['x'])
-                if np.sum(cifar_mask) > 0:
-                    cifar_test_ll = get_ele_torch(eval_ll, ArraysDataStream([
-                        x_test[cifar_mask]
-                    ], config.test_batch_size, False, False).map(lambda x: test_mapper.transform(x)))
-                    final_cifar_test_ll[cifar_mask] = cifar_test_ll
+                final_cifar_train_ll.append(get_ele_torch(eval_ll, cifar_train_flow))
+                final_cifar_test_ll.append(get_ele_torch(eval_ll, cifar_test_flow))
+                final_svhn_train_ll.append(get_ele_torch(eval_ll, svhn_train_flow))
+                final_svhn_test_ll.append(get_ele_torch(eval_ll, svhn_test_flow))
 
-                if np.sum(svhn_mask) > 0:
-                    svhn_test_ll = get_ele_torch(eval_ll, ArraysDataStream([
-                        svhn_test[svhn_mask]
-                    ], config.test_batch_size, False, False).map(lambda x: test_mapper.transform(x)))
-                    final_svhn_test_ll[svhn_mask] = svhn_test_ll
+            config.x_shape = x_train.shape[1:]
+            config.x_shape_multiple = 1
+            for x in config.x_shape:
+                config.x_shape_multiple *= x
 
-            loop.add_metrics(log_prob_histogram=plot_fig(
-                [final_cifar_test_ll, final_svhn_test_ll],
-                color_list=['red', 'green'],
-                label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
-                x_label='log(bit/dims)',
-                fig_name='log_prob_histogram', auc_pair=(0, 1)
-            ))
+            def get_bpd_waic(arrays):
+                arrays = np.stack(arrays, axis=0)
+                waic = np.mean(arrays, axis=0) - np.var(arrays, axis=0)
+                return waic
+
+            def get_ll_waic(arrays):
+                arrays = np.stack(arrays, axis=0)
+                arrays = arrays * config.x_shape_multiple * np.log(2)
+                waic = np.mean(arrays, axis=0) - np.var(arrays, axis=0)
+                return waic
+
+            def get_mean(arrays):
+                arrays = np.stack(arrays, axis=0)
+                return np.mean(arrays, axis=0)
+
+            def get_var(arrays):
+                arrays = np.stack(arrays, axis=0)
+                return -np.var(arrays, axis=0)
+
+            loop.add_metrics(bpd_waic_histogram=plot_fig(
+                data_list=[get_bpd_waic(final_cifar_train_ll), get_bpd_waic(final_cifar_test_ll),
+                           get_bpd_waic(final_svhn_train_ll), get_bpd_waic(final_svhn_test_ll)],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                x_label='bits/dim', fig_name='bpd_waic_histogram'))
+
+            loop.add_metrics(ll_waic_histogram=plot_fig(
+                data_list=[get_ll_waic(final_cifar_train_ll), get_ll_waic(final_cifar_test_ll),
+                           get_ll_waic(final_svhn_train_ll), get_ll_waic(final_svhn_test_ll)],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                x_label='bits/dim', fig_name='ll_waic_histogram'))
+
+            loop.add_metrics(mean_log_prob_histogram=plot_fig(
+                data_list=[get_mean(final_cifar_train_ll), get_mean(final_cifar_test_ll),
+                           get_mean(final_svhn_train_ll), get_mean(final_svhn_test_ll)],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                x_label='bits/dim', fig_name='mean_log_prob_histogram'))
+
+            loop.add_metrics(vae_log_prob_histogram=plot_fig(
+                data_list=[get_var(final_cifar_train_ll), get_var(final_cifar_test_ll),
+                           get_var(final_svhn_train_ll), get_var(final_svhn_test_ll)],
+                color_list=['red', 'salmon', 'green', 'lightgreen'],
+                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                x_label='bits/dim', fig_name='vae_log_prob_histogram'))
 
 
 if __name__ == '__main__':
