@@ -476,20 +476,20 @@ def main():
                     loop.collect_metrics(AUC=AUC)
 
                     make_diagram(loop,
-                        ele_test_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_with_batch_norm_{}'.format(epoch)
-                    )
+                                 ele_test_ll,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='log_prob_histogram_with_batch_norm_{}'.format(epoch)
+                                 )
 
                     make_diagram(loop,
-                        ele_eval_ll,
-                        [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_without_batch_norm{}'.format(epoch)
-                    )
+                                 ele_eval_ll,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='log_prob_histogram_without_batch_norm{}'.format(epoch)
+                                 )
 
                 for step, [x] in loop.iter_steps(train_flow):
                     _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
@@ -500,8 +500,8 @@ def main():
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
 
-                if epoch == config.warm_up_start:
-                    learning_rate.set(config.initial_lr)
+                if epoch == config.max_epoch:
+                    loop._checkpoint_saver.save(epoch)
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)

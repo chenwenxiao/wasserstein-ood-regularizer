@@ -26,6 +26,7 @@ from ood_regularizer.experiment.datasets.overall import load_overall, load_compl
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
+import os
 
 
 class ExpConfig(spt.Config):
@@ -563,7 +564,17 @@ def main():
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
-        restore_checkpoint = None
+        experiment_dict = {
+        }
+        print(experiment_dict)
+        if config.in_dataset in experiment_dict:
+            restore_dir = experiment_dict[config.in_dataset] + '/checkpoint'
+            restore_checkpoint = os.path.join(
+                restore_dir, 'checkpoint',
+                'checkpoint.dat-{}'.format(config.max_epoch if config.self_ood else config.warm_up_start))
+        else:
+            restore_dir = results.system_path('checkpoint')
+            restore_checkpoint = None
 
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
@@ -575,7 +586,6 @@ def main():
                            summary_graph=tf.get_default_graph(),
                            early_stopping=False,
                            checkpoint_dir=results.system_path('checkpoint'),
-                           checkpoint_epoch_freq=config.warm_up_start,
                            restore_checkpoint=restore_checkpoint
                            ) as loop:
 
@@ -736,8 +746,8 @@ def main():
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
 
-                if epoch == config.warm_up_start:
-                    learning_rate.set(config.initial_lr)
+                if epoch == config.max_epoch or epoch == config.warm_up_start:
+                    loop._checkpoint_saver.save(epoch)
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)

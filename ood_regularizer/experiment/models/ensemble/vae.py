@@ -405,8 +405,17 @@ def main():
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
-        restore_checkpoint = None
-        restore_dir = None
+        experiment_dict = {
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/3a/d5/02279d802d3a9c6590f5'
+        }
+        print(experiment_dict)
+        if config.in_dataset in experiment_dict:
+            restore_dir = experiment_dict[config.in_dataset] + '/checkpoint'
+            restore_checkpoint = os.path.join(
+                restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(config.max_epoch))
+        else:
+            restore_dir = results.system_path('checkpoint')
+            restore_checkpoint = None
 
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
@@ -439,10 +448,10 @@ def main():
                         pse_epoch = config.warm_up_start + (current_class + 1) * config.test_epoch_freq
                         loop._checkpoint_saver.restore(os.path.join(
                             restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(pse_epoch)))
+                        final_cifar_train_ll.append(get_ele(ele_test_ll, cifar_train_flow, input_x))
                         final_cifar_test_ll.append(get_ele(ele_test_ll, cifar_test_flow, input_x))
-                        final_cifar_test_ll.append(get_ele(ele_test_ll, cifar_test_flow, input_x))
-                        final_cifar_test_ll.append(get_ele(ele_test_ll, cifar_test_flow, input_x))
-                        final_cifar_test_ll.append(get_ele(ele_test_ll, cifar_test_flow, input_x))
+                        final_svhn_train_ll.append(get_ele(ele_test_ll, svhn_train_flow, input_x))
+                        final_svhn_test_ll.append(get_ele(ele_test_ll, svhn_test_flow, input_x))
 
                     def get_bpd_waic(arrays):
                         arrays = np.stack(arrays, axis=0)

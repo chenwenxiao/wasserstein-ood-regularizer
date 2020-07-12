@@ -126,7 +126,7 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
-            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/29/d5/02279d802d3a660250f5'
+
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:

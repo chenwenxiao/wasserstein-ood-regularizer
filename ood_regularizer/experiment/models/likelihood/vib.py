@@ -336,12 +336,15 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
-            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/1a/d5/02c52d867e43747d70f5/checkpoint/checkpoint/checkpoint.dat-78000'
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
-            restore_checkpoint = experiment_dict[config.in_dataset]
+            restore_dir = experiment_dict[config.in_dataset] + '/checkpoint'
+            restore_checkpoint = os.path.join(
+                restore_dir, 'checkpoint',
+                'checkpoint.dat-{}'.format(config.max_epoch if config.self_ood else config.warm_up_start))
         else:
+            restore_dir = results.system_path('checkpoint')
             restore_checkpoint = None
 
         # train the network
@@ -354,7 +357,6 @@ def main():
                            summary_graph=tf.get_default_graph(),
                            early_stopping=False,
                            checkpoint_dir=results.system_path('checkpoint'),
-                           checkpoint_epoch_freq=config.warm_up_start,
                            restore_checkpoint=restore_checkpoint
                            ) as loop:
 
@@ -430,6 +432,9 @@ def main():
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
+
+                if epoch == config.max_epoch:
+                    loop._checkpoint_saver.save(epoch)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

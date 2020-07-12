@@ -339,8 +339,17 @@ def main():
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
-        restore_checkpoint = None
-        restore_dir = None
+        experiment_dict = {
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/1a/d5/02c52d867e43747d70f5'
+        }
+        print(experiment_dict)
+        if config.in_dataset in experiment_dict:
+            restore_dir = experiment_dict[config.in_dataset] + '/checkpoint'
+            restore_checkpoint = os.path.join(
+                restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(config.max_epoch))
+        else:
+            restore_dir = results.system_path('checkpoint')
+            restore_checkpoint = None
 
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
