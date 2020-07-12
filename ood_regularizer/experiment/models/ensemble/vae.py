@@ -406,7 +406,6 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
-            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/3a/d5/02279d802d3a9c6590f5'
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:

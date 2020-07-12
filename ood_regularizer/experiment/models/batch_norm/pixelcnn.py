@@ -24,7 +24,6 @@ from tfsnippet.preprocessing import UniformNoiseSampler
 
 from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
-from ood_regularizer.experiment.models.likelihood.glow import myRNVPConfig
 from ood_regularizer.experiment.models.real_nvp import make_real_nvp, RealNVPConfig
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, plot_fig

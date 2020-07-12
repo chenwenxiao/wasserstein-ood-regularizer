@@ -114,8 +114,6 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
-            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/19/d5/02c52d867e43bf2540f5',
-            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/b6/d5/02732c28dc8d203540f5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:

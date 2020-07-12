@@ -24,7 +24,7 @@ from tfsnippet.preprocessing import UniformNoiseSampler
 from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.utils import make_diagram, plot_fig
-
+import os
 
 class ExpConfig(spt.Config):
     # model parameters
@@ -409,7 +409,17 @@ def main():
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
-        restore_checkpoint = None
+        experiment_dict = {
+
+        }
+        print(experiment_dict)
+        if config.in_dataset in experiment_dict:
+            restore_dir = experiment_dict[config.in_dataset] + '/checkpoint'
+            restore_checkpoint = os.path.join(
+                restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(config.max_epoch))
+        else:
+            restore_dir = results.system_path('checkpoint')
+            restore_checkpoint = None
 
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
