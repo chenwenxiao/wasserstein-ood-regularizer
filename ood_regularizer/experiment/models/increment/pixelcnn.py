@@ -26,6 +26,7 @@ from ood_regularizer.experiment.datasets.overall import load_overall, load_compl
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
+import os
 
 
 class ExpConfig(spt.Config):
@@ -309,7 +310,7 @@ def main():
                     for i in range(0, len(mixed_array), config.mixed_train_skip):
                         if config.retrain_for_batch:
                             loop._checkpoint_saver.restore_latest()
-                        if config.dynamic_epochs:
+                        if config.dynamic_epochs and not config.retrain_for_batch:
                             repeat_epoch = int(
                                 config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))
                             repeat_epoch = max(1, repeat_epoch)
@@ -334,9 +335,9 @@ def main():
                                 input_x: batch_x
                             })
                             loop.collect_metrics(theta_loss=batch_VAE_loss)
-                        mixed_kl.append(session.run(ele_test_ll, feed_dict={
-                            input_x: mixed_array[i: i + config.mixed_train_skip]
-                        }))
+                        mixed_kl.append(get_ele(ele_test_ll,
+                                                spt.DataFlow.arrays([mixed_array[i: i + config.mixed_train_skip]],
+                                                                    config.test_batch_size), input_x))
                         print(repeat_epoch, len(mixed_kl))
                         loop.print_logs()
 

@@ -235,13 +235,13 @@ def main():
                             config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
                 x_label='bits/dim', fig_name='mean_log_prob_histogram'))
 
-            loop.add_metrics(vae_log_prob_histogram=plot_fig(
+            loop.add_metrics(var_log_prob_histogram=plot_fig(
                 data_list=[get_var(final_cifar_train_ll), get_var(final_cifar_test_ll),
                            get_var(final_svhn_train_ll), get_var(final_svhn_test_ll)],
                 color_list=['red', 'salmon', 'green', 'lightgreen'],
                 label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
                             config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                x_label='bits/dim', fig_name='vae_log_prob_histogram'))
+                x_label='bits/dim', fig_name='var_log_prob_histogram'))
 
 
 if __name__ == '__main__':

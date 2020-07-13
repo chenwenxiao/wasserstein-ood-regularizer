@@ -205,8 +205,9 @@ def main():
                 train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
                             DataStream.generator(data_generator))
 
-                mixed_kl.append(eval_ll(
-                    test_mapper.transform(mixed_array[i: i + config.mixed_train_skip])))
+                mixed_kl.append(get_ele_torch(eval_ll, ArraysDataStream(
+                    [mixed_array[i: i + config.mixed_train_skip]], batch_size=config.batch_size, shuffle=False,
+                    skip_incomplete=False).map(lambda x: test_mapper.transform(x))))
 
             mixed_kl = np.concatenate(mixed_kl)
             mixed_kl = mixed_kl - mixed_ll

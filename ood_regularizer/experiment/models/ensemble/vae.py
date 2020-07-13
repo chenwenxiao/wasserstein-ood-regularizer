@@ -495,13 +495,13 @@ def main():
                                     config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         x_label='bits/dim', fig_name='mean_log_prob_histogram'))
 
-                    loop.collect_metrics(vae_log_prob_histogram=plot_fig(
+                    loop.collect_metrics(var_log_prob_histogram=plot_fig(
                         data_list=[get_var(final_cifar_train_ll), get_var(final_cifar_test_ll),
                                    get_var(final_svhn_train_ll), get_var(final_svhn_test_ll)],
                         color_list=['red', 'salmon', 'green', 'lightgreen'],
                         label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                     config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        x_label='bits/dim', fig_name='vae_log_prob_histogram'))
+                        x_label='bits/dim', fig_name='var_log_prob_histogram'))
                     loop.print_logs()
                     break
 
