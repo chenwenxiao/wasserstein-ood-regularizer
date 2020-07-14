@@ -48,7 +48,7 @@ class ExperimentConfig(mltk.Config):
     mixed_train = False
     mixed_train_epoch = 1024
     mixed_train_skip = 1024
-    dynamic_epochs = True
+    dynamic_epochs = False
     retrain_for_batch = False
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
@@ -202,7 +202,7 @@ def main():
                 exp.config.train.test_epoch_freq = exp.config.train.max_epoch + 1
                 if config.retrain_for_batch:
                     model = torch.load('model.pkl')
-                train_model(exp, model, svhn_train_dataset, svhn_test_dataset,
+                train_model(exp, model, svhn_train_dataset, None,
                             DataStream.generator(data_generator))
 
                 mixed_kl.append(get_ele_torch(eval_ll, ArraysDataStream(

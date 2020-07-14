@@ -1,1 +1,1 @@
-for i in {1..50}; do (bash dask_run.sh -- bash start.sh ${1} $i); done
+for i in {0..49}; do (bash dask_run.sh -- bash start.sh ${1} $i); done

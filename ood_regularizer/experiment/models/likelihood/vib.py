@@ -382,7 +382,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='recon_histogram_{}'.format(epoch)
+                                 fig_name='recon_histogram'
                                  )
 
                     make_diagram(loop,
@@ -391,7 +391,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='H_histogram_{}'.format(epoch)
+                                 fig_name='H_histogram'
                                  )
 
                     make_diagram(loop,
@@ -400,7 +400,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='elbo_histogram_{}'.format(epoch)
+                                 fig_name='elbo_histogram'
                                  )
 
                     make_diagram(loop,
@@ -409,7 +409,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='R_histogram_{}'.format(epoch)
+                                 fig_name='R_histogram'
                                  )
 
                     make_diagram(loop,
@@ -418,7 +418,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='log_prob_histogram_{}'.format(epoch)
+                                 fig_name='log_prob_histogram'
                                  )
 
                     loop.print_logs()

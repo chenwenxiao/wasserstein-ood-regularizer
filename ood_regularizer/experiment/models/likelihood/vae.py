@@ -602,7 +602,7 @@ def main():
                         [input_x, input_y],
                         names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram_{}'.format(epoch)
+                        fig_name='log_prob_histogram'
                     )
 
                     def t_perm(base, another_arrays=None):
@@ -621,7 +621,7 @@ def main():
                              label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                          config.out_dataset + ' Train', config.out_dataset + ' Test'],
                              x_label='bits/dim',
-                             fig_name='T_perm_histogram_{}'.format(epoch))
+                             fig_name='T_perm_histogram')
 
                     make_diagram(loop, grad_x_norm,
                                  [cifar_train_flow,
@@ -631,7 +631,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='grad_norm_histogram_{}'.format(epoch)
+                                 fig_name='grad_norm_histogram'
                                  )
 
                     make_diagram(loop,
@@ -640,7 +640,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='log_prob_mixed_histogram_{}'.format(epoch)
+                                 fig_name='log_prob_mixed_histogram'
                                  )
 
                     make_diagram(loop,
@@ -649,7 +649,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='recon_histogram_{}'.format(epoch)
+                                 fig_name='recon_histogram'
                                  )
 
                     make_diagram(loop,
@@ -658,7 +658,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='elbo_histogram_{}'.format(epoch)
+                                 fig_name='elbo_histogram'
                                  )
 
                     make_diagram(loop,
@@ -667,7 +667,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='elbo-recon_histogram_{}'.format(epoch)
+                                 fig_name='elbo-recon_histogram'
                                  )
 
                     make_diagram(loop,
@@ -677,7 +677,7 @@ def main():
                                  [input_x, input_y, input_complexity],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='ll_with_complexity_histogram_{}'.format(epoch)
+                                 fig_name='ll_with_complexity_histogram'
                                  )
 
                     make_diagram(loop,
@@ -686,7 +686,7 @@ def main():
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='kl_histogram_{}'.format(epoch)
+                                 fig_name='kl_histogram'
                                  )
 
                     def get_mcmc_and_origin(origin):
@@ -703,13 +703,13 @@ def main():
                                  ele_test_recon, mcmc_data, [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='mcmc_recon_histogram_{}'.format(epoch)
+                                 fig_name='mcmc_recon_histogram'
                                  )
                     make_diagram(loop,
                                  ele_test_ll, mcmc_data, [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='mcmc_log_prob_histogram_{}'.format(epoch)
+                                 fig_name='mcmc_log_prob_histogram'
                                  )
                     loop.print_logs()
                     break

@@ -2,7 +2,7 @@
 
 cd /home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/ood_regularizer/experiment
 
-full_dataset=('--in_dataset=cifar10 --out_dataset=cifar100'
+dataset=('--in_dataset=cifar10 --out_dataset=cifar100'
 '--in_dataset=cifar10 --out_dataset=svhn'
 '--in_dataset=cifar10 --out_dataset=tinyimagenet'
 '--in_dataset=cifar10 --out_dataset=celeba'
@@ -53,6 +53,10 @@ full_dataset=('--in_dataset=cifar10 --out_dataset=cifar100'
 '--in_dataset=not_mnist --out_dataset=kmnist'
 '--in_dataset=not_mnist --out_dataset=omniglot')
 
-mlrun --legacy -- python ${$1} ${full_dataset[$2]}
+
+algorithm=('models/likelihood/vae.py'
+)
+
+mlrun --legacy -- python ${algorithm[$1]} ${dataset[$2]}
 
 exit 0

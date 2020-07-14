@@ -2,7 +2,7 @@
 
 cd /home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/ood_regularizer/experiment
 
-pretrain_dataset=('--in_dataset=fashion_mnist --out_dataset=mnist'
+dataset=('--in_dataset=fashion_mnist --out_dataset=mnist'
 '--in_dataset=mnist --out_dataset=fashion_mnist'
 '--in_dataset=kmnist --out_dataset=mnist'
 '--in_dataset=omniglot --out_dataset=mnist'
@@ -13,6 +13,20 @@ pretrain_dataset=('--in_dataset=fashion_mnist --out_dataset=mnist'
 '--in_dataset=celeba --out_dataset=svhn'
 '--in_dataset=tinyimagenet --out_dataset=svhn')
 
-mlrun --legacy -- python ${$1} ${dataset[$2]}
+algorithm=('models/likelihood/vae.py --self_ood=True'
+'models/likelihood/pixelcnn.py --self_ood=True'
+'models/likelihood/vib.py'
+'models/ensemble/pixelcnn.py'
+'models/ensemble/vae.py'
+'models/conditional/pixelcnn.py'
+'models/conditional/vae.py'
+'models/batch_norm/pixelcnn.py'
+'models/batch_norm/vae.py'
+'models/likelihood/glow.py --self_ood=True'
+'models/ensemble/glow.py'
+'models/conditional/glow.py'
+'models/batch_norm/glow.py')
+
+mlrun --legacy -- python ${algorithm[$1]} ${dataset[$2]}
 
 exit 0

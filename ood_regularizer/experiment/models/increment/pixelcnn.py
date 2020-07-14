@@ -52,7 +52,7 @@ class ExpConfig(spt.Config):
     mixed_train = False
     mixed_train_epoch = 1024
     mixed_train_skip = 1024
-    dynamic_epochs = True
+    dynamic_epochs = False
     retrain_for_batch = False
 
     in_dataset_test_ratio = 1.0
@@ -310,7 +310,7 @@ def main():
                     for i in range(0, len(mixed_array), config.mixed_train_skip):
                         if config.retrain_for_batch:
                             loop._checkpoint_saver.restore_latest()
-                        if config.dynamic_epochs and not config.retrain_for_batch:
+                        if config.dynamic_epochs:
                             repeat_epoch = int(
                                 config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))
                             repeat_epoch = max(1, repeat_epoch)

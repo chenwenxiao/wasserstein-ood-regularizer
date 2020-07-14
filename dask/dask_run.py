@@ -160,7 +160,7 @@ def run_proc(args, work_dir=None, log_file=None):
 
 
 @click.command()
-@click.option('-s', '--scheduler', default=socket.gethostname() + ':7961',
+@click.option('-s', '--scheduler', default=socket.gethostname() + ':7891',
               help='Specify the dask scheduler.')
 @click.option('-l', '--log-file', default=None, required=False,
               help='Save console log to this file.')
