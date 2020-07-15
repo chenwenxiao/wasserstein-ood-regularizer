@@ -12,7 +12,7 @@ TEST_X_PATH = '/home/cwx17/data/kmnist/kmnist-test-imgs.npz'
 TEST_Y_PATH = '/home/cwx17/data/kmnist/kmnist-test-labels.npz'
 
 
-def load_kmnist(x_shape=(28, 28, 1), x_dtype=np.float32, y_dtype=np.int32,
+def load_kmnist(x_shape=(28, 28, 1), x_dtype=np.int8, y_dtype=np.int32,
                 normalize_x=False):
     """
     Load the MNIST dataset as NumPy arrays.

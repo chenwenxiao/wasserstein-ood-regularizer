@@ -316,12 +316,10 @@ def main():
 
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    x_train = (x_train - 127.5) / 256.0 * 2
-    x_test = (x_test - 127.5) / 256.0 * 2
-
     (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    def normalize(x):
+        return [(x - 127.5) / 256.0 * 2]
 
     config.class_num = np.max(y_train) + 1
     config.x_shape = x_train.shape[1:]
@@ -438,18 +436,18 @@ def main():
         except Exception as e:
             print(e)
 
-    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
-    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
-    svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
-    svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
+    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size).map(normalize)
+    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size).map(normalize)
+    svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size).map(normalize)
+    svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size).map(normalize)
 
     train_flow = spt.DataFlow.arrays([x_train, y_train], config.batch_size, shuffle=True,
-                                     skip_incomplete=True)
+                                     skip_incomplete=True).map(normalize)
 
-    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True)
+    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True).map(normalize)
 
     cifar_test_predict = None
 
@@ -509,13 +507,13 @@ def main():
                         if np.sum(cifar_mask) > 0:
                             cifar_test_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([
                                 x_test[cifar_mask]
-                            ], config.test_batch_size), input_x)
+                            ], config.test_batch_size).map(normalize), input_x)
                             final_cifar_test_ll[cifar_mask] = cifar_test_ll
 
                         if np.sum(svhn_mask) > 0:
                             svhn_test_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([
                                 svhn_test[svhn_mask]
-                            ], config.test_batch_size), input_x)
+                            ], config.test_batch_size).map(normalize), input_x)
                             final_svhn_test_ll[svhn_mask] = svhn_test_ll
 
                     loop.collect_metrics(log_prob_histogram=plot_fig(
@@ -530,7 +528,7 @@ def main():
                 def update_training_data():
                     train_flow = spt.DataFlow.arrays([x_train[y_train == current_class]],
                                                      config.batch_size, shuffle=True,
-                                                     skip_incomplete=True)
+                                                     skip_incomplete=True).map(normalize)
                     return train_flow
 
                 if (epoch - config.warm_up_start) % config.test_epoch_freq == 1 and epoch > config.warm_up_start:

@@ -60,8 +60,8 @@ def _fetch_array_y(path):
     return np.array(evalue)
 
 
-def load_tinyimagenet(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
-                       normalize_x=False):
+def load_tinyimagenet(x_shape=(32, 32, 3), x_dtype=np.int8, y_dtype=np.int32,
+                      normalize_x=False):
     """
     Load the imagenet dataset as NumPy arrays.
     samilar to load_not_mnist
@@ -79,10 +79,15 @@ def load_tinyimagenet(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
             
     """
 
-    train_x = np.load(TRAIN_X_ARR_PATH)
-    train_y = np.load(TRAIN_Y_ARR_PATH)
-    test_x = np.load(TEST_X_ARR_PATH)
+    train_x = np.load(TRAIN_X_ARR_PATH, mmap_mode='r')
+    train_y = np.load(TRAIN_Y_ARR_PATH, mmap_mode='r')
+    test_x = np.load(TEST_X_ARR_PATH, mmap_mode='r')
     test_y = None
+
+    train_x = train_x.astype(x_dtype)
+    train_y = train_y.astype(y_dtype)
+    test_x = test_x.astype(x_dtype)
+    test_y = train_y.astype(y_dtype)
 
     return (train_x, train_y), (test_x, test_y)
 

@@ -250,8 +250,8 @@ def main():
     # It is important: the `x_shape` must have channel dimension, even it is 1! (i.e. (28, 28, 1) for MNIST)
     # And the value of images should not be normalized, ranged from 0 to 255.
     # prepare for training and testing data
-    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset, dtype=np.int)
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset, dtype=np.int)
+    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
+    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
     config.x_shape = x_train.shape[1:]
     config.x_shape_multiple = 1
     for x in config.x_shape:
@@ -425,14 +425,6 @@ def main():
                                  )
 
                     make_diagram(loop,
-                                 ele_test_omega_ll,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='log_prob_mixed_histogram'
-                                 )
-
-                    make_diagram(loop,
                                  ele_test_ll + input_complexity,
                                  [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
                                   svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
@@ -440,14 +432,6 @@ def main():
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
                                  fig_name='ll_with_complexity_histogram'
-                                 )
-
-                    make_diagram(loop,
-                                 ele_test_ll,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='log_prob_histogram'
                                  )
 
                     make_diagram(loop,

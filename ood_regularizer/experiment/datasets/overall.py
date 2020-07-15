@@ -15,7 +15,7 @@ import numpy as np
 import os
 
 
-def load_overall(dataset_name, dtype=np.float):
+def load_overall(dataset_name, dtype=np.int8):
     x_train = None
     x_test = None
     y_train = None

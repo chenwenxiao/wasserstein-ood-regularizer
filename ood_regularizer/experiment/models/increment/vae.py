@@ -24,6 +24,7 @@ from tfsnippet.preprocessing import UniformNoiseSampler
 from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.utils import make_diagram, plot_fig, get_ele
+import os
 
 
 class ExpConfig(spt.Config):
@@ -270,12 +271,10 @@ def main():
 
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    x_train = (x_train - 127.5) / 256.0 * 2
-    x_test = (x_test - 127.5) / 256.0 * 2
-
     (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    def normalize(x):
+        return [(x - 127.5) / 256.0 * 2]
 
     config.x_shape = x_train.shape[1:]
     config.x_shape_multiple = 1
@@ -375,7 +374,7 @@ def main():
         except Exception as e:
             print(e)
 
-    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
+    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True).map(normalize)
 
     mixed_array = np.concatenate([x_test, svhn_test])
     print(mixed_array.shape)
@@ -383,10 +382,12 @@ def main():
     np.random.shuffle(index)
     mixed_array = mixed_array[index]
 
-    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True)
+    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True).map(
+        normalize)
+    reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True).map(
+        normalize)
 
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
@@ -425,7 +426,9 @@ def main():
             # adversarial training
             for epoch in epoch_iterator:
                 if epoch > config.max_epoch:
-                    mixed_ll = get_ele(ele_test_ll, spt.DataFlow.arrays([mixed_array], config.test_batch_size), input_x)
+                    mixed_ll = get_ele(ele_test_ll,
+                                       spt.DataFlow.arrays([mixed_array], config.test_batch_size).map(normalize),
+                                       input_x)
                     mixed_kl = []
                     # if restore_checkpoint is not None:
                     loop.make_checkpoint()
@@ -442,7 +445,7 @@ def main():
                         for pse_epoch in range(repeat_epoch):
                             mixed_index = np.random.randint(0, min(i + config.mixed_train_skip, len(mixed_array)),
                                                             config.batch_size)
-                            batch_x = mixed_array[mixed_index]
+                            batch_x = normalize(mixed_array[mixed_index])
                             # print(batch_x.shape)
 
                             if config.distill_ratio != 1.0:
@@ -461,7 +464,7 @@ def main():
 
                         mixed_kl.append(get_ele(ele_test_ll,
                                                 spt.DataFlow.arrays([mixed_array[i: i + config.mixed_train_skip]],
-                                                                    config.test_batch_size), input_x))
+                                                                    config.test_batch_size).map(normalize), input_x))
                         print(repeat_epoch, len(mixed_kl))
                         loop.print_logs()
 

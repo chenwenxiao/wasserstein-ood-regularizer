@@ -217,8 +217,8 @@ def main():
     # It is important: the `x_shape` must have channel dimension, even it is 1! (i.e. (28, 28, 1) for MNIST)
     # And the value of images should not be normalized, ranged from 0 to 255.
     # prepare for training and testing data
-    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset, dtype=np.int)
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset, dtype=np.int)
+    (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
+    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
     config.x_shape = x_train.shape[1:]
 
     config.class_num = np.max(y_train) + 1

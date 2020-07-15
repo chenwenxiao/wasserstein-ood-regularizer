@@ -365,12 +365,13 @@ def main():
 
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    x_train = (x_train - 127.5) / 256.0 * 2
-    x_test = (x_test - 127.5) / 256.0 * 2
-
     (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    def normalize(x):
+        return [(x - 127.5) / 256.0 * 2]
+
+    def double(x):
+        return [x, x]
 
     config.x_shape = x_train.shape[1:]
     config.x_shape_multiple = 1
@@ -534,31 +535,23 @@ def main():
         except Exception as e:
             print(e)
 
-    cifar_train_flow = spt.DataFlow.arrays([x_train, x_train], config.test_batch_size)
-    cifar_test_flow = spt.DataFlow.arrays([x_test, x_test], config.test_batch_size)
-    svhn_train_flow = spt.DataFlow.arrays([svhn_train, svhn_train], config.test_batch_size)
-    svhn_test_flow = spt.DataFlow.arrays([svhn_test, svhn_test], config.test_batch_size)
+    cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size).map(normalize).map(double)
+    cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size).map(normalize).map(double)
+    svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size).map(normalize).map(double)
+    svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size).map(normalize).map(double)
 
     x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
     svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
-    cifar_train_flow_with_complexity = spt.DataFlow.arrays([x_train, x_train, x_train_complexity],
-                                                           config.test_batch_size)
-    cifar_test_flow_with_complexity = spt.DataFlow.arrays([x_test, x_test, x_test_complexity], config.test_batch_size)
-    svhn_train_flow_with_complexity = spt.DataFlow.arrays([svhn_train, svhn_train, svhn_train_complexity],
-                                                          config.test_batch_size)
-    svhn_test_flow_with_complexity = spt.DataFlow.arrays([svhn_test, svhn_test, svhn_test_complexity],
-                                                         config.test_batch_size)
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True,
-                                     skip_incomplete=True)
-    mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
-    mixed_test_flow = spt.DataFlow.arrays([mixed_array, mixed_array], config.batch_size,
-                                          shuffle=False, skip_incomplete=False)
+                                     skip_incomplete=True).map(normalize)
 
-    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True)
-    reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True)
+    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True).map(
+        normalize)
+    reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True).map(
+        normalize)
 
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
@@ -625,10 +618,7 @@ def main():
                         fig_name='T_perm_histogram'))
 
                     make_diagram(loop, grad_x_norm,
-                                 [cifar_train_flow,
-                                  cifar_test_flow,
-                                  svhn_train_flow,
-                                  svhn_test_flow],
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
@@ -672,13 +662,14 @@ def main():
                                  )
 
                     make_diagram(loop,
-                                 ele_test_ll + input_complexity,
-                                 [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
-                                  svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
-                                 [input_x, input_y, input_complexity],
+                                 ele_test_ll,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='ll_with_complexity_histogram'
+                                 fig_name='ll_with_complexity_histogram',
+                                 addtion_data=[x_train_complexity, x_test_complexity,
+                                               svhn_train_complexity, svhn_test_complexity]
                                  )
 
                     make_diagram(loop,
@@ -690,19 +681,25 @@ def main():
                                  fig_name='kl_histogram'
                                  )
 
-                    def get_mcmc_and_origin(origin):
-                        mcmc_sample = origin
-                        for i in range(config.mcmc_times):
-                            mcmc_sample = get_ele(ele_test_recon_sample,
-                                                  spt.DataFlow.arrays([mcmc_sample], config.test_batch_size),
-                                                  input_x)
-                        mcmc_data = spt.DataFlow.arrays([mcmc_sample, origin], config.test_batch_size)
-                        mcmc_recon = get_ele(ele_test_recon, mcmc_data, [input_x, input_y])
-                        mcmc_ll = get_ele(ele_test_ll, mcmc_data, [input_x, input_y])
-                        return mcmc_recon, mcmc_ll
+                    def get_mcmc_and_origin(origin_flow):
+                        mcmc_recon_list = []
+                        mcmc_ll_list = []
+                        for [origin, _] in origin_flow:
+                            mcmc_sample = origin
+                            for i in range(config.mcmc_times):
+                                mcmc_sample = session.run(ele_test_recon_sample, feed_dict={
+                                    input_x: mcmc_sample
+                                })
+                            mcmc_recon, mcmc_ll = session.run([ele_test_recon, ele_test_ll], feed_dict={
+                                input_x: mcmc_sample,
+                                input_y: origin
+                            })
+                            mcmc_recon_list.append(mcmc_recon)
+                            mcmc_ll_list.append(mcmc_ll)
+                        return np.concatenate(mcmc_recon_list, axis=0), np.concatenate(mcmc_ll_list, axis=0)
 
-                    mcmc_metrics = [get_mcmc_and_origin(x_train), get_mcmc_and_origin(x_test),
-                                    get_mcmc_and_origin(svhn_train), get_mcmc_and_origin(svhn_test)]
+                    mcmc_metrics = [get_mcmc_and_origin(cifar_train_flow), get_mcmc_and_origin(cifar_test_flow),
+                                    get_mcmc_and_origin(svhn_train_flow), get_mcmc_and_origin(svhn_test_flow)]
 
                     loop.collect_metrics(mcmc_recon_histogram=plot_fig(
                         data_list=[mcmc_metrics[0][0], mcmc_metrics[1][0], mcmc_metrics[2][0], mcmc_metrics[3][0]],
@@ -724,9 +721,14 @@ def main():
                     break
 
                 if epoch == config.warm_up_start + 1:
+                    mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
+                    mixed_test_flow = spt.DataFlow.arrays(
+                        [mixed_array], config.batch_size, shuffle=False,
+                        skip_incomplete=False).map(normalize).map(double)
                     mixed_test_kl = get_ele(ele_test_ll, mixed_test_flow, [input_x, input_y])
-                    mixed_test_flow = spt.DataFlow.arrays([mixed_array, mixed_test_kl],
-                                                          config.batch_size, shuffle=True, skip_incomplete=True)
+                    mixed_test_flow = spt.DataFlow.arrays(
+                        [mixed_array, mixed_test_kl], config.batch_size, shuffle=True,
+                        skip_incomplete=True).map(lambda x, ll: (normalize(x), ll))
 
                     if config.pretrain:
                         session.run(copy_ops)

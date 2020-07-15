@@ -78,9 +78,9 @@ def load_imagenet(x_shape=(32, 32, 3), x_dtype=np.float32, y_dtype=np.int32,
             
     """
 
-    train_x = np.load(TRAIN_X_ARR_PATH)
+    train_x = np.load(TRAIN_X_ARR_PATH, mmap_mode='r')
     train_y = None
-    test_x = np.load(TEST_X_ARR_PATH)
+    test_x = np.load(TEST_X_ARR_PATH, mmap_mode='r')
     test_y = None
 
     return (train_x, train_y), (test_x, test_y)

@@ -248,12 +248,10 @@ def main():
 
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    x_train = (x_train - 127.5) / 256.0 * 2
-    x_test = (x_test - 127.5) / 256.0 * 2
-
     (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
-    svhn_train = (svhn_train - 127.5) / 256.0 * 2
-    svhn_test = (svhn_test - 127.5) / 256.0 * 2
+
+    def normalize(x, y):
+        return (x - 127.5) / 256.0 * 2, y
 
     config.class_num = np.max(y_train) + 1
     config.x_shape = x_train.shape[1:]
@@ -323,13 +321,13 @@ def main():
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             VAE_train_op = VAE_optimizer.apply_gradients(VAE_grads)
 
-    cifar_train_flow = spt.DataFlow.arrays([x_train, y_train], config.test_batch_size)
-    cifar_test_flow = spt.DataFlow.arrays([x_test, y_test], config.test_batch_size)
-    svhn_train_flow = spt.DataFlow.arrays([svhn_train, svhn_train_y], config.test_batch_size)
-    svhn_test_flow = spt.DataFlow.arrays([svhn_test, svhn_test_y], config.test_batch_size)
+    cifar_train_flow = spt.DataFlow.arrays([x_train, y_train], config.test_batch_size).map(normalize)
+    cifar_test_flow = spt.DataFlow.arrays([x_test, y_test], config.test_batch_size).map(normalize)
+    svhn_train_flow = spt.DataFlow.arrays([svhn_train, svhn_train_y], config.test_batch_size).map(normalize)
+    svhn_test_flow = spt.DataFlow.arrays([svhn_test, svhn_test_y], config.test_batch_size).map(normalize)
 
     train_flow = spt.DataFlow.arrays([x_train, y_train], config.batch_size, shuffle=True,
-                                     skip_incomplete=True)
+                                     skip_incomplete=True).map(normalize)
 
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
