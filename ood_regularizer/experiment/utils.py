@@ -108,27 +108,33 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, 
 def make_diagram(loop, op, flows, input_x, colors=['red', 'salmon', 'green', 'lightgreen'],
                  names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
                  x_label='log(bit/dims)', fig_name='log_pro_histogram', addtion_data=None):
-    packs = [get_ele(op, flow, input_x) for flow in flows]
-    if addtion_data is not None:
-        if len(packs) == len(addtion_data):
-            packs = [packs[i] + addtion_data[i] for i in range(len(packs))]
-    _dict = {}
-    _dict[fig_name] = plot_fig(packs, colors, names, x_label, fig_name)
-    loop.collect_metrics(_dict)
-    return packs
+    try:
+        packs = [get_ele(op, flow, input_x) for flow in flows]
+        if addtion_data is not None:
+            if len(packs) == len(addtion_data):
+                packs = [packs[i] + addtion_data[i] for i in range(len(packs))]
+        _dict = {}
+        _dict[fig_name] = plot_fig(packs, colors, names, x_label, fig_name)
+        loop.collect_metrics(_dict)
+        return packs
+    except Exception as e:
+        print(e)
 
 
 def make_diagram_torch(loop, fn, flows, colors=['red', 'salmon', 'green', 'lightgreen'],
                        names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
                        x_label='log(bit/dims)', fig_name='log_pro_histogram', addtion_data=None):
-    packs = [get_ele_torch(fn, flow) for flow in flows]
-    if addtion_data is not None:
-        if len(packs) == len(addtion_data):
-            packs = [packs[i] + addtion_data[i] for i in range(len(packs))]
-    _dict = {}
-    _dict[fig_name] = plot_fig(packs, colors, names, x_label, fig_name)
-    loop.add_metrics(_dict)
-    return packs
+    try:
+        packs = [get_ele_torch(fn, flow) for flow in flows]
+        if addtion_data is not None:
+            if len(packs) == len(addtion_data):
+                packs = [packs[i] + addtion_data[i] for i in range(len(packs))]
+        _dict = {}
+        _dict[fig_name] = plot_fig(packs, colors, names, x_label, fig_name)
+        loop.add_metrics(_dict)
+        return packs
+    except Exception as e:
+        print(e)
 
 
 if __name__ == '__main__':

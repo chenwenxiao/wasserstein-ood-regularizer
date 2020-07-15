@@ -86,7 +86,7 @@ class ExperimentConfig(mltk.Config):
     model = GlowConfig(
         hidden_conv_activation='relu',
         hidden_conv_channels=[128, 128],
-        depth=6,
+        depth=3,
         levels=3,
         hidden_conv_act_norm=False
     )

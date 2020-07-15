@@ -9,7 +9,7 @@ import numpy as np
 from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model, get_mapper
 from flow_next.models.glow import GlowConfig, Glow
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
-from ood_regularizer.experiment.models.utils import get_mixed_array
+from ood_regularizer.experiment.models.utils import get_mixed_array, get_noise_array
 from ood_regularizer.experiment.utils import plot_fig, make_diagram_torch, get_ele_torch
 from utils.data.mappers import ArrayMapperList
 
@@ -89,7 +89,7 @@ class ExperimentConfig(mltk.Config):
     model = GlowConfig(
         hidden_conv_activation='relu',
         hidden_conv_channels=[128, 128],
-        depth=6,
+        depth=3,
         levels=3,
     )
     in_dataset = 'cifar10'
@@ -256,12 +256,15 @@ def main():
                     epoch_counter = epoch_counter + 1
                     print('epoch_counter = {}'.format(epoch_counter))
                     for [x, ll] in mixed_stream:
+                        if config.self_ood:
+                            x = get_noise_array(config, x, normalized=False)
                         x = train_mapper.transform(x)
-                        if config.distill_ratio != 1.0 and config.use_transductive and epoch_counter > config.distill_epoch:
-                            ll_omega = eval_ll(x)
-                            batch_index = np.argsort(ll - ll_omega)
-                            batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
-                            x = x[batch_index]
+                        if not config.self_ood:
+                            if config.distill_ratio != 1.0 and config.use_transductive and epoch_counter > config.distill_epoch:
+                                ll_omega = eval_ll(x)
+                                batch_index = np.argsort(ll - ll_omega)
+                                batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                                x = x[batch_index]
                         yield [T.from_numpy(x)]
 
                 if config.use_transductive or config.self_ood:

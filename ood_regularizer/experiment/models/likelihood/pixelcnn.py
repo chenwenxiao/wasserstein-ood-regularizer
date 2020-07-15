@@ -24,7 +24,7 @@ from tfsnippet.preprocessing import UniformNoiseSampler
 
 from ood_regularizer.experiment.datasets.overall import load_overall, load_complexity
 from ood_regularizer.experiment.datasets.svhn import load_svhn
-from ood_regularizer.experiment.models.utils import get_mixed_array
+from ood_regularizer.experiment.models.utils import get_mixed_array, get_noise_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
 import os
 
@@ -476,13 +476,16 @@ def main():
                         loop.collect_metrics(theta_loss=batch_theta_loss)
                 else:
                     for step, [x, ll] in loop.iter_steps(mixed_test_flow):
-                        if config.distill_ratio != 1.0 and config.use_transductive and epoch > config.distill_epoch:
-                            ll_omega = session.run(ele_test_omega_ll, feed_dict={
-                                input_x: x
-                            })
-                            batch_index = np.argsort(ll - ll_omega)
-                            batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
-                            x = x[batch_index]
+                        if config.self_ood:
+                            x = get_noise_array(config, x, normalized=False)
+                        else:
+                            if config.distill_ratio != 1.0 and config.use_transductive and epoch > config.distill_epoch:
+                                ll_omega = session.run(ele_test_omega_ll, feed_dict={
+                                    input_x: x
+                                })
+                                batch_index = np.argsort(ll - ll_omega)
+                                batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                                x = x[batch_index]
 
                         _, batch_omega_loss = session.run([omega_train_op, omega_loss], feed_dict={
                             input_x: x

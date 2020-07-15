@@ -95,7 +95,7 @@ class ExperimentConfig(mltk.Config):
     model = GlowConfig(
         hidden_conv_activation='relu',
         hidden_conv_channels=[128, 128],
-        depth=6,
+        depth=3,
         levels=3,
     )
     in_dataset = 'cifar10'
@@ -208,6 +208,7 @@ def main():
                 mixed_kl.append(get_ele_torch(eval_ll, ArraysDataStream(
                     [mixed_array[i: i + config.mixed_train_skip]], batch_size=config.batch_size, shuffle=False,
                     skip_incomplete=False).map(lambda x: test_mapper.transform(x))))
+                loop.add_metrics(increment_process=len(mixed_kl) / len(mixed_array))
 
             mixed_kl = np.concatenate(mixed_kl)
             mixed_kl = mixed_kl - mixed_ll

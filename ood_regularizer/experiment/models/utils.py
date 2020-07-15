@@ -621,18 +621,17 @@ def find_largest_batch_size(test_metrics: GraphNodes,
     return low
 
 
-def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test, normalized=True):
-    mixed_array = None
+def get_noise_array(config, array, normalized=True):
     if config.self_ood:
         if config.noise_type == "mutation":
-            random_array = np.random.randint(0, 256, size=cifar_train.shape)
+            random_array = np.random.randint(0, 256, size=array.shape)
             if normalized:
                 random_array = (random_array - 127.5) / 256 * 2.0
-            mixed_array = np.where(np.random.random(size=cifar_train.shape) < config.mutation_rate,
-                                   random_array, cifar_train)
+            mixed_array = np.where(np.random.random(size=array.shape) < config.mutation_rate,
+                                   random_array, array)
         elif config.noise_type == "gaussian":
             if normalized:
-                cifar_train = cifar_train * 256.0 / 2 + 127.5
+                cifar_train = array * 256.0 / 2 + 127.5
             random_array = np.reshape(np.random.randn(len(cifar_train) * config.x_shape_multiple),
                                       (-1,) + config.x_shape) * config.mutation_rate * 255
             mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
@@ -640,12 +639,23 @@ def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test, norm
                 mixed_array = (mixed_array - 127.5) / 256.0 * 2
         elif config.noise_type == "unit":
             if normalized:
-                cifar_train = cifar_train * 256.0 / 2 + 127.5
+                cifar_train = array * 256.0 / 2 + 127.5
             random_array = np.reshape((np.random.rand(len(cifar_train) * config.x_shape_multiple) * 2 - 1),
                                       (-1,) + config.x_shape) * config.mutation_rate * 255
             mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
             if normalized:
                 mixed_array = (mixed_array - 127.5) / 256.0 * 2
+        else:
+            raise RuntimeError("noise type in {} is not supported".format(config))
+    else:
+        mixed_array = array
+    return mixed_array
+
+
+def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test, normalized=True):
+    mixed_array = None
+    if config.self_ood:
+        mixed_array = cifar_train
     else:
         if config.use_transductive:
             mixed_array = np.concatenate([cifar_test[:int(len(cifar_test) * config.in_dataset_test_ratio)], svhn_test])
