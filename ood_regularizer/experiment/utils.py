@@ -82,7 +82,7 @@ def draw_metric(metric, color, label, fig_name):
 
 
 def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, -1)):
-    tmp = None
+    tmp = 0.0
     try:
         pyplot.cla()
         pyplot.plot()

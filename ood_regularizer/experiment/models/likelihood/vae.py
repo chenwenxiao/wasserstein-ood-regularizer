@@ -616,12 +616,13 @@ def main():
                     [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
                         cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
 
-                    plot_fig(data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
-                             color_list=['red', 'salmon', 'green', 'lightgreen'],
-                             label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                             x_label='bits/dim',
-                             fig_name='T_perm_histogram')
+                    loop.collect_metrics(T_perm_histogram=plot_fig(
+                        data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
+                        color_list=['red', 'salmon', 'green', 'lightgreen'],
+                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        x_label='bits/dim',
+                        fig_name='T_perm_histogram'))
 
                     make_diagram(loop, grad_x_norm,
                                  [cifar_train_flow,
@@ -695,22 +696,30 @@ def main():
                             mcmc_sample = get_ele(ele_test_recon_sample,
                                                   spt.DataFlow.arrays([mcmc_sample], config.test_batch_size),
                                                   input_x)
-                        return spt.DataFlow.arrays([mcmc_sample, origin], config.test_batch_size)
+                        mcmc_data = spt.DataFlow.arrays([mcmc_sample, origin], config.test_batch_size)
+                        mcmc_recon = get_ele(ele_test_recon, mcmc_data, [input_x, input_y])
+                        mcmc_ll = get_ele(ele_test_ll, mcmc_data, [input_x, input_y])
+                        return mcmc_recon, mcmc_ll
 
-                    mcmc_data = [get_mcmc_and_origin(x_train), get_mcmc_and_origin(x_test),
-                                 get_mcmc_and_origin(svhn_train), get_mcmc_and_origin(svhn_test)]
-                    make_diagram(loop,
-                                 ele_test_recon, mcmc_data, [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='mcmc_recon_histogram'
-                                 )
-                    make_diagram(loop,
-                                 ele_test_ll, mcmc_data, [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='mcmc_log_prob_histogram'
-                                 )
+                    mcmc_metrics = [get_mcmc_and_origin(x_train), get_mcmc_and_origin(x_test),
+                                    get_mcmc_and_origin(svhn_train), get_mcmc_and_origin(svhn_test)]
+
+                    loop.collect_metrics(mcmc_recon_histogram=plot_fig(
+                        data_list=[mcmc_metrics[0][0], mcmc_metrics[1][0], mcmc_metrics[2][0], mcmc_metrics[3][0]],
+                        color_list=['red', 'salmon', 'green', 'lightgreen'],
+                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        x_label='bits/dim',
+                        fig_name='mcmc_recon_histogram'))
+
+                    loop.collect_metrics(mcmc_ll_histogram=plot_fig(
+                        data_list=[mcmc_metrics[0][1], mcmc_metrics[1][1], mcmc_metrics[2][1], mcmc_metrics[3][1]],
+                        color_list=['red', 'salmon', 'green', 'lightgreen'],
+                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        x_label='bits/dim',
+                        fig_name='mcmc_ll_histogram'))
+
                     loop.print_logs()
                     break
 
