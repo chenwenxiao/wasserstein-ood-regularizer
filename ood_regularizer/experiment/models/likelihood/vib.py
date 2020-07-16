@@ -26,7 +26,7 @@ from ood_regularizer.experiment.datasets.overall import load_overall, load_compl
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
-
+import os
 
 class ExpConfig(spt.Config):
     # model parameters

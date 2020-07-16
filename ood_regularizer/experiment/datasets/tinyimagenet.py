@@ -60,7 +60,7 @@ def _fetch_array_y(path):
     return np.array(evalue)
 
 
-def load_tinyimagenet(x_shape=(32, 32, 3), x_dtype=np.int8, y_dtype=np.int32,
+def load_tinyimagenet(x_shape=(32, 32, 3), x_dtype=np.uint8, y_dtype=np.int32,
                       normalize_x=False):
     """
     Load the imagenet dataset as NumPy arrays.

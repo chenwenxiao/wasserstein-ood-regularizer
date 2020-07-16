@@ -365,7 +365,7 @@ def main():
 
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
+    (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
 
     def normalize(x):
         return [(x - 127.5) / 256.0 * 2]
@@ -722,13 +722,14 @@ def main():
 
                 if epoch == config.warm_up_start + 1:
                     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test)
+                    print(mixed_array.shape)
                     mixed_test_flow = spt.DataFlow.arrays(
                         [mixed_array], config.batch_size, shuffle=False,
                         skip_incomplete=False).map(normalize).map(double)
                     mixed_test_kl = get_ele(ele_test_ll, mixed_test_flow, [input_x, input_y])
                     mixed_test_flow = spt.DataFlow.arrays(
                         [mixed_array, mixed_test_kl], config.batch_size, shuffle=True,
-                        skip_incomplete=True).map(lambda x, ll: (normalize(x), ll))
+                        skip_incomplete=True)
 
                     if config.pretrain:
                         session.run(copy_ops)
@@ -741,6 +742,7 @@ def main():
                         loop.collect_metrics(VAE_loss=batch_VAE_loss)
                 else:
                     for step, [x, ll] in loop.iter_steps(mixed_test_flow):
+                        [x] = normalize(x)
                         if config.self_ood:
                             x = get_noise_array(config, x)
                         else:

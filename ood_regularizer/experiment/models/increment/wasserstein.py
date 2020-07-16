@@ -461,7 +461,7 @@ def main():
                         for pse_epoch in range(repeat_epoch):
                             mixed_index = np.random.randint(0, min(i + config.mixed_train_skip, len(mixed_array)),
                                                             config.batch_size)
-                            y = normalize(mixed_array[mixed_index])
+                            [y] = normalize(mixed_array[mixed_index])
                             # print(batch_x.shape)
 
                             for step, [x] in loop.iter_steps(train_flow):

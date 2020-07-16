@@ -18,7 +18,7 @@ def _fetch_array(path):
         return idx2numpy.convert_from_file(f)
 
 
-def load_not_mnist(x_shape=(28, 28, 1), x_dtype=np.int8, y_dtype=np.int32,
+def load_not_mnist(x_shape=(28, 28, 1), x_dtype=np.uint8, y_dtype=np.int32,
                    normalize_x=False):
     """
     Load the MNIST dataset as NumPy arrays.

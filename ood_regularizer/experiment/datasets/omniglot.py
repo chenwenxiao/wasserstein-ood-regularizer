@@ -28,7 +28,7 @@ def _validate_x_shape(x_shape):
     return x_shape
 
 
-def load_omniglot(x_shape=(28, 28, 1), x_dtype=np.int8, y_dtype=np.int32,
+def load_omniglot(x_shape=(28, 28, 1), x_dtype=np.uint8, y_dtype=np.int32,
                   normalize_x=False):
     """
     Load the OMNIGLOT dataset as NumPy arrays.
