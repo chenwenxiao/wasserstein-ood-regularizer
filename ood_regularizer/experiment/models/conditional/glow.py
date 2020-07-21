@@ -208,6 +208,14 @@ def main():
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
+            @torch.no_grad()
+            def eval_entropy(x):
+                x = T.from_numpy(x)
+                predict = classifier(x)
+                odin = torch.softmax(predict, dim=-1)
+                entropy = T.reduce_sum(odin * torch.log(odin), axis=[-1])
+                return T.to_numpy(entropy)
+
             def eval_odin(x):
                 x = T.from_numpy(x)
                 x.requires_grad = True
@@ -222,6 +230,14 @@ def main():
                 odin = torch.softmax(classifier(x_hat) / config.odin_T, dim=-1)
 
                 return T.to_numpy(odin)
+
+            make_diagram_torch(
+                loop, eval_entropy,
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                fig_name='H_histogram'
+            )
 
             make_diagram_torch(
                 loop, eval_odin,

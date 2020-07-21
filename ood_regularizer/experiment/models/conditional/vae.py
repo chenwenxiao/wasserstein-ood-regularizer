@@ -316,7 +316,7 @@ def main():
 
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
+    (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
 
     def normalize(x):
         return [(x - 127.5) / 256.0 * 2]
@@ -442,7 +442,7 @@ def main():
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size).map(normalize)
 
     train_flow = spt.DataFlow.arrays([x_train, y_train], config.batch_size, shuffle=True,
-                                     skip_incomplete=True).map(normalize)
+                                     skip_incomplete=True)
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
     reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True).map(normalize)
@@ -537,13 +537,15 @@ def main():
                     train_flow = update_training_data()
 
                 if epoch > config.warm_up_start:
-                    for step, [x, y] in loop.iter_steps(train_flow):
+                    for step, [x] in loop.iter_steps(train_flow):
+                        [x] = normalize(x)
                         _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
                             input_x: x
                         })
                         loop.collect_metrics(VAE_loss=batch_VAE_loss)
                 else:
                     for step, [x, y] in loop.iter_steps(train_flow):
+                        [x] = normalize(x)
                         _, batch_classify_loss = session.run([classify_train_op, classify_loss], feed_dict={
                             input_x: x, input_y: y
                         })

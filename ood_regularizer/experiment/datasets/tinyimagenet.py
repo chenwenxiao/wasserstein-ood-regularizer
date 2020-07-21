@@ -87,7 +87,7 @@ def load_tinyimagenet(x_shape=(32, 32, 3), x_dtype=np.uint8, y_dtype=np.int32,
     train_x = train_x.astype(x_dtype)
     train_y = train_y.astype(y_dtype)
     test_x = test_x.astype(x_dtype)
-    test_y = train_y.astype(y_dtype)
+    test_y = None
 
     return (train_x, train_y), (test_x, test_y)
 

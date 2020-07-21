@@ -420,7 +420,7 @@ def main():
                     train_flow = update_training_data()
 
                 if epoch > config.warm_up_start:
-                    for step, [x, y] in loop.iter_steps(train_flow):
+                    for step, [x] in loop.iter_steps(train_flow):
                         _, batch_theta_loss = session.run([theta_train_op, theta_loss], feed_dict={
                             input_x: x
                         })

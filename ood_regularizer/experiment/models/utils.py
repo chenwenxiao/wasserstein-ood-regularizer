@@ -624,11 +624,12 @@ def find_largest_batch_size(test_metrics: GraphNodes,
 def get_noise_array(config, array, normalized=True):
     if config.self_ood:
         if config.noise_type == "mutation":
-            random_array = np.random.randint(0, 256, size=array.shape)
+            random_array = np.random.randint(0, 256, size=array.shape, dtype=array.dtype)
             if normalized:
                 random_array = (random_array - 127.5) / 256 * 2.0
             mixed_array = np.where(np.random.random(size=array.shape) < config.mutation_rate,
                                    random_array, array)
+            mixed_array = mixed_array.astype(array.dtype)
         elif config.noise_type == "gaussian":
             if normalized:
                 cifar_train = array * 256.0 / 2 + 127.5
@@ -637,6 +638,7 @@ def get_noise_array(config, array, normalized=True):
             mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
             if normalized:
                 mixed_array = (mixed_array - 127.5) / 256.0 * 2
+            mixed_array = mixed_array.astype(array.dtype)
         elif config.noise_type == "unit":
             if normalized:
                 cifar_train = array * 256.0 / 2 + 127.5
@@ -645,6 +647,7 @@ def get_noise_array(config, array, normalized=True):
             mixed_array = np.clip(np.round(random_array + cifar_train), 0, 255)
             if normalized:
                 mixed_array = (mixed_array - 127.5) / 256.0 * 2
+            mixed_array = mixed_array.astype(array.dtype)
         else:
             raise RuntimeError("noise type in {} is not supported".format(config))
     else:

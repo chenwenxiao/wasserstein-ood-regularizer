@@ -28,6 +28,7 @@ from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
 import os
 
+
 class ExpConfig(spt.Config):
     # model parameters
     z_dim = 256
@@ -108,6 +109,16 @@ def dropout(inputs, training=False, scope=None):
 def q_net(x, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
     normalizer_fn = None
+    shape = (1,) + config.x_shape[:-1] + (5,)
+    print(shape)
+    extend_x = tf.get_variable(name='extend_x', shape=shape, dtype=tf.float32,
+                               trainable=True)
+    print(extend_x)
+    batch_size = spt.utils.get_shape(x)[0]
+    extend_x = tf.tile(extend_x, tf.concat([[batch_size], [1] * len(config.x_shape)], axis=0))
+    print(extend_x)
+    x = tf.concat([x, extend_x], axis=-1)
+    print(x)
 
     # compute the hidden features
     with arg_scope([spt.layers.resnet_conv2d_block],
@@ -154,8 +165,10 @@ def p_net(observed=None, n_z=None):
                    weight_norm=True,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
         h_z = spt.layers.dense(z, 500)
-        h_z = spt.layers.dense(z, 500)
-        h_z = spt.layers.dense(z, 500)
+        h_z = spt.layers.dense(h_z, 500)
+        h_z = spt.layers.dense(h_z, 500)
+        h_z = spt.layers.dense(h_z, 500)
+        h_z = spt.layers.dense(h_z, 500)
         logits = spt.layers.dense(h_z, config.class_num)
 
     y = net.add('y', spt.Categorical(logits=logits))
@@ -294,7 +307,8 @@ def main():
         ele_test_entropy = []
         for i in range(config.class_num):
             fake_y = tf.ones_like(input_y, dtype=tf.int32) * i
-            ele_test_entropy.append(tf.reduce_mean(test_chain.model['y'].distribution.log_prob(given=fake_y), axis=0))
+            ele_test_entropy.append(
+                spt.ops.log_mean_exp(test_chain.model['y'].distribution.log_prob(given=fake_y), axis=0))
         ele_test_entropy = tf.stack(ele_test_entropy, axis=-1)  # [batch_size, class_num]
         ele_test_predict = tf.argmax(ele_test_entropy, axis=-1)
         ele_test_entropy = tf.reduce_sum(-tf.exp(ele_test_entropy) * ele_test_entropy, axis=-1)
