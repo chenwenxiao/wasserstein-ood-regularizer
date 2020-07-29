@@ -457,6 +457,11 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/11/e5/02279d802d3a601441f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/e0/e5/02279d802d3a485341f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/eb/d5/02732c28dc8d7c6e31f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/09/d5/02812baa4f707c6e31f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/49/d5/02812baa4f70e45441f5'
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:

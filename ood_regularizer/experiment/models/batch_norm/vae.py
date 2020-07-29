@@ -26,6 +26,7 @@ from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.utils import make_diagram, plot_fig
 import os
 
+
 class ExpConfig(spt.Config):
     # model parameters
     z_dim = 256
@@ -396,9 +397,11 @@ def main():
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True).map(normalize)
 
-    tmp_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size, shuffle=True, skip_incomplete=True).map(normalize)
+    tmp_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size, shuffle=True, skip_incomplete=True).map(
+        normalize)
     mixed_array = np.concatenate([x_test, svhn_test])
-    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size, shuffle=True, skip_incomplete=True).map(normalize)
+    mixed_test_flow = spt.DataFlow.arrays([mixed_array], config.batch_size, shuffle=True, skip_incomplete=True).map(
+        normalize)
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
     reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True).map(normalize)
@@ -408,7 +411,11 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
-
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/89/d5/02812baa4f702d8b41f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/91/e5/02279d802d3a94ea41f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/61/e5/02279d802d3aa9a941f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/00/e5/02c52d867e43048741f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/ff/d5/02c52d867e43048741f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -472,23 +479,32 @@ def main():
                     svhn_r1 = permutation_test(svhn_test_flow, config.mixed_ratio1)
                     svhn_r2 = permutation_test(svhn_test_flow, config.mixed_ratio2)
 
-                    plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
+                    loop.collect_metrics(r1_histogram=plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
                              ['red', 'salmon', 'green', 'lightgreen'],
                              [config.in_dataset + ' r1', config.in_dataset + ' r2',
                               config.out_dataset + ' r1', config.out_dataset + ' r2'], 'log(bit/dims)',
-                             'batch_norm_log_pro_histogram', auc_pair=(0, 2))
-                    AUC = plot_fig([cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
-                                   ['red', 'green'],
-                                   [config.in_dataset + ' test', config.out_dataset + ' test'], 'log(bit/dims)',
-                                   'batch_norm_r1-r2_log_pro_histogram', auc_pair=(0, 1))
-                    loop.collect_metrics(AUC=AUC)
+                             'r1_histogram', auc_pair=(0, 2)))
+
+                    loop.collect_metrics(r2_histogram=plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
+                             ['red', 'salmon', 'green', 'lightgreen'],
+                             [config.in_dataset + ' r1', config.in_dataset + ' r2',
+                              config.out_dataset + ' r1', config.out_dataset + ' r2'], 'log(bit/dims)',
+                             'r2_histogram', auc_pair=(1, 3)))
+
+                    loop.collect_metrics(r1_r2_histogram=plot_fig(
+                        [cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
+                        ['red', 'green'],
+                        [config.in_dataset + ' test',
+                         config.out_dataset + ' test'], 'log(bit/dims)',
+                        'r1_r2_log_pro_histogram',
+                        auc_pair=(0, 1)))
 
                     make_diagram(loop,
                                  ele_test_ll,
                                  [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='log_prob_histogram_with_batch_norm_{}'.format(epoch)
+                                 fig_name='log_prob_histogram_with_batch_norm'
                                  )
 
                     make_diagram(loop,
@@ -496,7 +512,7 @@ def main():
                                  [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='log_prob_histogram_without_batch_norm{}'.format(epoch)
+                                 fig_name='log_prob_histogram_without_batch_norm'
                                  )
 
                 for step, [x] in loop.iter_steps(train_flow):

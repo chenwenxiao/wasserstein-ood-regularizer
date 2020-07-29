@@ -5,6 +5,7 @@ from tensorkit import tensor as T
 import sys
 import torch
 import numpy as np
+import tensorkit as tk
 
 from flow_next.common import TrainConfig, DataSetConfig, make_dataset, train_model, get_mapper
 from flow_next.models.glow import GlowConfig, Glow
@@ -111,6 +112,16 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/b0/e5/02c52d867e43f4e461f5',
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/7c/d5/02732c28dc8df4e461f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/f9/d5/02812baa4f70f4e461f5',
+            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/a0/e5/02c52d867e43f4e461f5',
+            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/90/e5/02c52d867e43f4e461f5',
+            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/12/e5/02279d802d3af4e461f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/6c/d5/02732c28dc8df4e461f5',
+            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/80/e5/02c52d867e43f4e461f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/02/e5/02279d802d3af4e461f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/e9/d5/02812baa4f70f4e461f5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -129,6 +140,11 @@ def main():
         cifar_test_flow = cifar_test_dataset.get_stream('test', 'x', config.batch_size)
         svhn_train_flow = svhn_test_dataset.get_stream('train', 'x', config.batch_size)
         svhn_test_flow = svhn_test_dataset.get_stream('test', 'x', config.batch_size)
+
+        cifar_single_train_flow = cifar_test_dataset.get_stream('train', 'x', 1)
+        cifar_single_test_flow = cifar_test_dataset.get_stream('test', 'x', 1)
+        svhn_single_train_flow = svhn_test_dataset.get_stream('train', 'x', 1)
+        svhn_single_test_flow = svhn_test_dataset.get_stream('test', 'x', 1)
 
         if restore_checkpoint is not None:
             model = torch.load(restore_checkpoint + '/model.pkl')
@@ -211,9 +227,24 @@ def main():
                 grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
                 return T.to_numpy(grad_norm)
 
+            theta_params = tk.layers.iter_parameters(model)
+
+            def eval_grad_theta(x):
+                x = T.from_numpy(x)
+                x.requires_grad = True
+                ll, outputs = model(x)
+                gradients = autograd.grad(ll, theta_params, grad_outputs=torch.ones(ll.size()).cuda(),
+                                          create_graph=True, retain_graph=True)
+                grad_norm = 0
+                for grad in gradients:
+                    grad_norm = grad_norm + grad.norm(2)
+                grad_norm = T.expand_dim(grad_norm, axis=-1)
+
+                return T.to_numpy(grad_norm)
+
             make_diagram_torch(
                 loop, eval_grad_norm,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                [cifar_single_train_flow, cifar_single_test_flow, svhn_single_train_flow, svhn_single_test_flow],
                 names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
                        config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
                 fig_name='grad_norm_histogram')

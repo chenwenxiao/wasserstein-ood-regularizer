@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import mltk
+from sklearn.covariance import EmpiricalCovariance
 from mltk.data import ArraysDataStream, DataStream
 import tensorkit as tk
 from tensorkit import tensor as T
@@ -77,6 +78,7 @@ class ExperimentConfig(mltk.Config):
     x_shape_multiple = 3072
     extra_stride = 2
     class_num = 10
+    features_nums = 5
 
     odin_T = 1000
     odin_epsilon = 0.0012 * 2  # multiple 2 for the normalization [-1, 1] instead of [0, 1] in ODIN
@@ -125,6 +127,18 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/4a/d5/02812baa4f70936391f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/70/e5/02c52d867e437ed261f5',
+            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/e1/e5/02279d802d3ad38f51f5',
+            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/60/e5/02c52d867e4360ae51f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/d1/e5/02279d802d3a5a9d51f5',
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/d9/d5/02812baa4f70b68951f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/50/e5/02c52d867e437d2851f5',
+            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/3c/d5/02732c28dc8db6c751f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/c1/e5/02279d802d3ab6c751f5',
+            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/2c/d5/02732c28dc8db6c751f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/f4/e5/02279d802d3a98e102f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/b4/e5/02279d802d3aa7d002f5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -189,6 +203,44 @@ def main():
             classifier = torch.load(restore_dir + '/classifier.pkl')
 
         with mltk.TestLoop() as loop:
+
+            outputs_features = [[] for i in range(config.features_nums)]
+
+            @torch.no_grad()
+            def get_each_outputs(x):
+                x = T.from_numpy(x)
+                # See note [TorchScript super()]
+                x = classifier.conv1(x)
+                x = classifier.bn1(x)
+                x = classifier.relu(x)
+                x = classifier.maxpool(x)
+                outputs_features[0].append(T.to_numpy(torch.flatten(x, 1)))
+                x = classifier.layer1(x)
+                outputs_features[1].append(T.to_numpy(torch.flatten(x, 1)))
+                x = classifier.layer2(x)
+                outputs_features[2].append(T.to_numpy(torch.flatten(x, 1)))
+                x = classifier.layer3(x)
+                outputs_features[3].append(T.to_numpy(torch.flatten(x, 1)))
+                x = classifier.layer4(x)
+                outputs_features[4].append(T.to_numpy(torch.flatten(x, 1)))
+
+                x = classifier.avgpool(x)
+                x = torch.flatten(x, 1)
+                x = classifier.fc(x)
+
+                return T.to_numpy(x)
+
+            outputs_features_mean = []
+            outputs_features_precision = []
+
+            get_ele_torch(get_each_outputs, cifar_train_flow)
+            for i in range(config.features_nums):
+                outputs_features[i] = np.concatenate(outputs_features[i], axis=0)
+                outputs_features_mean.append(np.mean(outputs_features[i], axis=0))
+                group_lasso = EmpiricalCovariance(assume_centered=False)
+                group_lasso.fit(outputs_features[i] - outputs_features_mean[i])
+                outputs_features_precision.append(group_lasso.precision_)
+
             @torch.no_grad()
             def eval_predict(x):
                 x = T.from_numpy(x)
@@ -197,6 +249,50 @@ def main():
                 print(T.reduce_mean(odin))
                 predict = T.argmax(predict, axis=-1)
                 return T.to_numpy(predict)
+
+            def get_gaussian_score(x):
+                outputs = []
+                x = T.from_numpy(x)
+                x = classifier.conv1(x)
+                x = classifier.bn1(x)
+                x = classifier.relu(x)
+                x = classifier.maxpool(x)
+                outputs.append(torch.flatten(x, 1))
+                x = classifier.layer1(x)
+                outputs.append(torch.flatten(x, 1))
+                x = classifier.layer2(x)
+                outputs.append(torch.flatten(x, 1))
+                x = classifier.layer3(x)
+                outputs.append(torch.flatten(x, 1))
+                x = classifier.layer4(x)
+                outputs.append(torch.flatten(x, 1))
+                gaussian_score = []
+                for i in range(config.features_nums):
+                    zero_f = outputs[i] - T.from_numpy(outputs_features_mean[i])
+                    gaussian_score.append(-torch.mm(
+                        torch.mm(zero_f, T.from_numpy(outputs_features_precision[i])), zero_f.t()).diag())
+                gaussian_score = T.stack(gaussian_score, axis=0)
+                gaussian_score = T.reduce_max(gaussian_score, axis=[0])
+                return gaussian_score
+
+            m_list = [0.0, 0.01, 0.005, 0.002, 0.0014, 0.001, 0.0005]
+            for magnitude in m_list:
+                def eval_Mahalanobis(x):
+                    x.requires_grad = True
+                    gau = get_gaussian_score(x)
+                    gradients = autograd.grad(gau, x, grad_outputs=torch.ones(gau.size()).cuda(),
+                                              create_graph=True, retain_graph=True)[0]
+                    sign = torch.sign(gradients)
+                    x_hat = x + magnitude * sign
+                    return T.to_numpy(get_gaussian_score(x_hat))
+
+                make_diagram_torch(
+                    loop, eval_Mahalanobis,
+                    [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                    names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                           config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                    fig_name='Mahalanobis_{}_histogram'.format(magnitude)
+                )
 
             cifar_test_predict = get_ele_torch(eval_predict, cifar_test_flow)
             svhn_test_predict = get_ele_torch(eval_predict, svhn_test_flow)

@@ -1,8 +1,10 @@
 from ood_regularizer.experiment.datasets.celeba import load_celeba
+from ood_regularizer.experiment.datasets.constant import load_constant
 from ood_regularizer.experiment.datasets.imagenet import load_imagenet
 from ood_regularizer.experiment.datasets.isun import load_isun_test
 from ood_regularizer.experiment.datasets.kmnist import load_kmnist
 from ood_regularizer.experiment.datasets.lsun import load_lsun_test
+from ood_regularizer.experiment.datasets.noise import load_noise
 from ood_regularizer.experiment.datasets.not_mnist import load_not_mnist
 from tfsnippet.datasets import load_cifar10, load_cifar100, load_fashion_mnist, load_mnist
 
@@ -13,6 +15,9 @@ from ood_regularizer.experiment.datasets.tinyimagenet import load_tinyimagenet
 
 import numpy as np
 import os
+
+__all_datasets__ = ['mnist', 'fashion_mnist', 'kmnist', 'not_mnist', 'omniglot', 'celeba', 'tinyimagenet', 'svhn',
+                    'cifar10', 'cifar100', 'isun', 'lsun', 'constant', 'noise']
 
 
 def load_overall(dataset_name, dtype=np.uint8):
@@ -48,8 +53,25 @@ def load_overall(dataset_name, dtype=np.uint8):
         (x_train, y_train), (x_test, y_test) = load_fashion_mnist(x_shape=(28, 28, 1))
     elif dataset_name == 'mnist':
         (x_train, y_train), (x_test, y_test) = load_mnist(x_shape=(28, 28, 1))
+    elif dataset_name == 'constant':
+        (x_train, y_train), (x_test, y_test) = load_constant()
+    elif dataset_name == 'noise':
+        (x_train, y_train), (x_test, y_test) = load_noise()
     else:
-        raise RuntimeError('dataset {} is not supported'.format(dataset_name))
+        find_others = False
+        for i in range(len(__all_datasets__)):
+            if dataset_name == __all_datasets__[i] + '_others':
+                find_others = True
+        x_test = np.load('/home/cwx17/new_data/' + dataset_name + '/' + 'test.npy')
+        if not find_others:
+            raise RuntimeError('dataset {} is not supported'.format(dataset_name))
+
+    if dataset_name in ['mnist', 'fashion_mnist', 'kmnist', 'not_mnist', 'omniglot']:
+        x_train = np.pad(x_train, ((0, 0), (2, 2), (2, 2), (0, 0)))
+        x_test = np.pad(x_test, ((0, 0), (2, 2), (2, 2), (0, 0)))
+        x_train = np.tile(x_train, (1, 1, 1, 3))
+        x_test = np.tile(x_test, (1, 1, 1, 3))
+
     if x_train is None:
         x_train = x_test
     x_train = x_train.astype(dtype)
@@ -75,11 +97,11 @@ def load_complexity(dataset_name, compressor):
     if x_train_complexity is None:
         x_train_complexity = x_test_complexity
     print(x_train_complexity.shape, x_test_complexity.shape)
-    if dataset_name in ['celeba', 'tinyimagenet', 'svhn', 'cifar10', 'cifar100', 'imagenet', 'isun', 'sun', 'lsun']:
-        x_train_complexity = x_train_complexity / (32 * 32 * 3 * np.log(2))
-        x_test_complexity = x_test_complexity / (32 * 32 * 3 * np.log(2))
-    else:
-        x_train_complexity = x_train_complexity / (28 * 28 * 1 * np.log(2))
-        x_test_complexity = x_test_complexity / (28 * 28 * 1 * np.log(2))
+    # if dataset_name in ['celeba', 'tinyimagenet', 'svhn', 'cifar10', 'cifar100', 'imagenet', 'isun', 'sun', 'lsun']:
+    x_train_complexity = x_train_complexity / (32 * 32 * 3 * np.log(2))
+    x_test_complexity = x_test_complexity / (32 * 32 * 3 * np.log(2))
+    # else:
+    #     x_train_complexity = x_train_complexity / (28 * 28 * 1 * np.log(2))
+    #     x_test_complexity = x_test_complexity / (28 * 28 * 1 * np.log(2))
 
     return x_train_complexity[..., compressor], x_test_complexity[..., compressor]

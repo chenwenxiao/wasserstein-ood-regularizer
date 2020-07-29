@@ -1,1 +1,1 @@
-for i in {0..9}; do (bash dask_run.sh -- bash pretrain_start.sh ${1} $i); done
+for i in {0..11}; do (bash dask_run.sh -- bash pretrain_start.sh ${1} $i); done

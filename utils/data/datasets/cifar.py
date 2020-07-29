@@ -9,7 +9,7 @@ from ...misc import get_bit_depth
 from ..types import *
 from .base import *
 
-__all__ = ['Cifar10', 'Cifar100', 'SVHN', 'TinyImagenet', 'Imagenet', 'ISUN', 'LSUN', 'SUN', 'CelebA']
+__all__ = ['Cifar10', 'Cifar100', 'SVHN', 'TinyImagenet', 'Imagenet', 'ISUN', 'LSUN', 'SUN', 'CelebA', 'Noise', 'Constant']
 
 
 class BaseCifar(ArrayDataSet):
@@ -92,3 +92,11 @@ class SUN(BaseCifar):
 
 class LSUN(BaseCifar):
     name: str = 'lsun'
+
+
+class Constant(BaseCifar):
+    name: str = 'constant'
+
+
+class Noise(BaseCifar):
+    name: str = 'noise'

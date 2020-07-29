@@ -106,6 +106,18 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         experiment_dict = {
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/8a/d5/02812baa4f70a5c6e1f5',
+            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/0d/d5/02732c28dc8da5c6e1f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/1d/d5/02732c28dc8da5c6e1f5',
+            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/c1/e5/02c52d867e43d6c6e1f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/e2/e5/02279d802d3afd2de1f5',
+            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/22/e5/02c52d867e43071de1f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/f1/e5/02c52d867e4304fae1f5',
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/e1/e5/02c52d867e437cf9e1f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/2d/d5/02732c28dc8db6f9e1f5',
+            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/d1/e5/02c52d867e4331e9e1f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/b4/e5/02c52d867e43c90102f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/e4/e5/02279d802d3a896102f5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -208,7 +220,7 @@ def main():
             svhn_r1 = permutation_test(svhn_test_flow, config.mixed_ratio1)
             svhn_r2 = permutation_test(svhn_test_flow, config.mixed_ratio2)
 
-            loop.add_metrics(batch_norm_log_pro_histogram=plot_fig(
+            loop.add_metrics(r1_histogram=plot_fig(
                 [cifar_r1, cifar_r2, svhn_r1, svhn_r2],
                 ['red', 'salmon', 'green', 'lightgreen'],
                 [config.in_dataset.name + ' r1', config.in_dataset.name + ' r2',
@@ -216,13 +228,22 @@ def main():
                 'log(bit/dims)',
                 'batch_norm_log_pro_histogram', auc_pair=(0, 2)))
 
-            loop.add_metrics(batch_norm_r1_r2_log_pro_histogram=plot_fig([cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
-                                                                         ['red', 'green'],
-                                                                         [config.in_dataset.name + ' test',
-                                                                          config.out_dataset.name + ' test'],
-                                                                         'log(bit/dims)',
-                                                                         'batch_norm_r1-r2_log_pro_histogram',
-                                                                         auc_pair=(0, 1)))
+            loop.add_metrics(r2_histogram=plot_fig(
+                [cifar_r1, cifar_r2, svhn_r1, svhn_r2],
+                ['red', 'salmon', 'green', 'lightgreen'],
+                [config.in_dataset.name + ' r1', config.in_dataset.name + ' r2',
+                 config.out_dataset.name + ' r1', config.out_dataset.name + ' r2'],
+                'log(bit/dims)',
+                'batch_norm_log_pro_histogram', auc_pair=(1, 3)))
+
+            loop.add_metrics(r1_r2_histogram=plot_fig(
+                [cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
+                ['red', 'green'],
+                [config.in_dataset.name + ' test',
+                 config.out_dataset.name + ' test'],
+                'log(bit/dims)',
+                'r1_r2_log_pro_histogram',
+                auc_pair=(0, 1)))
 
             make_diagram_torch(loop,
                                eval_ll,

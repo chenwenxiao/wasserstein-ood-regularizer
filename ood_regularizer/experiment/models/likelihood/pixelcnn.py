@@ -322,21 +322,29 @@ def main():
             copy_ops.append(tf.assign(omega_params[i], theta_params[i]))
         copy_ops = tf.group(*copy_ops)
 
+        print(ele_test_ll)
+        grad_theta = tf.gradients(ele_test_ll, theta_params)
+        print(grad_theta)
+        sum_counter = 0
+        for grad in grad_theta:
+            if grad is not None:
+                sum_counter = sum_counter + tf.reduce_sum(grad ** 2)
+        sum_counter = tf.sqrt(sum_counter)
+        sum_counter = tf.expand_dims(sum_counter, axis=-1)
+        print(sum_counter)
+
     cifar_train_flow = spt.DataFlow.arrays([x_train], config.test_batch_size)
     cifar_test_flow = spt.DataFlow.arrays([x_test], config.test_batch_size)
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
+    cifar_single_train_flow = spt.DataFlow.arrays([x_train], 1)
+    cifar_single_test_flow = spt.DataFlow.arrays([x_test], 1)
+    svhn_single_train_flow = spt.DataFlow.arrays([svhn_train], 1)
+    svhn_single_test_flow = spt.DataFlow.arrays([svhn_test], 1)
+
     x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
     svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
-
-    cifar_train_flow_with_complexity = spt.DataFlow.arrays([x_train, x_train_complexity],
-                                                           config.test_batch_size)
-    cifar_test_flow_with_complexity = spt.DataFlow.arrays([x_test, x_test_complexity], config.test_batch_size)
-    svhn_train_flow_with_complexity = spt.DataFlow.arrays([svhn_train, svhn_train_complexity],
-                                                          config.test_batch_size)
-    svhn_test_flow_with_complexity = spt.DataFlow.arrays([svhn_test, svhn_test_complexity],
-                                                         config.test_batch_size)
 
     train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True)
     mixed_array = get_mixed_array(config, x_train, x_test, svhn_train, svhn_test, normalized=False)
@@ -348,6 +356,11 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/cd/d5/02279d802d3a67e701f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/1a/d5/02732c28dc8d842701f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/bd/d5/02279d802d3aec4401f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6d/d5/02c52d867e43834401f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/5d/d5/02c52d867e43d6b101f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -416,6 +429,15 @@ def main():
                     #              fig_name='grad_norm_histogram'
                     #              )
 
+                    # make_diagram(
+                    #     loop, sum_counter, [cifar_single_train_flow, cifar_single_test_flow, svhn_single_train_flow,
+                    #                         svhn_single_test_flow],
+                    #     [input_x],
+                    #     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                    #            config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                    #     fig_name='grad_theta_norm_histogram'
+                    # )
+
                     make_diagram(loop,
                                  ele_test_omega_ll,
                                  [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
@@ -425,13 +447,14 @@ def main():
                                  )
 
                     make_diagram(loop,
-                                 ele_test_ll + input_complexity,
-                                 [cifar_train_flow_with_complexity, cifar_test_flow_with_complexity,
-                                  svhn_train_flow_with_complexity, svhn_test_flow_with_complexity],
-                                 [input_x, input_complexity],
+                                 ele_test_ll,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='ll_with_complexity_histogram'
+                                 fig_name='ll_with_complexity_histogram',
+                                 addtion_data=[x_train_complexity, x_test_complexity,
+                                               svhn_train_complexity, svhn_test_complexity]
                                  )
 
                     make_diagram(loop,

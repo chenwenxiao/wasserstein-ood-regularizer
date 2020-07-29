@@ -31,6 +31,8 @@ class InMemoryDataSetName(str, Enum):
     ISUN = 'isun'
     SUN = 'sun'
     TINYIMAGENET = 'tinyimagenet'
+    NOISE = 'noise'
+    CONSTANT = 'constant'
 
 
 class DataSetConfig(mltk.Config):
@@ -116,6 +118,10 @@ def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet, DataSet]:
         dataset = LSUN()
     elif config.name == InMemoryDataSetName.TINYIMAGENET:
         dataset = TinyImagenet()
+    elif config.name == InMemoryDataSetName.NOISE:
+        dataset = Noise()
+    elif config.name == InMemoryDataSetName.CONSTANT:
+        dataset = Constant()
 
     train_dataset = dataset.apply_mappers(x=get_mapper(config, training=True))
 
@@ -129,10 +135,10 @@ def get_mapper(config: DataSetConfig, training=False):
     # assemble the pipelines
     def common_mappers():
         m = []
-        if config.name in ('mnist', 'fashion_mnist', 'kmnist', 'omniglot', 'not_mnist'):
-            m.append(mappers.Pad([(2, 2), (2, 2), (0, 0)]))  # pad to 32x32x1
-            if config.enable_grayscale_to_rgb:
-                m.append(mappers.GrayscaleToRGB())  # copy to 32x32x3
+        # if config.name in ('mnist', 'fashion_mnist', 'kmnist', 'omniglot', 'not_mnist'):
+        #     m.append(mappers.Pad([(2, 2), (2, 2), (0, 0)]))  # pad to 32x32x1
+        #     if config.enable_grayscale_to_rgb:
+        #         m.append(mappers.GrayscaleToRGB())  # copy to 32x32x3
         m.extend([
             mappers.Dequantize(),
             mappers.ScaleToRange(-1., 1.),

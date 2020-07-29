@@ -6,13 +6,13 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_prec
 import tensorflow as tf
 
 
-def get_ele(op, flow, inputs):
+def get_ele(op, flow, inputs, default_feed_dict={}):
     if not isinstance(inputs, list):
         inputs = [inputs]
     packs = []
     session = tf.get_default_session()
     for batch_x in flow:
-        feed_dict = {}
+        feed_dict = default_feed_dict
         for i in range(len(inputs)):
             feed_dict[inputs[i]] = batch_x[i]
         pack = session.run(
@@ -107,9 +107,9 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, 
 
 def make_diagram(loop, op, flows, input_x, colors=['red', 'salmon', 'green', 'lightgreen'],
                  names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
-                 x_label='log(bit/dims)', fig_name='log_pro_histogram', addtion_data=None):
+                 x_label='log(bit/dims)', fig_name='log_pro_histogram', addtion_data=None, *args, **kwargs):
     try:
-        packs = [get_ele(op, flow, input_x) for flow in flows]
+        packs = [get_ele(op, flow, input_x, *args, **kwargs) for flow in flows]
         if addtion_data is not None:
             if len(packs) == len(addtion_data):
                 packs = [packs[i] + addtion_data[i] for i in range(len(packs))]

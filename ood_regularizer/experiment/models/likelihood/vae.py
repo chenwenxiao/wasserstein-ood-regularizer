@@ -461,6 +461,17 @@ def main():
             copy_ops.append(tf.assign(VAE_omega_params[i], VAE_params[i]))
         copy_ops = tf.group(*copy_ops)
 
+        print(eval_test_ll)
+        grad_theta = tf.gradients(eval_test_ll, VAE_params)
+        print(grad_theta)
+        sum_counter = 0
+        for grad in grad_theta:
+            if grad is not None:
+                sum_counter = sum_counter + tf.reduce_sum(grad ** 2)
+        sum_counter = tf.sqrt(sum_counter)
+        sum_counter = tf.expand_dims(sum_counter, axis=-1)
+        print(sum_counter)
+
     # derive the plotting function
     with tf.name_scope('plotting'):
         plot_net = p_net(n_z=config.sample_n_z)
@@ -540,6 +551,11 @@ def main():
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size).map(normalize).map(double)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size).map(normalize).map(double)
 
+    cifar_single_train_flow = spt.DataFlow.arrays([x_train], 1).map(normalize).map(double)
+    cifar_single_test_flow = spt.DataFlow.arrays([x_test], 1).map(normalize).map(double)
+    svhn_single_train_flow = spt.DataFlow.arrays([svhn_train], 1).map(normalize).map(double)
+    svhn_single_test_flow = spt.DataFlow.arrays([svhn_test], 1).map(normalize).map(double)
+
     x_train_complexity, x_test_complexity = load_complexity(config.in_dataset, config.compressor)
     svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset, config.compressor)
 
@@ -558,6 +574,11 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/3d/d5/02c52d867e43fbb001f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/8d/d5/02279d802d3afbb001f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/e7/d5/02812baa4f70fbb001f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6d/d5/02279d802d3afbb001f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/5d/d5/02279d802d3afbb001f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -616,6 +637,14 @@ def main():
                                     config.out_dataset + ' Train', config.out_dataset + ' Test'],
                         x_label='bits/dim',
                         fig_name='T_perm_histogram'))
+
+                    # make_diagram(
+                    #     loop, sum_counter, [cifar_single_train_flow, cifar_single_test_flow, svhn_single_train_flow, svhn_single_test_flow],
+                    #     [input_x, input_y],
+                    #     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                    #            config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                    #     fig_name='grad_theta_norm_histogram'
+                    # )
 
                     make_diagram(loop, grad_x_norm,
                                  [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],

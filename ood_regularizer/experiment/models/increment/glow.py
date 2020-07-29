@@ -198,6 +198,7 @@ def main():
                 else:
                     repeat_epoch = config.mixed_train_epoch
 
+                exp.config.train.warmup_epochs = None
                 exp.config.train.max_epoch = repeat_epoch
                 exp.config.train.test_epoch_freq = exp.config.train.max_epoch + 1
                 if config.retrain_for_batch:

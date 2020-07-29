@@ -25,7 +25,7 @@ class BaseMNISTLike(ArrayDataSet):
 
         slots = {
             'x': ArrayInfo(
-                dtype='uint8', shape=[28, 28, 1], is_discrete=True, min_val=0,
+                dtype='uint8', shape=[32, 32, 3], is_discrete=True, min_val=0,
                 max_val=255, n_discrete_vals=256, bit_depth=8),
             'y': ArrayInfo(
                 dtype='int32', shape=[], is_discrete=True, min_val=0,

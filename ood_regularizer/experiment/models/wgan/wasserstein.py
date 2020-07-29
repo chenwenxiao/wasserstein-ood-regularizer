@@ -25,6 +25,7 @@ from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele
+import os
 
 
 class ExpConfig(spt.Config):
@@ -41,8 +42,8 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 100
-    warm_up_start = 0
+    max_epoch = 200
+    warm_up_start = 100
 
     min_distance = 0.2
     use_transductive = True  # can model use the data in SVHN's and CIFAR's testing set
@@ -110,22 +111,22 @@ def G_omega(z):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 512 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
+        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
                                normalizer_fn=None)
         h_z = spt.ops.reshape_tail(
             h_z,
             ndims=1,
-            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 512)
+            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 128)
         )
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 512, strides=2, scope='level_2')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 256, strides=2, scope='level_3')  # output: (7, 7, 64)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, scope='level_5')  # output: (14, 14, 32)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
     x_mean = spt.layers.conv2d(
         h_z, config.x_shape[-1], (1, 1), padding='same', scope='feature_map_mean_to_pixel',
-        kernel_initializer=tf.zeros_initializer(), activation_fn=tf.nn.tanh
+        kernel_initializer=tf.zeros_initializer(),  # activation_fn=tf.nn.tanh
     )
     return x_mean
 
@@ -150,8 +151,8 @@ def D_psi(x, y=None):
         h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_6')  # output: (7, 7, 64)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2, scope='level_8')  # output: (7, 7, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
 
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
         h_x = spt.layers.dense(h_x, 64, scope='level_-2')
@@ -412,7 +413,17 @@ def main():
     with spt.utils.create_session().as_default() as session, train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
-        restore_checkpoint = None
+        experiment_dict = {
+        }
+        print(experiment_dict)
+        if config.in_dataset in experiment_dict:
+            restore_dir = experiment_dict[config.in_dataset] + '/checkpoint'
+            restore_checkpoint = os.path.join(
+                restore_dir, 'checkpoint',
+                'checkpoint.dat-{}'.format(config.max_epoch if config.self_ood else config.warm_up_start))
+        else:
+            restore_dir = results.system_path('checkpoint')
+            restore_checkpoint = None
 
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
@@ -424,7 +435,6 @@ def main():
                            summary_graph=tf.get_default_graph(),
                            early_stopping=False,
                            checkpoint_dir=results.system_path('checkpoint'),
-                           checkpoint_epoch_freq=100,
                            restore_checkpoint=restore_checkpoint
                            ) as loop:
 
@@ -436,6 +446,22 @@ def main():
             n_critical = config.n_critical
             # adversarial training
             for epoch in epoch_iterator:
+
+                if epoch == config.warm_up_start + 1:
+                    make_diagram(loop,
+                                 ele_gradient_norm,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='origin_gradient_norm_histogram'
+                                 )
+                    make_diagram(loop,
+                                 ele_test_energy,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='origin_log_prob_histogram'
+                                 )
 
                 if epoch == config.max_epoch + 1:
                     make_diagram(loop,
@@ -456,35 +482,55 @@ def main():
                     loop.print_logs()
                     break
 
-                for step, [x] in loop.iter_steps(train_flow):
-                    for [y] in mixed_test_flow:
-                        if config.distill_ratio != 1.0 and epoch > config.distill_epoch and config.use_transductive:
-                            batch_energy = session.run(ele_test_energy, feed_dict={
-                                input_x: y
-                            })
-                            batch_index = np.argsort(batch_energy)
-                            batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
-                            y = y[batch_index]
-                            x_index = np.arange(len(x))
-                            np.random.shuffle(x_index)
-                            x_index = x_index[:len(batch_index)]
-                            x = x[x_index]
+                if epoch < config.warm_up_start:
+                    step_iterator = MyIterator(train_flow)
+                    while step_iterator.has_next:
+                        for step, [x] in loop.iter_steps(limited(step_iterator, n_critical)):
+                            # training generator
+                            [_, batch_D_loss, batch_D_real] = session.run(
+                                [train_D_train_op, train_D_loss, train_D_real], feed_dict={
+                                    input_x: x
+                                })
+                            loop.collect_metrics(D_loss=batch_D_loss)
+                            loop.collect_metrics(D_real=batch_D_real)
 
-                        # spec-training discriminator
-                        [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
-                            [D_train_op, D_loss, G_loss, D_real], feed_dict={
-                                input_x: x, input_y: y
+                        # training discriminator
+                        [_, batch_G_loss] = session.run(
+                            [train_G_train_op, train_G_loss], feed_dict={
+                                input_x: x
                             })
                         loop.collect_metrics(G_loss=batch_G_loss)
-                        loop.collect_metrics(D_loss=batch_D_loss)
-                        loop.collect_metrics(D_real=batch_D_real)
-                        break
+
+                else:
+                    for step, [x] in loop.iter_steps(train_flow):
+                        for [y] in mixed_test_flow:
+                            if config.distill_ratio != 1.0 and epoch > config.distill_epoch and config.use_transductive:
+                                batch_energy = session.run(ele_test_energy, feed_dict={
+                                    input_x: y
+                                })
+                                batch_index = np.argsort(batch_energy)
+                                batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                                y = y[batch_index]
+                                x_index = np.arange(len(x))
+                                np.random.shuffle(x_index)
+                                x_index = x_index[:len(batch_index)]
+                                x = x[x_index]
+
+                            # spec-training discriminator
+                            [_, batch_D_loss, batch_G_loss, batch_D_real] = session.run(
+                                [D_train_op, D_loss, G_loss, D_real], feed_dict={
+                                    input_x: x, input_y: y
+                                })
+                            loop.collect_metrics(G_loss=batch_G_loss)
+                            loop.collect_metrics(D_loss=batch_D_loss)
+                            loop.collect_metrics(D_real=batch_D_real)
+                            break
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()
 
-                if epoch == config.warm_up_start:
-                    learning_rate.set(config.initial_lr)
+                if epoch == config.max_epoch or epoch == config.warm_up_start:
+                    loop._checkpoint_saver.save(epoch)
 
                 if epoch % config.plot_epoch_freq == 0:
                     plot_samples(loop)
