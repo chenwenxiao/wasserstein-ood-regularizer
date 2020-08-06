@@ -79,6 +79,7 @@ class ExpConfig(spt.Config):
     x_shape = (32, 32, 3)
     x_shape_multiple = 3072
     extra_stride = 2
+    count_experiment = False
 
 
 config = ExpConfig()
@@ -267,9 +268,14 @@ def main():
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
 
+    if config.count_experiment:
+        with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            f.write(results.system_path("") + '\n')
+            f.close()
+
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
+    (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
 
     def normalize(x):
         return [(x - 127.5) / 256.0 * 2]
@@ -504,7 +510,7 @@ def main():
                                  [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='log_prob_histogram_with_batch_norm'
+                                 fig_name='log_prob_with_batch_norm_histogram'
                                  )
 
                     make_diagram(loop,
@@ -512,7 +518,7 @@ def main():
                                  [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='log_prob_histogram_without_batch_norm'
+                                 fig_name='log_prob_without_batch_norm_histogram'
                                  )
 
                 for step, [x] in loop.iter_steps(train_flow):

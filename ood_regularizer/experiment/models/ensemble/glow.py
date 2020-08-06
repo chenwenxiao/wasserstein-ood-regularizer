@@ -112,6 +112,7 @@ class ExperimentConfig(mltk.Config):
     )
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
+    count_experiment = False
 
 
 def main():
@@ -124,6 +125,11 @@ def main():
         config.out_dataset = DataSetConfig(name=config.out_dataset)
         x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
+
+        if config.count_experiment:
+            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+                f.write(exp.abspath("") + '\n')
+                f.close()
 
         experiment_dict = {
             'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/52/e5/02279d802d3a2cb471f5',

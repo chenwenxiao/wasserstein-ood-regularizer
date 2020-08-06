@@ -86,6 +86,7 @@ class ExpConfig(spt.Config):
     x_shape_multiple = 3072
     extra_stride = 2
     class_num = 10
+    count_experiment = False
 
 
 config = ExpConfig()
@@ -224,6 +225,11 @@ def main():
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
 
+    if config.count_experiment:
+        with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            f.write(results.system_path("") + '\n')
+            f.close()
+
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
     (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
@@ -263,13 +269,21 @@ def main():
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
         test_h, test_g = resnet34(input_x)
+        deconf_h = tf.reduce_max(test_h, axis=-1)
+        deconf_g = test_g
         predict = test_h / (test_g + 1e-10)
         predict = tf.nn.softmax(predict, axis=-1)
+        deconf_f = tf.reduce_max(predict, axis=-1)
         predict = tf.argmax(predict, axis=-1)
-        grad_x = tf.gradients(test_h, [input_x])[0]
+
+        grad_x = tf.gradients(deconf_h, [input_x])[0]
         x_hat = input_x + tf.sign(grad_x) * magnitude
         test_h_hat, test_g_hat = resnet34(x_hat)
-        odin = test_h_hat
+        deconf_h_hat = tf.reduce_max(test_h_hat, axis=-1)
+        grad_x = tf.gradients(deconf_g, [input_x])[0]
+        x_hat = input_x + tf.sign(grad_x) * magnitude
+        test_h_hat, test_g_hat = resnet34(x_hat)
+        deconf_g_hat = tf.reduce_max(test_g_hat, axis=-1)
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
@@ -341,27 +355,88 @@ def main():
                     svhn_test_predict = get_ele(predict, svhn_test_flow, input_x)
 
                 if epoch == config.max_epoch + 1:
-                    m_list = [0.0025, 0.005, 0.01, 0.02, 0.04, 0.08]
-                    m_value = []
-                    for m in m_list:
-                        val_odin = get_ele(odin, cifar_train_flow, input_x, default_feed_dict={
-                            magnitude: m
-                        })
-                        val_odin = np.mean(val_odin)
-                        m_value.append(val_odin)
-                    print(m_value)
-                    selected_m = m_list[np.argmax(np.asarray(m_value))]
-
-                    make_diagram(loop, odin,
+                    make_diagram(loop, deconf_h,
                                  [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
                                  [input_x],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='generalized_odin_histogram',
+                                 fig_name='deconf_h_histogram')
+
+                    make_diagram(loop, deconf_g,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='deconf_g_histogram')
+
+                    make_diagram(loop, deconf_f,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='deconf_f_histogram')
+
+                    m_list = [0.0025, 0.005, 0.01, 0.02, 0.04, 0.08]
+                    m_value = []
+                    for m in m_list:
+                        val_odin = get_ele(deconf_h_hat, cifar_train_flow, input_x, default_feed_dict={
+                            magnitude: m
+                        })
+                        val_odin = np.mean(val_odin)
+                        m_value.append(val_odin)
+
+                        make_diagram(loop, deconf_h_hat,
+                                     [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                     [input_x],
+                                     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                            config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                     fig_name='deconf_h_hat_{}_histogram'.format(m),
+                                     default_feed_dict={
+                                         magnitude: m
+                                     })
+                    print(m_value)
+                    selected_m = m_list[np.argmax(np.asarray(m_value))]
+
+                    make_diagram(loop, deconf_h_hat,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='deconf_h_hat_histogram',
                                  default_feed_dict={
                                      magnitude: selected_m
                                  })
 
+                    m_value = []
+                    for m in m_list:
+                        val_odin = get_ele(deconf_g_hat, cifar_train_flow, input_x, default_feed_dict={
+                            magnitude: m
+                        })
+                        val_odin = np.mean(val_odin)
+                        m_value.append(val_odin)
+
+                        make_diagram(loop, deconf_g_hat,
+                                     [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                     [input_x],
+                                     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                            config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                     fig_name='deconf_h_hat_{}_histogram'.format(m),
+                                     default_feed_dict={
+                                         magnitude: m
+                                     })
+                    print(m_value)
+                    selected_m = m_list[np.argmax(np.asarray(m_value))]
+
+                    make_diagram(loop, deconf_g_hat,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='deconf_g_hat_histogram',
+                                 default_feed_dict={
+                                     magnitude: selected_m
+                                 })
+                    loop.print_logs()
                     break
 
                 for step, [x, y] in loop.iter_steps(train_flow):

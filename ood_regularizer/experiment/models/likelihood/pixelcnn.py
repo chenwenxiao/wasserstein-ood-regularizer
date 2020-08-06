@@ -87,6 +87,7 @@ class ExpConfig(spt.Config):
     x_shape = (32, 32, 3)
     x_shape_multiple = 3072
     extra_stride = 2
+    count_experiment = False
 
 
 config = ExpConfig()
@@ -246,12 +247,17 @@ def main():
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
 
+    if config.count_experiment:
+        with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            f.write(results.system_path("") + '\n')
+            f.close()
+
     # prepare for training and testing data
     # It is important: the `x_shape` must have channel dimension, even it is 1! (i.e. (28, 28, 1) for MNIST)
     # And the value of images should not be normalized, ranged from 0 to 255.
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
+    (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
     config.x_shape = x_train.shape[1:]
     config.x_shape_multiple = 1
     for x in config.x_shape:
@@ -361,6 +367,13 @@ def main():
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/bd/d5/02279d802d3aec4401f5',
             'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6d/d5/02c52d867e43834401f5',
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/5d/d5/02c52d867e43d6b101f5',
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/36/e5/02279d802d3a8bf522f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/d5/e5/02c52d867e43c3c622f5',
+            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/e5/e5/02c52d867e43e4c622f5',
+            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/4c/d5/02812baa4f7012d622f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/7c/d5/02812baa4f70a83722f5',
+            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/f5/e5/02c52d867e43382822f5',
+            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/66/e5/02279d802d3a7c8822f5'
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:

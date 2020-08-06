@@ -25,7 +25,7 @@ from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
-
+import os
 
 class ExpConfig(spt.Config):
     # model parameters
@@ -87,6 +87,7 @@ class ExpConfig(spt.Config):
     x_shape = (32, 32, 3)
     x_shape_multiple = 3072
     extra_stride = 2
+    count_experiment = False
 
 
 config = ExpConfig()
@@ -316,9 +317,14 @@ def main():
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
 
+    if config.count_experiment:
+        with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            f.write(results.system_path("") + '\n')
+            f.close()
+
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
+    (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
 
     def normalize(x):
         return (x - 127.5) / 256.0 * 2
@@ -419,7 +425,17 @@ def main():
     with spt.utils.create_session().as_default() as session, train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
-        restore_checkpoint = None
+        experiment_dict = {
+        }
+        print(experiment_dict)
+        if config.in_dataset in experiment_dict:
+            restore_dir = experiment_dict[config.in_dataset] + '/checkpoint'
+            restore_checkpoint = os.path.join(
+                restore_dir, 'checkpoint',
+                'checkpoint.dat-{}'.format(config.max_epoch if config.self_ood else config.warm_up_start))
+        else:
+            restore_dir = results.system_path('checkpoint')
+            restore_checkpoint = None
 
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),

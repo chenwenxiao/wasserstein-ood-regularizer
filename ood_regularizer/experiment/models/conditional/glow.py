@@ -113,6 +113,7 @@ class ExperimentConfig(mltk.Config):
     )
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
+    count_experiment = False
 
 
 def main():
@@ -125,6 +126,11 @@ def main():
         config.out_dataset = DataSetConfig(name=config.out_dataset)
         x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
+
+        if config.count_experiment:
+            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+                f.write(exp.abspath("") + '\n')
+                f.close()
 
         experiment_dict = {
             'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/4a/d5/02812baa4f70936391f5',
@@ -280,8 +286,7 @@ def main():
                 def eval_Mahalanobis(x):
                     x.requires_grad = True
                     gau = get_gaussian_score(x)
-                    gradients = autograd.grad(gau, x, grad_outputs=torch.ones(gau.size()).cuda(),
-                                              create_graph=True, retain_graph=True)[0]
+                    gradients = autograd.grad(gau, x, grad_outputs=torch.ones(gau.size()).cuda())[0]
                     sign = torch.sign(gradients)
                     x_hat = x + magnitude * sign
                     return T.to_numpy(get_gaussian_score(x_hat))
@@ -318,8 +323,7 @@ def main():
                 S = torch.softmax(classifier(x) / config.odin_T, dim=-1)
                 S = T.reduce_max(S, axis=[-1])
                 log_S = torch.log(S)
-                gradients = autograd.grad(-log_S, x, grad_outputs=torch.ones(log_S.size()).cuda(),
-                                          create_graph=True, retain_graph=True)[0]
+                gradients = autograd.grad(-log_S, x, grad_outputs=torch.ones(log_S.size()).cuda())[0]
                 sign = torch.sign(gradients)
                 x_hat = x - config.odin_epsilon * sign
 
@@ -332,7 +336,15 @@ def main():
                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
                 names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
                        config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                fig_name='H_histogram'
+                fig_name='entropy_histogram'
+            )
+
+            make_diagram_torch(
+                loop, lambda x: -eval_entropy(x),
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
+                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                fig_name='negative_entropy_histogram'
             )
 
             make_diagram_torch(

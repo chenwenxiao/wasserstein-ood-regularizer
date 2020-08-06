@@ -624,7 +624,7 @@ def find_largest_batch_size(test_metrics: GraphNodes,
 def get_noise_array(config, array, normalized=True):
     if config.self_ood:
         if config.noise_type == "mutation":
-            random_array = np.random.randint(0, 256, size=array.shape, dtype=array.dtype)
+            random_array = np.random.randint(0, 256, size=array.shape, dtype=np.uint8)
             if normalized:
                 random_array = (random_array - 127.5) / 256 * 2.0
             mixed_array = np.where(np.random.random(size=array.shape) < config.mutation_rate,

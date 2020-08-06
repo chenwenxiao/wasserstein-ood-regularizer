@@ -55,6 +55,7 @@ class ExpConfig(spt.Config):
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
     pretrain = True
+    max_beta = 0.01
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -80,7 +81,7 @@ class ExpConfig(spt.Config):
     mcmc_times = 5
 
     epsilon = -20.0
-    min_logstd_of_q = -3.0
+    min_logstd_of_q = -10.0
 
     sample_n_z = 100
 
@@ -88,6 +89,7 @@ class ExpConfig(spt.Config):
     x_shape_multiple = 3072
     extra_stride = 2
     class_num = 10
+    count_experiment = False
 
 
 config = ExpConfig()
@@ -259,6 +261,11 @@ def main():
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
 
+    if config.count_experiment:
+        with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            f.write(results.system_path("") + '\n')
+            f.close()
+
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
     (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
@@ -290,8 +297,9 @@ def main():
     with tf.name_scope('training'), \
          arg_scope([batch_norm], training=True):
         train_q_net = q_net(input_x, n_z=config.train_n_qz)
-        train_p_net = p_net(observed={'x': input_x, 'z': train_q_net['z']},
+        train_p_net = p_net(observed={'x': input_x, 'z': train_q_net['z'], 'y': input_y},
                             n_z=config.train_n_qz)
+        train_recon = train_p_net['y'].log_prob()
         VAE_loss = get_all_loss(train_q_net, train_p_net, warm_up)
 
         VAE_loss += tf.losses.get_regularization_loss()
@@ -308,10 +316,12 @@ def main():
         for i in range(config.class_num):
             fake_y = tf.ones_like(input_y, dtype=tf.int32) * i
             ele_test_entropy.append(
-                spt.ops.log_mean_exp(test_chain.model['y'].distribution.log_prob(given=fake_y), axis=0))
+                tf.reduce_mean(tf.exp(test_chain.model['y'].distribution.log_prob(given=fake_y)), axis=0))
         ele_test_entropy = tf.stack(ele_test_entropy, axis=-1)  # [batch_size, class_num]
+        print(ele_test_entropy)
         ele_test_predict = tf.argmax(ele_test_entropy, axis=-1)
-        ele_test_entropy = tf.reduce_sum(-tf.exp(ele_test_entropy) * ele_test_entropy, axis=-1)
+        ele_test_predict_value = tf.reduce_max(ele_test_entropy, axis=-1)
+        ele_test_entropy = tf.reduce_sum(-tf.log(ele_test_entropy) * ele_test_entropy, axis=-1)
 
         test_recon = tf.reduce_mean(
             ele_test_recon
@@ -348,18 +358,25 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
-            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/4f/d5/02c52d867e43567f21f5',
-            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/70/e5/02279d802d3a551f21f5',
-            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/50/e5/02279d802d3a737e21f5',
-            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/3f/d5/02c52d867e43737e21f5',
-            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/40/e5/02279d802d3a737e21f5',
+            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/a8/e5/02279d802d3ada3a62f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/00/e5/02732c28dc8de8d962f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/ff/d5/02732c28dc8d02d962f5',
+            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/98/e5/02279d802d3a8f4962f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/ef/d5/02732c28dc8d2ad862f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/df/d5/02732c28dc8d87d862f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/08/e5/02c52d867e431fc862f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/f7/e5/02c52d867e43403862f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/dd/d5/02812baa4f7014b762f5',
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/cf/d5/02732c28dc8d14b762f5',
+            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/cd/d5/02812baa4f7014b762f5',
+            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/78/e5/02279d802d3a14b762f5'
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
             restore_dir = experiment_dict[config.in_dataset] + '/checkpoint'
             restore_checkpoint = os.path.join(
                 restore_dir, 'checkpoint',
-                'checkpoint.dat-{}'.format(config.max_epoch if config.self_ood else config.warm_up_start))
+                'checkpoint.dat-{}'.format(config.max_epoch))
         else:
             restore_dir = results.system_path('checkpoint')
             restore_checkpoint = None
@@ -387,20 +404,12 @@ def main():
                 if epoch == config.max_epoch + 1:
                     cifar_train_predict = get_ele(ele_test_predict, cifar_train_flow, [input_x, input_y])
                     cifar_test_predict = get_ele(ele_test_predict, cifar_test_flow, [input_x, input_y])
-
+                    get_ele(ele_test_predict_value, cifar_train_flow, [input_x, input_y])
+                    get_ele(ele_test_predict_value, cifar_test_flow, [input_x, input_y])
                     print('Correct number in cifar test is {}'.format(
                         np.sum(cifar_test_predict == y_test)))
                     print('Correct number in cifar train is {}'.format(
                         np.sum(cifar_train_predict == y_train)))
-
-                    make_diagram(loop,
-                                 ele_test_recon,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                                 [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='recon_histogram'
-                                 )
 
                     make_diagram(loop,
                                  ele_test_entropy,
@@ -412,21 +421,48 @@ def main():
                                  )
 
                     make_diagram(loop,
-                                 ele_test_lb,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                                 [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                 fig_name='elbo_histogram'
-                                 )
-
-                    make_diagram(loop,
                                  ele_test_lb - ele_test_recon,
                                  [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
                                         config.out_dataset + ' Train', config.out_dataset + ' Test'],
                                  fig_name='R_histogram'
+                                 )
+
+                    make_diagram(loop,
+                                 -ele_test_entropy,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x, input_y],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='nH_histogram'
+                                 )
+
+                    make_diagram(loop,
+                                 -ele_test_lb + ele_test_recon,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x, input_y],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='nR_histogram'
+                                 )
+
+                    make_diagram(loop,
+                                 ele_test_recon,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x, input_y],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='recon_histogram'
+                                 )
+
+                    make_diagram(loop,
+                                 ele_test_lb,
+                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [input_x, input_y],
+                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 fig_name='elbo_histogram'
                                  )
 
                     make_diagram(loop,
@@ -442,10 +478,11 @@ def main():
                     break
 
                 for step, [x, y] in loop.iter_steps(train_flow):
-                    _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
-                        input_x: x, input_y: y, warm_up: max(1.0 * epoch / config.warm_up_start, 1.0)
+                    _, batch_VAE_loss, batch_recon = session.run([VAE_train_op, VAE_loss, train_recon], feed_dict={
+                        input_x: x, input_y: y, warm_up: max(1.0 * epoch / config.warm_up_start, 1.0) * config.max_beta
                     })
                     loop.collect_metrics(VAE_loss=batch_VAE_loss)
+                    loop.collect_metrics(recon=batch_recon)
 
                 if epoch in config.lr_anneal_epoch_freq:
                     learning_rate.anneal()

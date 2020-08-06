@@ -95,6 +95,7 @@ class ExperimentConfig(mltk.Config):
     )
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
+    count_experiment = False
 
 
 epoch_counter = 0
@@ -111,6 +112,11 @@ def main():
         x_train_complexity, x_test_complexity = load_complexity(config.in_dataset.name, config.compressor)
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
+        if config.count_experiment:
+            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+                f.write(exp.abspath("") + '\n')
+                f.close()
+
         experiment_dict = {
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/b0/e5/02c52d867e43f4e461f5',
             'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/7c/d5/02732c28dc8df4e461f5',
@@ -121,7 +127,9 @@ def main():
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/6c/d5/02732c28dc8df4e461f5',
             'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/80/e5/02c52d867e43f4e461f5',
             'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/02/e5/02279d802d3af4e461f5',
-            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/e9/d5/02812baa4f70f4e461f5'
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/e9/d5/02812baa4f70f4e461f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/db/d5/02812baa4f70f19e02f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/25/e5/02c52d867e43435322f5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -222,8 +230,7 @@ def main():
                 x = T.from_numpy(x)
                 x.requires_grad = True
                 ll, outputs = model(x)
-                gradients = autograd.grad(ll, x, grad_outputs=torch.ones(ll.size()).cuda(),
-                                          create_graph=True, retain_graph=True)[0]
+                gradients = autograd.grad(ll, x, grad_outputs=torch.ones(ll.size()).cuda())[0]
                 grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
                 return T.to_numpy(grad_norm)
 
@@ -233,8 +240,7 @@ def main():
                 x = T.from_numpy(x)
                 x.requires_grad = True
                 ll, outputs = model(x)
-                gradients = autograd.grad(ll, theta_params, grad_outputs=torch.ones(ll.size()).cuda(),
-                                          create_graph=True, retain_graph=True)
+                gradients = autograd.grad(ll, theta_params, grad_outputs=torch.ones(ll.size()).cuda())
                 grad_norm = 0
                 for grad in gradients:
                     grad_norm = grad_norm + grad.norm(2)

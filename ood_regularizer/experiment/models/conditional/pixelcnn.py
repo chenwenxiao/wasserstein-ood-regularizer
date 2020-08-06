@@ -87,6 +87,7 @@ class ExpConfig(spt.Config):
     x_shape_multiple = 3072
     extra_stride = 2
     class_num = 10
+    count_experiment = False
 
 
 config = ExpConfig()
@@ -254,12 +255,17 @@ def main():
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
 
+    if config.count_experiment:
+        with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            f.write(results.system_path("") + '\n')
+            f.close()
+
     # prepare for training and testing data
     # It is important: the `x_shape` must have channel dimension, even it is 1! (i.e. (28, 28, 1) for MNIST)
     # And the value of images should not be normalized, ranged from 0 to 255.
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
-    (svhn_train, _svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
+    (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
     config.x_shape = x_train.shape[1:]
 
     config.class_num = np.max(y_train) + 1

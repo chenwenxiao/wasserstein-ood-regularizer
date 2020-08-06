@@ -87,6 +87,7 @@ class ExpConfig(spt.Config):
     x_shape = (32, 32, 3)
     x_shape_multiple = 3072
     extra_stride = 2
+    count_experiment = False
 
 
 config = ExpConfig()
@@ -363,6 +364,11 @@ def main():
     results.make_dirs('plotting/test.reconstruct', exist_ok=True)
     results.make_dirs('train_summary', exist_ok=True)
 
+    if config.count_experiment:
+        with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            f.write(results.system_path("") + '\n')
+            f.close()
+
     # prepare for training and testing data
     (x_train, y_train, x_test, y_test) = load_overall(config.in_dataset)
     (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
@@ -579,6 +585,13 @@ def main():
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/e7/d5/02812baa4f70fbb001f5',
             'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6d/d5/02279d802d3afbb001f5',
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/5d/d5/02279d802d3afbb001f5',
+            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/a6/e5/02279d802d3a839f22f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/9c/d5/02812baa4f704f1f22f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/96/e5/02279d802d3a755d22f5',
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/16/e5/02c52d867e43c8dc22f5',
+            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/86/e5/02279d802d3a365c22f5',
+            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/06/e5/02c52d867e43118b22f5',
+            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/ce/d5/02732c28dc8d118b22f5'
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
