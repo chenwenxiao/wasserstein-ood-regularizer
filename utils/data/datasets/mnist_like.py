@@ -9,13 +9,14 @@ from ...misc import get_bit_depth
 from ..types import *
 from .base import *
 
-__all__ = ['MNIST', 'FashionMNIST', 'KMNIST', 'NotMNIST', 'Omniglot']
+__all__ = ['BaseMNISTLike']
 
 
 class BaseMNISTLike(ArrayDataSet):
     name: str
 
-    def __init__(self, val_split: Optional[float] = None):
+    def __init__(self, name, val_split: Optional[float] = None):
+        self.name = name
         n_categories = 10
         train_x, train_y, test_x, test_y = load_overall(self.name)
         val_x, val_y = None, None
@@ -25,7 +26,7 @@ class BaseMNISTLike(ArrayDataSet):
 
         slots = {
             'x': ArrayInfo(
-                dtype='uint8', shape=[32, 32, 3], is_discrete=True, min_val=0,
+                dtype='uint8', shape=[28, 28, 1], is_discrete=True, min_val=0,
                 max_val=255, n_discrete_vals=256, bit_depth=8),
             'y': ArrayInfo(
                 dtype='int32', shape=[], is_discrete=True, min_val=0,
@@ -52,23 +53,3 @@ class BaseMNISTLike(ArrayDataSet):
             arrays.pop('val')
 
         super().__init__(splits=splits, slots=slots, arrays=arrays)
-
-
-class MNIST(BaseMNISTLike):
-    name = 'mnist'
-
-
-class FashionMNIST(BaseMNISTLike):
-    name = 'fashion_mnist'
-
-
-class KMNIST(BaseMNISTLike):
-    name = 'kmnist'
-
-
-class NotMNIST(BaseMNISTLike):
-    name = 'not_mnist'
-
-
-class Omniglot(BaseMNISTLike):
-    name = 'omniglot'

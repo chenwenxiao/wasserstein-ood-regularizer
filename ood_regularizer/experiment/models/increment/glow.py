@@ -46,7 +46,7 @@ class ExperimentConfig(mltk.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 1024
+    mixed_train_epoch = 64
     mixed_train_skip = 1024
     dynamic_epochs = False
     retrain_for_batch = False
@@ -115,7 +115,8 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         if config.count_experiment:
-            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments',
+                      'a') as f:
                 f.write(exp.abspath("") + '\n')
                 f.close()
 
@@ -203,6 +204,9 @@ def main():
                     repeat_epoch = max(1, repeat_epoch)
                 else:
                     repeat_epoch = config.mixed_train_epoch
+                repeat_epoch = repeat_epoch * config.mixed_train_skip // config.batch_size
+                # data generator generate data for each batch
+                # repeat_epoch will determine how much time it generates
 
                 exp.config.train.warmup_epochs = None
                 exp.config.train.max_epoch = repeat_epoch

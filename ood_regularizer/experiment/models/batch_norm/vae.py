@@ -422,6 +422,8 @@ def main():
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/61/e5/02279d802d3aa9a941f5',
             'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/00/e5/02c52d867e43048741f5',
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/ff/d5/02c52d867e43048741f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/69/e5/02c52d867e43a50682f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/e9/e5/02279d802d3ad7e382f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:

@@ -135,16 +135,16 @@ def main():
         experiment_dict = {
             'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/4a/d5/02812baa4f70936391f5',
             'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/70/e5/02c52d867e437ed261f5',
-            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/e1/e5/02279d802d3ad38f51f5',
-            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/60/e5/02c52d867e4360ae51f5',
             'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/d1/e5/02279d802d3a5a9d51f5',
-            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/d9/d5/02812baa4f70b68951f5',
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/50/e5/02c52d867e437d2851f5',
-            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/3c/d5/02732c28dc8db6c751f5',
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/c1/e5/02279d802d3ab6c751f5',
-            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/2c/d5/02732c28dc8db6c751f5',
             'constant': '/mnt/mfs/mlstorage-experiments/cwx17/f4/e5/02279d802d3a98e102f5',
-            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/b4/e5/02279d802d3aa7d002f5'
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/b4/e5/02279d802d3aa7d002f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/2c/d5/02732c28dc8db6c751f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/3c/d5/02732c28dc8db6c751f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/d9/d5/02812baa4f70b68951f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/e1/e5/02279d802d3ad38f51f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/60/e5/02c52d867e4360ae51f5',
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:

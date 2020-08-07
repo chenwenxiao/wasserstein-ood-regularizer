@@ -9,13 +9,14 @@ from ...misc import get_bit_depth
 from ..types import *
 from .base import *
 
-__all__ = ['Cifar10', 'Cifar100', 'SVHN', 'TinyImagenet', 'Imagenet', 'ISUN', 'LSUN', 'SUN', 'CelebA', 'Noise', 'Constant']
+__all__ = ['BaseCifar']
 
 
 class BaseCifar(ArrayDataSet):
     name: str
 
-    def __init__(self, val_split: Optional[float] = None):
+    def __init__(self, name, val_split: Optional[float] = None):
+        self.name = name
         if self.name == 'cifar100':
             n_categories = 100
         else:
@@ -56,47 +57,3 @@ class BaseCifar(ArrayDataSet):
             arrays.pop('val')
 
         super().__init__(splits=splits, slots=slots, arrays=arrays)
-
-
-class Cifar10(BaseCifar):
-    name: str = 'cifar10'
-
-
-class Cifar100(BaseCifar):
-    name: str = 'cifar100'
-
-
-class SVHN(BaseCifar):
-    name: str = 'svhn'
-
-
-class CelebA(BaseCifar):
-    name: str = 'celeba'
-
-
-class TinyImagenet(BaseCifar):
-    name: str = 'tinyimagenet'
-
-
-class Imagenet(BaseCifar):
-    name: str = 'imagenet'
-
-
-class ISUN(BaseCifar):
-    name: str = 'isun'
-
-
-class SUN(BaseCifar):
-    name: str = 'sun'
-
-
-class LSUN(BaseCifar):
-    name: str = 'lsun'
-
-
-class Constant(BaseCifar):
-    name: str = 'constant'
-
-
-class Noise(BaseCifar):
-    name: str = 'noise'

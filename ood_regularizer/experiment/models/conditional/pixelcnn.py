@@ -350,7 +350,9 @@ def main():
             'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/db/d5/02732c28dc8dda6e31f5',
             'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/cf/d5/02c52d867e43da6e31f5',
             'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/b0/e5/02279d802d3ada6e31f5',
-            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/bf/d5/02c52d867e43da6e31f5'
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/bf/d5/02c52d867e43da6e31f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/d0/e5/02732c28dc8d8e0872f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/c0/e5/02732c28dc8d36e572f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:

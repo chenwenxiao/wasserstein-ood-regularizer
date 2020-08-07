@@ -297,7 +297,8 @@ def main():
             'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/39/d5/02812baa4f70601441f5',
             'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/ef/d5/02c52d867e43601441f5',
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/11/e5/02279d802d3a601441f5',
-
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/d8/e5/02c52d867e439b8f72f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/01/e5/02732c28dc8d9b8f72f5'
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:

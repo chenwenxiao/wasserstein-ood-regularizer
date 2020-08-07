@@ -18,18 +18,19 @@ __all__ = [
 
 
 class InMemoryDataSetName(str, Enum):
-    MNIST = 'mnist'
-    KMINIST = 'kmnist'
-    NOTMNIST = 'not_mnist'
-    FASHIONMIST = 'fashion_mnist'
-    OMNNIGLOT = 'omniglot'
+    MNIST28 = 'mnist28'
+    KMINIST28 = 'kmnist28'
+    NOTMNIST28 = 'not_mnist28'
+    FASHIONMIST28 = 'fashion_mnist28'
+    OMNNIGLOT28 = 'omniglot28'
+    NOISE28 = 'noise28'
+    CONSTANT28 = 'constant28'
     CIFAR10 = 'cifar10'
     CIFAR100 = 'cifar100'
     SVHN = 'svhn'
     CELEBA = 'celeba'
     LSUN = 'lsun'
     ISUN = 'isun'
-    SUN = 'sun'
     TINYIMAGENET = 'tinyimagenet'
     NOISE = 'noise'
     CONSTANT = 'constant'
@@ -92,36 +93,10 @@ def make_dataset(config: DataSetConfig) -> Tuple[DataSet, DataSet, DataSet]:
     # construct the original dataset object
     if config.name is None:
         dataset = MMapDataSet(config.mmap_dir)
-    elif config.name == InMemoryDataSetName.MNIST:
-        dataset = MNIST()
-    elif config.name == InMemoryDataSetName.CIFAR10:
-        dataset = Cifar10()
-    elif config.name == InMemoryDataSetName.FASHIONMIST:
-        dataset = FashionMNIST()
-    elif config.name == InMemoryDataSetName.KMINIST:
-        dataset = KMNIST()
-    elif config.name == InMemoryDataSetName.NOTMNIST:
-        dataset = NotMNIST()
-    elif config.name == InMemoryDataSetName.OMNNIGLOT:
-        dataset = Omniglot()
-    elif config.name == InMemoryDataSetName.SVHN:
-        dataset = SVHN()
-    elif config.name == InMemoryDataSetName.CIFAR100:
-        dataset = Cifar100()
-    elif config.name == InMemoryDataSetName.CELEBA:
-        dataset = CelebA()
-    elif config.name == InMemoryDataSetName.ISUN:
-        dataset = ISUN()
-    elif config.name == InMemoryDataSetName.SUN:
-        dataset = SUN()
-    elif config.name == InMemoryDataSetName.LSUN:
-        dataset = LSUN()
-    elif config.name == InMemoryDataSetName.TINYIMAGENET:
-        dataset = TinyImagenet()
-    elif config.name == InMemoryDataSetName.NOISE:
-        dataset = Noise()
-    elif config.name == InMemoryDataSetName.CONSTANT:
-        dataset = Constant()
+    elif config.name[-2:] == '28':
+        dataset = BaseMNISTLike(config.name)
+    else:
+        dataset = BaseCifar(config.name)
 
     train_dataset = dataset.apply_mappers(x=get_mapper(config, training=True))
 
@@ -135,10 +110,10 @@ def get_mapper(config: DataSetConfig, training=False):
     # assemble the pipelines
     def common_mappers():
         m = []
-        # if config.name in ('mnist', 'fashion_mnist', 'kmnist', 'omniglot', 'not_mnist'):
-        #     m.append(mappers.Pad([(2, 2), (2, 2), (0, 0)]))  # pad to 32x32x1
-        #     if config.enable_grayscale_to_rgb:
-        #         m.append(mappers.GrayscaleToRGB())  # copy to 32x32x3
+        if config.name[-2:] == '28':
+            m.append(mappers.Pad([(2, 2), (2, 2), (0, 0)]))  # pad to 32x32x1
+            if config.enable_grayscale_to_rgb:
+                m.append(mappers.GrayscaleToRGB())  # copy to 32x32x3
         m.extend([
             mappers.Dequantize(),
             mappers.ScaleToRange(-1., 1.),

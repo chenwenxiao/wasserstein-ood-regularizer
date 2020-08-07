@@ -318,6 +318,13 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/c9/e5/02279d802d3ad93182f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/f8/e5/02c52d867e43633182f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/b9/e5/02279d802d3a0e2182f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/21/e5/02732c28dc8d122182f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/e8/e5/02c52d867e431a0182f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/f0/e5/02732c28dc8d998f72f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/b8/e5/02c52d867e43998f72f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:

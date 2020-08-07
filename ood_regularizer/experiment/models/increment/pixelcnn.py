@@ -50,7 +50,7 @@ class ExpConfig(spt.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 1024
+    mixed_train_epoch = 64
     mixed_train_skip = 1024
     dynamic_epochs = False
     retrain_for_batch = False
@@ -322,6 +322,10 @@ def main():
                             repeat_epoch = max(1, repeat_epoch)
                         else:
                             repeat_epoch = config.mixed_train_epoch
+
+                        repeat_epoch = repeat_epoch * config.mixed_train_skip // config.batch_size
+                        # data generator generate data for each batch
+                        # repeat_epoch will determine how much time it generates
                         for pse_epoch in range(repeat_epoch):
                             mixed_index = np.random.randint(0, min(i + config.mixed_train_skip, len(mixed_array)),
                                                             config.batch_size)

@@ -133,17 +133,17 @@ def main():
 
         experiment_dict = {
             'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/52/e5/02279d802d3a2cb471f5',
-            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/42/e5/02279d802d3a520f61f5',
-            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/32/e5/02279d802d3a08fd61f5',
             'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/1a/d5/02812baa4f7008fd61f5',
-            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/22/e5/02279d802d3a08fd61f5',
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/f0/e5/02c52d867e4308fd61f5',
-            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/01/e5/02c52d867e4308fd61f5',
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/8c/d5/02732c28dc8d08fd61f5',
-            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/0a/d5/02812baa4f7008fd61f5',
             'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/e0/e5/02c52d867e4308fd61f5',
             'noise': '/mnt/mfs/mlstorage-experiments/cwx17/6b/d5/02812baa4f7019aef1f5',
-            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/54/e5/02279d802d3a19aef1f5'
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/54/e5/02279d802d3a19aef1f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/42/e5/02279d802d3a520f61f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/32/e5/02279d802d3a08fd61f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/0a/d5/02812baa4f7008fd61f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/01/e5/02c52d867e4308fd61f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/22/e5/02279d802d3a08fd61f5',
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:

@@ -113,17 +113,17 @@ def main():
 
         experiment_dict = {
             'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/8a/d5/02812baa4f70a5c6e1f5',
-            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/0d/d5/02732c28dc8da5c6e1f5',
             'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/1d/d5/02732c28dc8da5c6e1f5',
-            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/c1/e5/02c52d867e43d6c6e1f5',
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/e2/e5/02279d802d3afd2de1f5',
-            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/22/e5/02c52d867e43071de1f5',
             'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/f1/e5/02c52d867e4304fae1f5',
-            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/e1/e5/02c52d867e437cf9e1f5',
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/2d/d5/02732c28dc8db6f9e1f5',
-            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/d1/e5/02c52d867e4331e9e1f5',
             'constant': '/mnt/mfs/mlstorage-experiments/cwx17/b4/e5/02c52d867e43c90102f5',
-            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/e4/e5/02279d802d3a896102f5'
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/e4/e5/02279d802d3a896102f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/d1/e5/02c52d867e4331e9e1f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/e1/e5/02c52d867e437cf9e1f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/22/e5/02c52d867e43071de1f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/c1/e5/02c52d867e43d6c6e1f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/0d/d5/02732c28dc8da5c6e1f5',
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
