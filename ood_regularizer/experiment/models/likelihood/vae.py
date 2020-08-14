@@ -358,11 +358,17 @@ def main():
     # open the result object and prepare for result directories
     results = MLResults(config.result_dir)
     results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
+    while True:
+        try:
+            results.make_dirs('plotting/sample', exist_ok=True)
+            results.make_dirs('plotting/z_plot', exist_ok=True)
+            results.make_dirs('plotting/train.reconstruct', exist_ok=True)
+            results.make_dirs('plotting/test.reconstruct', exist_ok=True)
+            results.make_dirs('train_summary', exist_ok=True)
+            results.make_dirs('checkpoint/checkpoint', exist_ok=True)
+            break
+        except Exception:
+            pass
 
     if config.count_experiment:
         with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
@@ -591,7 +597,14 @@ def main():
             'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/16/e5/02c52d867e43c8dc22f5',
             'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/86/e5/02279d802d3a365c22f5',
             'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/06/e5/02c52d867e43118b22f5',
-            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/ce/d5/02732c28dc8d118b22f5'
+            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/ce/d5/02732c28dc8d118b22f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/bf/e5/02c52d867e43d5c5d2f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/cf/e5/02c52d867e43d5c5d2f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/40/e5/02812baa4f70d5c5d2f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/df/e5/02c52d867e43d5c5d2f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/a4/e5/02732c28dc8dd5c5d2f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/70/f5/02279d802d3ad5c5d2f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/b4/e5/02732c28dc8dd5c5d2f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -624,11 +637,11 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
-                    cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll = make_diagram(
-                        loop, ele_test_ll, [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                    cifar_train_nll, svhn_train_nll, cifar_test_nll, svhn_test_nll = make_diagram(
+                        loop, ele_test_ll, [cifar_train_flow, svhn_train_flow, cifar_test_flow, svhn_test_flow],
                         [input_x, input_y],
-                        names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                               config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        names=[config.in_dataset + ' Train', config.out_dataset + ' Train',
+                               config.in_dataset + ' Test', config.out_dataset + ' Test'],
                         fig_name='log_prob_histogram'
                     )
 
@@ -660,66 +673,58 @@ def main():
                     # )
 
                     make_diagram(loop, grad_x_norm,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='grad_norm_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_omega_ll,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='log_prob_mixed_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_recon,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='recon_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_lb,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='elbo_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_lb - ele_test_recon,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='elbo-recon_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_ll,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='ll_with_complexity_histogram',
-                                 addtion_data=[x_train_complexity, x_test_complexity,
-                                               svhn_train_complexity, svhn_test_complexity]
+                                 addtion_data=[x_test_complexity, svhn_test_complexity]
                                  )
 
                     make_diagram(loop,
                                  -ele_test_kl,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='kl_histogram'
                                  )
 
@@ -740,22 +745,19 @@ def main():
                             mcmc_ll_list.append(mcmc_ll)
                         return np.concatenate(mcmc_recon_list, axis=0), np.concatenate(mcmc_ll_list, axis=0)
 
-                    mcmc_metrics = [get_mcmc_and_origin(cifar_train_flow), get_mcmc_and_origin(cifar_test_flow),
-                                    get_mcmc_and_origin(svhn_train_flow), get_mcmc_and_origin(svhn_test_flow)]
+                    mcmc_metrics = [get_mcmc_and_origin(cifar_test_flow), get_mcmc_and_origin(svhn_test_flow)]
 
                     loop.collect_metrics(mcmc_recon_histogram=plot_fig(
-                        data_list=[mcmc_metrics[0][0], mcmc_metrics[1][0], mcmc_metrics[2][0], mcmc_metrics[3][0]],
-                        color_list=['red', 'salmon', 'green', 'lightgreen'],
-                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        data_list=[mcmc_metrics[0][0], mcmc_metrics[1][0]],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                         x_label='bits/dim',
                         fig_name='mcmc_recon_histogram'))
 
                     loop.collect_metrics(mcmc_ll_histogram=plot_fig(
-                        data_list=[mcmc_metrics[0][1], mcmc_metrics[1][1], mcmc_metrics[2][1], mcmc_metrics[3][1]],
-                        color_list=['red', 'salmon', 'green', 'lightgreen'],
-                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        data_list=[mcmc_metrics[0][1], mcmc_metrics[1][1]],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                         x_label='bits/dim',
                         fig_name='mcmc_ll_histogram'))
 

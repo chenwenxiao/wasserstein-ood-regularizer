@@ -311,11 +311,17 @@ def main():
     # open the result object and prepare for result directories
     results = MLResults(config.result_dir)
     results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
+    while True:
+        try:
+            results.make_dirs('plotting/sample', exist_ok=True)
+            results.make_dirs('plotting/z_plot', exist_ok=True)
+            results.make_dirs('plotting/train.reconstruct', exist_ok=True)
+            results.make_dirs('plotting/test.reconstruct', exist_ok=True)
+            results.make_dirs('train_summary', exist_ok=True)
+            results.make_dirs('checkpoint/checkpoint', exist_ok=True)
+            break
+        except Exception:
+            pass
 
     if config.count_experiment:
         with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:

@@ -249,11 +249,17 @@ def main():
     # open the result object and prepare for result directories
     results = MLResults(config.result_dir)
     results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
+    while True:
+        try:
+            results.make_dirs('plotting/sample', exist_ok=True)
+            results.make_dirs('plotting/z_plot', exist_ok=True)
+            results.make_dirs('plotting/train.reconstruct', exist_ok=True)
+            results.make_dirs('plotting/test.reconstruct', exist_ok=True)
+            results.make_dirs('train_summary', exist_ok=True)
+            results.make_dirs('checkpoint/checkpoint', exist_ok=True)
+            break
+        except Exception:
+            pass
 
     if config.count_experiment:
         with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
@@ -353,6 +359,13 @@ def main():
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/bf/d5/02c52d867e43da6e31f5',
             'noise': '/mnt/mfs/mlstorage-experiments/cwx17/d0/e5/02732c28dc8d8e0872f5',
             'constant': '/mnt/mfs/mlstorage-experiments/cwx17/c0/e5/02732c28dc8d36e572f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/f8/d5/02812baa4f70da6e31f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/cb/d5/02732c28dc8dda6e31f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/a0/e5/02279d802d3ada6e31f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/af/d5/02c52d867e43da6e31f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/e8/d5/02812baa4f70da6e31f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/45/e5/02732c28dc8dae25e2f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/35/e5/02732c28dc8d9d25e2f5'
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:

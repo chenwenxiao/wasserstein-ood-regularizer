@@ -307,11 +307,17 @@ def main():
     # open the result object and prepare for result directories
     results = MLResults(config.result_dir)
     results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
+    while True:
+        try:
+            results.make_dirs('plotting/sample', exist_ok=True)
+            results.make_dirs('plotting/z_plot', exist_ok=True)
+            results.make_dirs('plotting/train.reconstruct', exist_ok=True)
+            results.make_dirs('plotting/test.reconstruct', exist_ok=True)
+            results.make_dirs('train_summary', exist_ok=True)
+            results.make_dirs('checkpoint/checkpoint', exist_ok=True)
+            break
+        except Exception:
+            pass
 
     if config.count_experiment:
         with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
@@ -431,7 +437,14 @@ def main():
             'constant': '/mnt/mfs/mlstorage-experiments/cwx17/96/e5/02c52d867e43a22632f5',
             'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/a6/e5/02c52d867e431f3732f5',
             'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/d6/e5/02279d802d3a485932f5',
-            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/b6/e5/02c52d867e4371ab32f5'
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/b6/e5/02c52d867e4371ab32f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/80/f5/02279d802d3adcc9d2f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/60/e5/02812baa4f70dcc9d2f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/90/f5/02279d802d3adcc9d2f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/a0/f5/02279d802d3adcc9d2f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/b0/f5/02279d802d3adcc9d2f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/e4/e5/02732c28dc8d095ad2f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/c0/f5/02279d802d3a5a5ad2f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -468,33 +481,29 @@ def main():
                 if epoch == config.warm_up_start + 1:
                     make_diagram(loop,
                                  ele_gradient_norm,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 [cifar_test_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='origin_gradient_norm_histogram'
                                  )
                     make_diagram(loop,
                                  ele_test_energy,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 [cifar_test_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='origin_log_prob_histogram'
                                  )
 
                 if epoch == config.max_epoch + 1:
                     make_diagram(loop,
                                  ele_gradient_norm,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 [cifar_test_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='gradient_norm_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_energy,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 [cifar_test_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='log_prob_histogram'
                                  )
                     loop.print_logs()

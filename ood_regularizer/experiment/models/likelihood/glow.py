@@ -104,7 +104,12 @@ epoch_counter = 0
 def main():
     with mltk.Experiment(ExperimentConfig, args=sys.argv[1:]) as exp, \
             T.use_device(T.first_gpu_device()):
-        exp.make_dirs('plotting')
+        while True:
+            try:
+                exp.make_dirs('plotting')
+                break
+            except Exception:
+                pass
         config = exp.config
         # prepare for training and testing data
         config.in_dataset = DataSetConfig(name=config.in_dataset)
@@ -113,7 +118,8 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         if config.count_experiment:
-            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments',
+                      'a') as f:
                 f.write(exp.abspath("") + '\n')
                 f.close()
 
@@ -130,6 +136,8 @@ def main():
             'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/90/e5/02c52d867e43f4e461f5',
             'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/12/e5/02279d802d3af4e461f5',
             'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/7c/d5/02732c28dc8df4e461f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/d5/e5/02732c28dc8d622303f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/c5/e5/02732c28dc8d622303f5'
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -219,11 +227,10 @@ def main():
                             config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
                 x_label='bits/dim', fig_name='ll_with_complexity_histogram'))
 
-            cifar_train_det, cifar_test_det, svhn_train_det, svhn_test_det = make_diagram_torch(
+            cifar_test_det, svhn_test_det = make_diagram_torch(
                 loop, eval_log_det,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='log_det_histogram')
 
             def eval_grad_norm(x):
@@ -250,17 +257,14 @@ def main():
 
             make_diagram_torch(
                 loop, eval_grad_norm,
-                [cifar_single_train_flow, cifar_single_test_flow, svhn_single_train_flow, svhn_single_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                [cifar_single_test_flow, svhn_single_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='grad_norm_histogram')
 
             loop.add_metrics(origin_log_prob_histogram=plot_fig(
-                data_list=[cifar_train_ll - cifar_train_det, cifar_test_ll - cifar_test_det,
-                           svhn_train_ll - svhn_train_det, svhn_test_ll - svhn_test_det],
+                data_list=[cifar_test_ll - cifar_test_det, svhn_test_ll - svhn_test_det],
                 color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 x_label='bits/dim', fig_name='origin_log_prob_histogram'))
 
             if config.self_ood and restore_checkpoint is not None:
@@ -313,19 +317,17 @@ def main():
 
             make_diagram_torch(
                 loop, eval_ll,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='log_prob_mixed_histogram'
             )
 
             make_diagram_torch(
                 loop, lambda x: -eval_ll(x),
                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='kl_histogram',
-                addtion_data=[cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll]
+                addtion_data=[cifar_test_ll, svhn_test_ll]
             )
 
 

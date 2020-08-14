@@ -255,11 +255,17 @@ def main():
     # open the result object and prepare for result directories
     results = MLResults(config.result_dir)
     results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
+    while True:
+        try:
+            results.make_dirs('plotting/sample', exist_ok=True)
+            results.make_dirs('plotting/z_plot', exist_ok=True)
+            results.make_dirs('plotting/train.reconstruct', exist_ok=True)
+            results.make_dirs('plotting/test.reconstruct', exist_ok=True)
+            results.make_dirs('train_summary', exist_ok=True)
+            results.make_dirs('checkpoint/checkpoint', exist_ok=True)
+            break
+        except Exception:
+            pass
 
     if config.count_experiment:
         with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
@@ -369,7 +375,14 @@ def main():
             'constant': '/mnt/mfs/mlstorage-experiments/cwx17/dd/d5/02812baa4f7014b762f5',
             'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/cf/d5/02732c28dc8d14b762f5',
             'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/cd/d5/02812baa4f7014b762f5',
-            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/78/e5/02279d802d3a14b762f5'
+            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/78/e5/02279d802d3a14b762f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/d0/f5/02279d802d3a3fdad2f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/e0/f5/02279d802d3ab75cd2f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/01/f5/02279d802d3acecdd2f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/11/f5/02279d802d3a6b7ed2f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/21/f5/02279d802d3a7c7ed2f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/31/f5/02279d802d3a71fed2f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/d0/f5/02c52d867e4350bdf2f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -413,64 +426,57 @@ def main():
 
                     make_diagram(loop,
                                  ele_test_entropy,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='H_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_lb - ele_test_recon,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='R_histogram'
                                  )
 
                     make_diagram(loop,
                                  -ele_test_entropy,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='nH_histogram'
                                  )
 
                     make_diagram(loop,
                                  -ele_test_lb + ele_test_recon,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='nR_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_recon,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='recon_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_lb,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='elbo_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_test_ll,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='log_prob_histogram'
                                  )
 

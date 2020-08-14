@@ -118,7 +118,12 @@ class ExperimentConfig(mltk.Config):
 def main():
     with mltk.Experiment(ExperimentConfig, args=sys.argv[1:]) as exp, \
             T.use_device(T.first_gpu_device()):
-        exp.make_dirs('plotting')
+        while True:
+            try:
+                exp.make_dirs('plotting')
+                break
+            except Exception:
+                pass
         config = exp.config
         # prepare for training and testing data
         config.in_dataset = DataSetConfig(name=config.in_dataset)
@@ -144,6 +149,8 @@ def main():
             'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/0a/d5/02812baa4f7008fd61f5',
             'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/01/e5/02c52d867e4308fd61f5',
             'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/22/e5/02279d802d3a08fd61f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/82/f5/02279d802d3a032303f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/e5/e5/02732c28dc8d032303f5',
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:

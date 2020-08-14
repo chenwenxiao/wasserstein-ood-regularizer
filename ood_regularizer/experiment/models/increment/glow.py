@@ -106,7 +106,12 @@ class ExperimentConfig(mltk.Config):
 def main():
     with mltk.Experiment(ExperimentConfig, args=sys.argv[1:]) as exp, \
             T.use_device(T.first_gpu_device()):
-        exp.make_dirs('plotting')
+        while True:
+            try:
+                exp.make_dirs('plotting')
+                break
+            except Exception:
+                pass
         config = exp.config
         # prepare for training and testing data
         config.in_dataset = DataSetConfig(name=config.in_dataset)

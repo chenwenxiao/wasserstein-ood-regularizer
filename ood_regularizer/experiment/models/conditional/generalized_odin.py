@@ -140,7 +140,7 @@ def resnet34(input_x):
         h_x = spt.layers.avg_pool2d(h_x, pool_size=2, strides=2)
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
         print(h_x)
-        g_x = spt.layers.dense(h_x, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=batch_norm)
+        g_x = spt.layers.dense(h_x, 1, activation_fn=tf.nn.sigmoid, normalizer_fn=batch_norm, use_bias=True)
         W_shape = (config.class_num, spt.utils.get_static_shape(h_x)[-1])
         W = tf.get_variable(name='generalized_W', shape=W_shape)  # (class_num, hidden_state)
         h_x = tf.expand_dims(h_x, axis=-2)  # (batch_size, 1, hidden_state)
@@ -219,11 +219,17 @@ def main():
     # open the result object and prepare for result directories
     results = MLResults(config.result_dir)
     results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
+    while True:
+        try:
+            results.make_dirs('plotting/sample', exist_ok=True)
+            results.make_dirs('plotting/z_plot', exist_ok=True)
+            results.make_dirs('plotting/train.reconstruct', exist_ok=True)
+            results.make_dirs('plotting/test.reconstruct', exist_ok=True)
+            results.make_dirs('train_summary', exist_ok=True)
+            results.make_dirs('checkpoint/checkpoint', exist_ok=True)
+            break
+        except Exception:
+            pass
 
     if config.count_experiment:
         with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
@@ -318,13 +324,20 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
-            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/c9/e5/02279d802d3ad93182f5',
-            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/f8/e5/02c52d867e43633182f5',
-            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/b9/e5/02279d802d3a0e2182f5',
-            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/21/e5/02732c28dc8d122182f5',
-            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/e8/e5/02c52d867e431a0182f5',
-            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/f0/e5/02732c28dc8d998f72f5',
-            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/b8/e5/02c52d867e43998f72f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/a0/f5/02c52d867e4361a6f2f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/a0/e5/02812baa4f7061a6f2f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/b0/e5/02812baa4f70d608f2f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/32/f5/02279d802d3a0e08f2f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/42/f5/02279d802d3a2018f2f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/c0/f5/02c52d867e435049f2f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/90/f5/02c52d867e4361a6f2f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/12/f5/02279d802d3a61a6f2f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/22/f5/02279d802d3a6708f2f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/b0/f5/02c52d867e437da8f2f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/75/e5/02732c28dc8d2879f2f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/95/e5/02732c28dc8d247af2f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/85/e5/02732c28dc8d4a1af2f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/c0/e5/02812baa4f700a6df2f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -363,24 +376,21 @@ def main():
 
                 if epoch == config.max_epoch + 1:
                     make_diagram(loop, deconf_h,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='deconf_h_histogram')
 
                     make_diagram(loop, deconf_g,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='deconf_g_histogram')
 
                     make_diagram(loop, deconf_f,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='deconf_f_histogram')
 
                     m_list = [0.0025, 0.005, 0.01, 0.02, 0.04, 0.08]
@@ -393,10 +403,9 @@ def main():
                         m_value.append(val_odin)
 
                         make_diagram(loop, deconf_h_hat,
-                                     [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                     [cifar_test_flow, svhn_test_flow],
                                      [input_x],
-                                     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                            config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                     names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                      fig_name='deconf_h_hat_{}_histogram'.format(m),
                                      default_feed_dict={
                                          magnitude: m
@@ -405,10 +414,9 @@ def main():
                     selected_m = m_list[np.argmax(np.asarray(m_value))]
 
                     make_diagram(loop, deconf_h_hat,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='deconf_h_hat_histogram',
                                  default_feed_dict={
                                      magnitude: selected_m
@@ -423,11 +431,10 @@ def main():
                         m_value.append(val_odin)
 
                         make_diagram(loop, deconf_g_hat,
-                                     [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                     [cifar_test_flow, svhn_test_flow],
                                      [input_x],
-                                     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                            config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                                     fig_name='deconf_h_hat_{}_histogram'.format(m),
+                                     names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                     fig_name='deconf_g_hat_{}_histogram'.format(m),
                                      default_feed_dict={
                                          magnitude: m
                                      })
@@ -435,10 +442,9 @@ def main():
                     selected_m = m_list[np.argmax(np.asarray(m_value))]
 
                     make_diagram(loop, deconf_g_hat,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                                 [cifar_test_flow, svhn_test_flow],
                                  [input_x],
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='deconf_g_hat_histogram',
                                  default_feed_dict={
                                      magnitude: selected_m

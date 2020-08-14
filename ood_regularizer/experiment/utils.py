@@ -81,7 +81,7 @@ def draw_metric(metric, color, label, fig_name):
     pyplot.legend()
 
 
-def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, -1)):
+def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(-2, -1)):
     tmp = 0.0
     try:
         pyplot.cla()
@@ -105,8 +105,8 @@ def plot_fig(data_list, color_list, label_list, x_label, fig_name, auc_pair=(1, 
     return tmp
 
 
-def make_diagram(loop, op, flows, input_x, colors=['red', 'salmon', 'green', 'lightgreen'],
-                 names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
+def make_diagram(loop, op, flows, input_x, colors=['red', 'green', 'salmon', 'lightgreen'],
+                 names=['CIFAR-10 Train', 'SVHN Train', 'CIFAR-10 Test', 'SVHN Test'],
                  x_label='log(bit/dims)', fig_name='log_pro_histogram', addtion_data=None, *args, **kwargs):
     try:
         packs = [get_ele(op, flow, input_x, *args, **kwargs) for flow in flows]
@@ -121,8 +121,8 @@ def make_diagram(loop, op, flows, input_x, colors=['red', 'salmon', 'green', 'li
         print(e)
 
 
-def make_diagram_torch(loop, fn, flows, colors=['red', 'salmon', 'green', 'lightgreen'],
-                       names=['CIFAR-10 Train', 'CIFAR-10 Test', 'SVHN Train', 'SVHN Test'],
+def make_diagram_torch(loop, fn, flows, colors=['red', 'green', 'salmon', 'lightgreen'],
+                       names=['CIFAR-10 Train', 'SVHN Train', 'CIFAR-10 Test', 'SVHN Test'],
                        x_label='log(bit/dims)', fig_name='log_pro_histogram', addtion_data=None):
     try:
         packs = [get_ele_torch(fn, flow) for flow in flows]

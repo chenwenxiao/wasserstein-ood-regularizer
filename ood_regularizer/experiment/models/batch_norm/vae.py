@@ -262,11 +262,17 @@ def main():
     # open the result object and prepare for result directories
     results = MLResults(config.result_dir)
     results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
+    while True:
+        try:
+            results.make_dirs('plotting/sample', exist_ok=True)
+            results.make_dirs('plotting/z_plot', exist_ok=True)
+            results.make_dirs('plotting/train.reconstruct', exist_ok=True)
+            results.make_dirs('plotting/test.reconstruct', exist_ok=True)
+            results.make_dirs('train_summary', exist_ok=True)
+            results.make_dirs('checkpoint/checkpoint', exist_ok=True)
+            break
+        except Exception:
+            pass
 
     if config.count_experiment:
         with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
@@ -424,6 +430,13 @@ def main():
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/ff/d5/02c52d867e43048741f5',
             'constant': '/mnt/mfs/mlstorage-experiments/cwx17/69/e5/02c52d867e43a50682f5',
             'noise': '/mnt/mfs/mlstorage-experiments/cwx17/e9/e5/02279d802d3ad7e382f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/99/d5/02812baa4f7050ac41f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/20/e5/02c52d867e430d6b41f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/81/e5/02279d802d3ac88a41f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/71/e5/02279d802d3a817a41f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/79/d5/02812baa4f70048741f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/f1/f5/02279d802d3adc3ce2f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/60/f5/02c52d867e431b2ce2f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -488,16 +501,18 @@ def main():
                     svhn_r2 = permutation_test(svhn_test_flow, config.mixed_ratio2)
 
                     loop.collect_metrics(r1_histogram=plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
-                             ['red', 'salmon', 'green', 'lightgreen'],
-                             [config.in_dataset + ' r1', config.in_dataset + ' r2',
-                              config.out_dataset + ' r1', config.out_dataset + ' r2'], 'log(bit/dims)',
-                             'r1_histogram', auc_pair=(0, 2)))
+                                                               ['red', 'salmon', 'green', 'lightgreen'],
+                                                               [config.in_dataset + ' r1', config.in_dataset + ' r2',
+                                                                config.out_dataset + ' r1', config.out_dataset + ' r2'],
+                                                               'log(bit/dims)',
+                                                               'r1_histogram', auc_pair=(0, 2)))
 
                     loop.collect_metrics(r2_histogram=plot_fig([cifar_r1, cifar_r2, svhn_r1, svhn_r2],
-                             ['red', 'salmon', 'green', 'lightgreen'],
-                             [config.in_dataset + ' r1', config.in_dataset + ' r2',
-                              config.out_dataset + ' r1', config.out_dataset + ' r2'], 'log(bit/dims)',
-                             'r2_histogram', auc_pair=(1, 3)))
+                                                               ['red', 'salmon', 'green', 'lightgreen'],
+                                                               [config.in_dataset + ' r1', config.in_dataset + ' r2',
+                                                                config.out_dataset + ' r1', config.out_dataset + ' r2'],
+                                                               'log(bit/dims)',
+                                                               'r2_histogram', auc_pair=(1, 3)))
 
                     loop.collect_metrics(r1_r2_histogram=plot_fig(
                         [cifar_r1 - cifar_r2, svhn_r1 - svhn_r2],
@@ -509,17 +524,15 @@ def main():
 
                     make_diagram(loop,
                                  ele_test_ll,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 [cifar_test_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='log_prob_with_batch_norm_histogram'
                                  )
 
                     make_diagram(loop,
                                  ele_eval_ll,
-                                 [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow], input_x,
-                                 names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                        config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                                 [cifar_test_flow, svhn_test_flow], input_x,
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='log_prob_without_batch_norm_histogram'
                                  )
 

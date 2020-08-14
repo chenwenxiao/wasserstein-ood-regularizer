@@ -119,7 +119,12 @@ class ExperimentConfig(mltk.Config):
 def main():
     with mltk.Experiment(ExperimentConfig, args=sys.argv[1:]) as exp, \
             T.use_device(T.first_gpu_device()):
-        exp.make_dirs('plotting')
+        while True:
+            try:
+                exp.make_dirs('plotting')
+                break
+            except Exception:
+                pass
         config = exp.config
         # prepare for training and testing data
         config.in_dataset = DataSetConfig(name=config.in_dataset)
@@ -128,7 +133,8 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         if config.count_experiment:
-            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments',
+                      'a') as f:
                 f.write(exp.abspath("") + '\n')
                 f.close()
 
@@ -145,6 +151,8 @@ def main():
             'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/d9/d5/02812baa4f70b68951f5',
             'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/e1/e5/02279d802d3ad38f51f5',
             'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/60/e5/02c52d867e4360ae51f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/a2/f5/02279d802d3aa24a03f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/92/f5/02279d802d3a3c3a03f5',
         }
         print(experiment_dict)
         if config.in_dataset.name in experiment_dict:
@@ -293,9 +301,8 @@ def main():
 
                 make_diagram_torch(
                     loop, eval_Mahalanobis,
-                    [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                    names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                           config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                    [cifar_test_flow, svhn_test_flow],
+                    names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                     fig_name='Mahalanobis_{}_histogram'.format(magnitude)
                 )
 
@@ -333,25 +340,22 @@ def main():
 
             make_diagram_torch(
                 loop, eval_entropy,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='entropy_histogram'
             )
 
             make_diagram_torch(
                 loop, lambda x: -eval_entropy(x),
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='negative_entropy_histogram'
             )
 
             make_diagram_torch(
                 loop, eval_odin,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='odin_histogram'
             )
 

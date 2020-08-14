@@ -270,11 +270,17 @@ def main():
     # open the result object and prepare for result directories
     results = MLResults(config.result_dir)
     results.save_config(config)  # save experiment settings for review
-    results.make_dirs('plotting/sample', exist_ok=True)
-    results.make_dirs('plotting/z_plot', exist_ok=True)
-    results.make_dirs('plotting/train.reconstruct', exist_ok=True)
-    results.make_dirs('plotting/test.reconstruct', exist_ok=True)
-    results.make_dirs('train_summary', exist_ok=True)
+    while True:
+        try:
+            results.make_dirs('plotting/sample', exist_ok=True)
+            results.make_dirs('plotting/z_plot', exist_ok=True)
+            results.make_dirs('plotting/train.reconstruct', exist_ok=True)
+            results.make_dirs('plotting/test.reconstruct', exist_ok=True)
+            results.make_dirs('train_summary', exist_ok=True)
+            results.make_dirs('checkpoint/checkpoint', exist_ok=True)
+            break
+        except Exception:
+            pass
 
     if config.count_experiment:
         with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
@@ -422,7 +428,14 @@ def main():
             'noise': '/mnt/mfs/mlstorage-experiments/cwx17/7f/d5/02732c28dc8d986652f5',
             'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/77/e5/02c52d867e43986652f5',
             'constant': '/mnt/mfs/mlstorage-experiments/cwx17/6d/d5/02812baa4f70986652f5',
-            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/f7/e5/02279d802d3a986652f5'
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/f7/e5/02279d802d3a986652f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/5f/d5/02279d802d3aca8921f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/da/d5/02732c28dc8d396711f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/2f/d5/02279d802d3a396711f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/88/d5/02812baa4f70396711f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/ca/d5/02732c28dc8d396711f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/30/f5/02c52d867e434290e2f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/25/e5/02732c28dc8d4290e2f5'
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
