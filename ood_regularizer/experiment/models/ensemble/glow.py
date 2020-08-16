@@ -132,7 +132,8 @@ def main():
         svhn_train_complexity, svhn_test_complexity = load_complexity(config.out_dataset.name, config.compressor)
 
         if config.count_experiment:
-            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments', 'a') as f:
+            with open('/home/cwx17/research/ml-workspace/projects/wasserstein-ood-regularizer/count_experiments',
+                      'a') as f:
                 f.write(exp.abspath("") + '\n')
                 f.close()
 
@@ -236,35 +237,27 @@ def main():
                 return -np.var(arrays, axis=0)
 
             loop.add_metrics(bpd_waic_histogram=plot_fig(
-                data_list=[get_bpd_waic(final_cifar_train_ll), get_bpd_waic(final_cifar_test_ll),
-                           get_bpd_waic(final_svhn_train_ll), get_bpd_waic(final_svhn_test_ll)],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                data_list=[get_bpd_waic(final_cifar_test_ll), get_bpd_waic(final_svhn_test_ll)],
+                color_list=['red', 'green'],
+                label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 x_label='bits/dim', fig_name='bpd_waic_histogram'))
 
             loop.add_metrics(ll_waic_histogram=plot_fig(
-                data_list=[get_ll_waic(final_cifar_train_ll), get_ll_waic(final_cifar_test_ll),
-                           get_ll_waic(final_svhn_train_ll), get_ll_waic(final_svhn_test_ll)],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                data_list=[get_ll_waic(final_cifar_test_ll), get_ll_waic(final_svhn_test_ll)],
+                color_list=['red', 'green'],
+                label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 x_label='bits/dim', fig_name='ll_waic_histogram'))
 
             loop.add_metrics(mean_log_prob_histogram=plot_fig(
-                data_list=[get_mean(final_cifar_train_ll), get_mean(final_cifar_test_ll),
-                           get_mean(final_svhn_train_ll), get_mean(final_svhn_test_ll)],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                data_list=[get_mean(final_cifar_test_ll), get_mean(final_svhn_test_ll)],
+                color_list=['red', 'green'],
+                label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 x_label='bits/dim', fig_name='mean_log_prob_histogram'))
 
             loop.add_metrics(var_log_prob_histogram=plot_fig(
-                data_list=[get_var(final_cifar_train_ll), get_var(final_cifar_test_ll),
-                           get_var(final_svhn_train_ll), get_var(final_svhn_test_ll)],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                data_list=[get_var(final_cifar_test_ll), get_var(final_svhn_test_ll)],
+                color_list=['red', 'green'],
+                label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 x_label='bits/dim', fig_name='var_log_prob_histogram'))
 
 

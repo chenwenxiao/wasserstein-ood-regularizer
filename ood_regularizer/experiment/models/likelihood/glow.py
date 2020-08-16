@@ -201,71 +201,69 @@ def main():
                 fig_name='log_prob_histogram'
             )
 
-            def t_perm(base, another_arrays=None):
-                base = sorted(base)
-                N = len(base)
-                return_arrays = []
-                for array in another_arrays:
-                    return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
-                return return_arrays
+            if config.self_ood:
+                def t_perm(base, another_arrays=None):
+                    base = sorted(base)
+                    N = len(base)
+                    return_arrays = []
+                    for array in another_arrays:
+                        return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
+                    return return_arrays
 
-            [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
-                cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
+                [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
+                    cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
 
-            loop.add_metrics(T_perm_histogram=plot_fig(
-                data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                x_label='bits/dim', fig_name='T_perm_histogram'))
+                loop.add_metrics(T_perm_histogram=plot_fig(
+                    data_list=[cifar_test_nll_t, svhn_test_nll_t],
+                    color_list=['red', 'green'],
+                    label_list=[config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                    x_label='bits/dim', fig_name='T_perm_histogram'))
 
-            loop.add_metrics(ll_with_complexity_histogram=plot_fig(
-                data_list=[cifar_train_ll + x_train_complexity, cifar_test_ll + x_test_complexity,
-                           svhn_train_ll + svhn_train_complexity, svhn_test_ll + svhn_test_complexity],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                            config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
-                x_label='bits/dim', fig_name='ll_with_complexity_histogram'))
+                loop.add_metrics(ll_with_complexity_histogram=plot_fig(
+                    data_list=[cifar_test_ll + x_test_complexity, svhn_test_ll + svhn_test_complexity],
+                    color_list=['red', 'green'],
+                    label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                    x_label='bits/dim', fig_name='ll_with_complexity_histogram'))
 
-            cifar_test_det, svhn_test_det = make_diagram_torch(
-                loop, eval_log_det,
-                [cifar_test_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
-                fig_name='log_det_histogram')
+                cifar_test_det, svhn_test_det = make_diagram_torch(
+                    loop, eval_log_det,
+                    [cifar_test_flow, svhn_test_flow],
+                    names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                    fig_name='log_det_histogram')
 
-            def eval_grad_norm(x):
-                x = T.from_numpy(x)
-                x.requires_grad = True
-                ll, outputs = model(x)
-                gradients = autograd.grad(ll, x, grad_outputs=torch.ones(ll.size()).cuda())[0]
-                grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
-                return T.to_numpy(grad_norm)
+                def eval_grad_norm(x):
+                    x = T.from_numpy(x)
+                    x.requires_grad = True
+                    ll, outputs = model(x)
+                    gradients = autograd.grad(ll, x, grad_outputs=torch.ones(ll.size()).cuda())[0]
+                    grad_norm = gradients.view(gradients.size()[0], -1).norm(2, 1)
+                    return T.to_numpy(grad_norm)
 
-            theta_params = tk.layers.iter_parameters(model)
+                theta_params = tk.layers.iter_parameters(model)
 
-            def eval_grad_theta(x):
-                x = T.from_numpy(x)
-                x.requires_grad = True
-                ll, outputs = model(x)
-                gradients = autograd.grad(ll, theta_params, grad_outputs=torch.ones(ll.size()).cuda())
-                grad_norm = 0
-                for grad in gradients:
-                    grad_norm = grad_norm + grad.norm(2)
-                grad_norm = T.expand_dim(grad_norm, axis=-1)
+                def eval_grad_theta(x):
+                    x = T.from_numpy(x)
+                    x.requires_grad = True
+                    ll, outputs = model(x)
+                    gradients = autograd.grad(ll, theta_params, grad_outputs=torch.ones(ll.size()).cuda())
+                    grad_norm = 0
+                    for grad in gradients:
+                        grad_norm = grad_norm + grad.norm(2)
+                    grad_norm = T.expand_dim(grad_norm, axis=-1)
 
-                return T.to_numpy(grad_norm)
+                    return T.to_numpy(grad_norm)
 
-            make_diagram_torch(
-                loop, eval_grad_norm,
-                [cifar_single_test_flow, svhn_single_test_flow],
-                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
-                fig_name='grad_norm_histogram')
+                make_diagram_torch(
+                    loop, eval_grad_norm,
+                    [cifar_single_test_flow, svhn_single_test_flow],
+                    names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                    fig_name='grad_norm_histogram')
 
-            loop.add_metrics(origin_log_prob_histogram=plot_fig(
-                data_list=[cifar_test_ll - cifar_test_det, svhn_test_ll - svhn_test_det],
-                color_list=['red', 'salmon', 'green', 'lightgreen'],
-                label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
-                x_label='bits/dim', fig_name='origin_log_prob_histogram'))
+                loop.add_metrics(origin_log_prob_histogram=plot_fig(
+                    data_list=[cifar_test_ll - cifar_test_det, svhn_test_ll - svhn_test_det],
+                    color_list=['red', 'green'],
+                    label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                    x_label='bits/dim', fig_name='origin_log_prob_histogram'))
 
             if config.self_ood and restore_checkpoint is not None:
                 model = torch.load(restore_checkpoint + '/omega_model.pkl')

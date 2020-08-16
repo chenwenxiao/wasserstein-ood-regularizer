@@ -409,8 +409,10 @@ def main():
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
     reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True).map(normalize)
-    reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
-    reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True).map(
+        normalize)
+    reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True).map(
+        normalize)
 
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
@@ -502,35 +504,27 @@ def main():
                         return -np.var(arrays, axis=0)
 
                     loop.collect_metrics(bpd_waic_histogram=plot_fig(
-                        data_list=[get_bpd_waic(final_cifar_train_ll), get_bpd_waic(final_cifar_test_ll),
-                                   get_bpd_waic(final_svhn_train_ll), get_bpd_waic(final_svhn_test_ll)],
-                        color_list=['red', 'salmon', 'green', 'lightgreen'],
-                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        data_list=[get_bpd_waic(final_cifar_test_ll), get_bpd_waic(final_svhn_test_ll)],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                         x_label='bits/dim', fig_name='bpd_waic_histogram'))
 
                     loop.collect_metrics(ll_waic_histogram=plot_fig(
-                        data_list=[get_ll_waic(final_cifar_train_ll), get_ll_waic(final_cifar_test_ll),
-                                   get_ll_waic(final_svhn_train_ll), get_ll_waic(final_svhn_test_ll)],
-                        color_list=['red', 'salmon', 'green', 'lightgreen'],
-                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        data_list=[get_ll_waic(final_cifar_test_ll), get_ll_waic(final_svhn_test_ll)],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                         x_label='bits/dim', fig_name='ll_waic_histogram'))
 
                     loop.collect_metrics(mean_log_prob_histogram=plot_fig(
-                        data_list=[get_mean(final_cifar_train_ll), get_mean(final_cifar_test_ll),
-                                   get_mean(final_svhn_train_ll), get_mean(final_svhn_test_ll)],
-                        color_list=['red', 'salmon', 'green', 'lightgreen'],
-                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        data_list=[get_mean(final_cifar_test_ll), get_mean(final_svhn_test_ll)],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                         x_label='bits/dim', fig_name='mean_log_prob_histogram'))
 
                     loop.collect_metrics(var_log_prob_histogram=plot_fig(
-                        data_list=[get_var(final_cifar_train_ll), get_var(final_cifar_test_ll),
-                                   get_var(final_svhn_train_ll), get_var(final_svhn_test_ll)],
-                        color_list=['red', 'salmon', 'green', 'lightgreen'],
-                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        data_list=[get_var(final_cifar_test_ll), get_var(final_svhn_test_ll)],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                         x_label='bits/dim', fig_name='var_log_prob_histogram'))
                     loop.print_logs()
                     break

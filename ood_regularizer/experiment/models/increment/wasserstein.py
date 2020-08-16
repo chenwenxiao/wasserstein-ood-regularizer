@@ -432,6 +432,25 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/de/d5/02732c28dc8d103d22f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/26/e5/02c52d867e43103d22f5',
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/36/e5/02c52d867e43103d22f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/46/e5/02c52d867e43103d22f5',
+            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/fe/d5/02732c28dc8df9c132f5',
+            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/b6/e5/02279d802d3a19a232f5',
+            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/c6/e5/02279d802d3aede332f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/86/e5/02c52d867e43e2e432f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/96/e5/02c52d867e43a22632f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/a6/e5/02c52d867e431f3732f5',
+            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/d6/e5/02279d802d3a485932f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/b6/e5/02c52d867e4371ab32f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/80/f5/02279d802d3adcc9d2f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/60/e5/02812baa4f70dcc9d2f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/90/f5/02279d802d3adcc9d2f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/a0/f5/02279d802d3adcc9d2f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/b0/f5/02279d802d3adcc9d2f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/e4/e5/02732c28dc8d095ad2f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/c0/f5/02279d802d3a5a5ad2f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -486,7 +505,8 @@ def main():
                         # repeat_epoch will determine how much time it generates
 
                         for pse_epoch in range(repeat_epoch):
-                            mixed_index = np.random.randint(0, min(i + config.mixed_train_skip, len(mixed_array)),
+                            mixed_index = np.random.randint(i if config.retrain_for_batch else 0,
+                                                            min(len(mixed_array), i + config.mixed_train_skip),
                                                             config.batch_size)
                             [y] = normalize(mixed_array[mixed_index])
                             # print(batch_x.shape)
@@ -532,12 +552,11 @@ def main():
                     mixed_kl = np.concatenate(mixed_kl)
                     cifar_kl = mixed_kl[index < len(x_test)]
                     svhn_kl = mixed_kl[index >= len(x_test)]
-                    AUC = plot_fig([cifar_kl, svhn_kl],
+
+                    loop.collect_metrics(kl_histogram=plot_fig([cifar_kl, svhn_kl],
                                    ['red', 'green'],
                                    [config.in_dataset + ' Test', config.out_dataset + ' Test'], 'log(bit/dims)',
-                                   'kl_histogram', auc_pair=(0, 1))
-
-                    loop.collect_metrics(AUC=AUC)
+                                   'kl_histogram', auc_pair=(0, 1)))
                     loop.print_logs()
                     break
 

@@ -419,30 +419,39 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
-                    cifar_train_nll, svhn_train_nll, cifar_test_nll, svhn_test_nll = make_diagram(
-                        loop, ele_test_ll, [cifar_train_flow, svhn_train_flow, cifar_test_flow, svhn_test_flow],
-                        input_x, names=[config.in_dataset + ' Train', config.out_dataset + ' Train',
-                                        config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram'
-                    )
+                    if config.self_ood:
+                        cifar_train_nll, svhn_train_nll, cifar_test_nll, svhn_test_nll = make_diagram(
+                            loop, ele_test_ll, [cifar_train_flow, svhn_train_flow, cifar_test_flow, svhn_test_flow],
+                            input_x, names=[config.in_dataset + ' Train', config.out_dataset + ' Train',
+                                            config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                            fig_name='log_prob_histogram'
+                        )
 
-                    def t_perm(base, another_arrays=None):
-                        base = sorted(base)
-                        N = len(base)
-                        return_arrays = []
-                        for array in another_arrays:
-                            return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
-                        return return_arrays
+                        def t_perm(base, another_arrays=None):
+                            base = sorted(base)
+                            N = len(base)
+                            return_arrays = []
+                            for array in another_arrays:
+                                return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
+                            return return_arrays
 
-                    [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
-                        cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
+                        [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
+                            cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
 
-                    plot_fig(data_list=[cifar_train_nll_t, svhn_train_nll_t, cifar_test_nll_t, svhn_test_nll_t],
-                             color_list=['red', 'green', 'salmon', 'lightgreen'],
-                             label_list=[config.in_dataset + ' Train', config.out_dataset + ' Train',
-                                         config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                             x_label='bits/dim',
-                             fig_name='T_perm_histogram')
+                        plot_fig(data_list=[cifar_test_nll_t, svhn_test_nll_t],
+                                 color_list=['red', 'green'],
+                                 label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                 x_label='bits/dim',
+                                 fig_name='T_perm_histogram')
+
+                        make_diagram(loop,
+                                     ele_test_ll,
+                                     [cifar_test_flow, svhn_test_flow],
+                                     [input_x],
+                                     names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                     fig_name='ll_with_complexity_histogram',
+                                     addtion_data=[x_test_complexity, svhn_test_complexity]
+                                     )
 
                     # make_diagram(loop, grad_x_norm,
                     #              [cifar_train_flow,
@@ -469,15 +478,6 @@ def main():
                                  [cifar_test_flow, svhn_test_flow], input_x,
                                  names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='log_prob_mixed_histogram'
-                                 )
-
-                    make_diagram(loop,
-                                 ele_test_ll,
-                                 [cifar_test_flow, svhn_test_flow],
-                                 [input_x],
-                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                                 fig_name='ll_with_complexity_histogram',
-                                 addtion_data=[x_test_complexity, svhn_test_complexity]
                                  )
 
                     make_diagram(loop,

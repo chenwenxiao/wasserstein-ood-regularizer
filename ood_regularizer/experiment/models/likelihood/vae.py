@@ -637,47 +637,113 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
-                    cifar_train_nll, svhn_train_nll, cifar_test_nll, svhn_test_nll = make_diagram(
-                        loop, ele_test_ll, [cifar_train_flow, svhn_train_flow, cifar_test_flow, svhn_test_flow],
-                        [input_x, input_y],
-                        names=[config.in_dataset + ' Train', config.out_dataset + ' Train',
-                               config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                        fig_name='log_prob_histogram'
-                    )
+                    if config.self_ood:
+                        cifar_train_nll, svhn_train_nll, cifar_test_nll, svhn_test_nll = make_diagram(
+                            loop, ele_test_ll, [cifar_train_flow, svhn_train_flow, cifar_test_flow, svhn_test_flow],
+                            [input_x, input_y],
+                            names=[config.in_dataset + ' Train', config.out_dataset + ' Train',
+                                   config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                            fig_name='log_prob_histogram'
+                        )
 
-                    def t_perm(base, another_arrays=None):
-                        base = sorted(base)
-                        N = len(base)
-                        return_arrays = []
-                        for array in another_arrays:
-                            return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
-                        return return_arrays
+                        def t_perm(base, another_arrays=None):
+                            base = sorted(base)
+                            N = len(base)
+                            return_arrays = []
+                            for array in another_arrays:
+                                return_arrays.append(-np.abs(np.searchsorted(base, array) - N // 2))
+                            return return_arrays
 
-                    [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
-                        cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
+                        [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
+                            cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
 
-                    loop.collect_metrics(T_perm_histogram=plot_fig(
-                        data_list=[cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t],
-                        color_list=['red', 'salmon', 'green', 'lightgreen'],
-                        label_list=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                                    config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                        x_label='bits/dim',
-                        fig_name='T_perm_histogram'))
+                        loop.collect_metrics(T_perm_histogram=plot_fig(
+                            data_list=[cifar_test_nll_t, svhn_test_nll_t],
+                            color_list=['red', 'green'],
+                            label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                            x_label='bits/dim',
+                            fig_name='T_perm_histogram'))
 
-                    # make_diagram(
-                    #     loop, sum_counter, [cifar_single_train_flow, cifar_single_test_flow, svhn_single_train_flow, svhn_single_test_flow],
-                    #     [input_x, input_y],
-                    #     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
-                    #            config.out_dataset + ' Train', config.out_dataset + ' Test'],
-                    #     fig_name='grad_theta_norm_histogram'
-                    # )
+                        # make_diagram(
+                        #     loop, sum_counter, [cifar_single_train_flow, cifar_single_test_flow, svhn_single_train_flow, svhn_single_test_flow],
+                        #     [input_x, input_y],
+                        #     names=[config.in_dataset + ' Train', config.in_dataset + ' Test',
+                        #            config.out_dataset + ' Train', config.out_dataset + ' Test'],
+                        #     fig_name='grad_theta_norm_histogram'
+                        # )
 
-                    make_diagram(loop, grad_x_norm,
-                                 [cifar_test_flow, svhn_test_flow],
-                                 [input_x, input_y],
-                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                                 fig_name='grad_norm_histogram'
-                                 )
+                        make_diagram(loop, grad_x_norm,
+                                     [cifar_test_flow, svhn_test_flow],
+                                     [input_x, input_y],
+                                     names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                     fig_name='grad_norm_histogram'
+                                     )
+
+                        make_diagram(loop,
+                                     ele_test_recon,
+                                     [cifar_test_flow, svhn_test_flow],
+                                     [input_x, input_y],
+                                     names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                     fig_name='recon_histogram'
+                                     )
+
+                        make_diagram(loop,
+                                     ele_test_lb,
+                                     [cifar_test_flow, svhn_test_flow],
+                                     [input_x, input_y],
+                                     names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                     fig_name='elbo_histogram'
+                                     )
+
+                        make_diagram(loop,
+                                     ele_test_lb - ele_test_recon,
+                                     [cifar_test_flow, svhn_test_flow],
+                                     [input_x, input_y],
+                                     names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                     fig_name='elbo-recon_histogram'
+                                     )
+
+                        make_diagram(loop,
+                                     ele_test_ll,
+                                     [cifar_test_flow, svhn_test_flow],
+                                     [input_x, input_y],
+                                     names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                     fig_name='ll_with_complexity_histogram',
+                                     addtion_data=[x_test_complexity, svhn_test_complexity]
+                                     )
+
+                        def get_mcmc_and_origin(origin_flow):
+                            mcmc_recon_list = []
+                            mcmc_ll_list = []
+                            for [origin, _] in origin_flow:
+                                mcmc_sample = origin
+                                for i in range(config.mcmc_times):
+                                    mcmc_sample = session.run(ele_test_recon_sample, feed_dict={
+                                        input_x: mcmc_sample
+                                    })
+                                mcmc_recon, mcmc_ll = session.run([ele_test_recon, ele_test_ll], feed_dict={
+                                    input_x: mcmc_sample,
+                                    input_y: origin
+                                })
+                                mcmc_recon_list.append(mcmc_recon)
+                                mcmc_ll_list.append(mcmc_ll)
+                            return np.concatenate(mcmc_recon_list, axis=0), np.concatenate(mcmc_ll_list, axis=0)
+
+                        mcmc_metrics = [get_mcmc_and_origin(cifar_test_flow), get_mcmc_and_origin(svhn_test_flow)]
+
+                        loop.collect_metrics(mcmc_recon_histogram=plot_fig(
+                            data_list=[mcmc_metrics[0][0], mcmc_metrics[1][0]],
+                            color_list=['red', 'green'],
+                            label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                            x_label='bits/dim',
+                            fig_name='mcmc_recon_histogram'))
+
+                        loop.collect_metrics(mcmc_ll_histogram=plot_fig(
+                            data_list=[mcmc_metrics[0][1], mcmc_metrics[1][1]],
+                            color_list=['red', 'green'],
+                            label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                            x_label='bits/dim',
+                            fig_name='mcmc_ll_histogram'))
 
                     make_diagram(loop,
                                  ele_test_omega_ll,
@@ -688,78 +754,12 @@ def main():
                                  )
 
                     make_diagram(loop,
-                                 ele_test_recon,
-                                 [cifar_test_flow, svhn_test_flow],
-                                 [input_x, input_y],
-                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                                 fig_name='recon_histogram'
-                                 )
-
-                    make_diagram(loop,
-                                 ele_test_lb,
-                                 [cifar_test_flow, svhn_test_flow],
-                                 [input_x, input_y],
-                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                                 fig_name='elbo_histogram'
-                                 )
-
-                    make_diagram(loop,
-                                 ele_test_lb - ele_test_recon,
-                                 [cifar_test_flow, svhn_test_flow],
-                                 [input_x, input_y],
-                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                                 fig_name='elbo-recon_histogram'
-                                 )
-
-                    make_diagram(loop,
-                                 ele_test_ll,
-                                 [cifar_test_flow, svhn_test_flow],
-                                 [input_x, input_y],
-                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                                 fig_name='ll_with_complexity_histogram',
-                                 addtion_data=[x_test_complexity, svhn_test_complexity]
-                                 )
-
-                    make_diagram(loop,
                                  -ele_test_kl,
                                  [cifar_test_flow, svhn_test_flow],
                                  [input_x, input_y],
                                  names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='kl_histogram'
                                  )
-
-                    def get_mcmc_and_origin(origin_flow):
-                        mcmc_recon_list = []
-                        mcmc_ll_list = []
-                        for [origin, _] in origin_flow:
-                            mcmc_sample = origin
-                            for i in range(config.mcmc_times):
-                                mcmc_sample = session.run(ele_test_recon_sample, feed_dict={
-                                    input_x: mcmc_sample
-                                })
-                            mcmc_recon, mcmc_ll = session.run([ele_test_recon, ele_test_ll], feed_dict={
-                                input_x: mcmc_sample,
-                                input_y: origin
-                            })
-                            mcmc_recon_list.append(mcmc_recon)
-                            mcmc_ll_list.append(mcmc_ll)
-                        return np.concatenate(mcmc_recon_list, axis=0), np.concatenate(mcmc_ll_list, axis=0)
-
-                    mcmc_metrics = [get_mcmc_and_origin(cifar_test_flow), get_mcmc_and_origin(svhn_test_flow)]
-
-                    loop.collect_metrics(mcmc_recon_histogram=plot_fig(
-                        data_list=[mcmc_metrics[0][0], mcmc_metrics[1][0]],
-                        color_list=['red', 'green'],
-                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                        x_label='bits/dim',
-                        fig_name='mcmc_recon_histogram'))
-
-                    loop.collect_metrics(mcmc_ll_histogram=plot_fig(
-                        data_list=[mcmc_metrics[0][1], mcmc_metrics[1][1]],
-                        color_list=['red', 'green'],
-                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                        x_label='bits/dim',
-                        fig_name='mcmc_ll_histogram'))
 
                     loop.print_logs()
                     break
