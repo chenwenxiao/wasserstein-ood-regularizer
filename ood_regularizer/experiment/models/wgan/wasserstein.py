@@ -53,6 +53,7 @@ class ExpConfig(spt.Config):
     mixed_ratio = 1.0
     mutation_rate = 0.1
     in_dataset_test_ratio = 1.0
+    pretrain = False
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -491,6 +492,8 @@ def main():
                                  names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='origin_log_prob_histogram'
                                  )
+                    if not config.pretrain:
+                        session.run(tf.global_variables_initializer())
 
                 if epoch == config.max_epoch + 1:
                     make_diagram(loop,

@@ -46,10 +46,11 @@ class ExperimentConfig(mltk.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 64
-    mixed_train_skip = 1024
+    mixed_train_epoch = 128
+    mixed_train_skip = 4096
     dynamic_epochs = False
     retrain_for_batch = False
+    pretrain = False
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
@@ -200,6 +201,10 @@ def main():
 
             mixed_ll = get_ele_torch(eval_ll, mixed_stream)
 
+            if not config.pretrain:
+                model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
+            torch.save(model, 'last.pkl')
+
             for i in range(0, len(mixed_array), config.mixed_train_skip):
                 def data_generator():
                     mixed_index = np.random.randint(i if config.retrain_for_batch else 0,
@@ -231,7 +236,7 @@ def main():
                 exp.config.train.max_epoch = repeat_epoch
                 exp.config.train.test_epoch_freq = exp.config.train.max_epoch + 1
                 if config.retrain_for_batch:
-                    model = torch.load('model.pkl')
+                    model = torch.load('last.pkl')
                 train_model(exp, model, svhn_train_dataset, None,
                             DataStream.generator(data_generator))
 

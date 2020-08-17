@@ -27,6 +27,7 @@ from ood_regularizer.experiment.models.utils import get_mixed_array
 from ood_regularizer.experiment.utils import make_diagram, get_ele, plot_fig
 import os
 
+
 class ExpConfig(spt.Config):
     # model parameters
     z_dim = 256
@@ -47,8 +48,8 @@ class ExpConfig(spt.Config):
     min_distance = 0.2
     use_transductive = True  # can model use the data in SVHN's and CIFAR's testing set
     mixed_train = False
-    mixed_train_epoch = 1024
-    mixed_train_skip = 64
+    mixed_train_epoch = 128
+    mixed_train_skip = 4096
     mixed_mean_times = 10
     dynamic_epochs = False
     retrain_for_batch = False
@@ -57,6 +58,7 @@ class ExpConfig(spt.Config):
     mixed_ratio = 1.0
     mutation_rate = 0.1
     in_dataset_test_ratio = 1.0
+    pretrain = False
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -488,6 +490,8 @@ def main():
                 if epoch > config.max_epoch:
                     mixed_kl = []
                     # if restore_checkpoint is not None:
+                    if not config.pretrain:
+                        session.run(tf.global_variables_initializer())
                     loop.make_checkpoint()
                     print('Starting testing')
                     for i in range(0, len(mixed_array), config.mixed_train_skip):
@@ -554,9 +558,10 @@ def main():
                     svhn_kl = mixed_kl[index >= len(x_test)]
 
                     loop.collect_metrics(kl_histogram=plot_fig([cifar_kl, svhn_kl],
-                                   ['red', 'green'],
-                                   [config.in_dataset + ' Test', config.out_dataset + ' Test'], 'log(bit/dims)',
-                                   'kl_histogram', auc_pair=(0, 1)))
+                                                               ['red', 'green'],
+                                                               [config.in_dataset + ' Test',
+                                                                config.out_dataset + ' Test'], 'log(bit/dims)',
+                                                               'kl_histogram', auc_pair=(0, 1)))
                     loop.print_logs()
                     break
 

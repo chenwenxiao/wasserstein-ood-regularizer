@@ -55,7 +55,7 @@ class ExpConfig(spt.Config):
     mutation_rate = 0.1
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
-    pretrain = True
+    pretrain = False
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'

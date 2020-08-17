@@ -673,5 +673,6 @@ def get_mixed_array(config, cifar_train, cifar_test, svhn_train, svhn_test, norm
         limit_nummber = int(len(shuffle_index) * config.mixed_ratio)
         print(limit_nummber)
         shuffle_index = shuffle_index[:limit_nummber]
+        # shuffle_index = np.repeat(shuffle_index, int(1.0 / config.mixed_ratio))
         mixed_array = mixed_array[shuffle_index]
     return mixed_array

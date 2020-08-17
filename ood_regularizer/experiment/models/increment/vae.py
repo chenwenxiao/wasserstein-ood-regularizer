@@ -47,11 +47,12 @@ class ExpConfig(spt.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 64
-    mixed_train_skip = 1024
+    mixed_train_epoch = 128
+    mixed_train_skip = 4096
     dynamic_epochs = False
     retrain_for_batch = False
     in_dataset_test_ratio = 1.0
+    pretrain = False
     distill_ratio = 1.0
 
     in_dataset = 'cifar10'
@@ -462,6 +463,8 @@ def main():
                                        input_x)
                     mixed_kl = []
                     # if restore_checkpoint is not None:
+                    if not config.pretrain:
+                        session.run(tf.global_variables_initializer())
                     loop.make_checkpoint()
                     print('Starting testing')
                     for i in range(0, len(mixed_array), config.mixed_train_skip):
