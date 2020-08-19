@@ -51,6 +51,7 @@ class ExperimentConfig(mltk.Config):
     dynamic_epochs = False
     retrain_for_batch = False
     pretrain = False
+    stand_weight = 0.1
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 
@@ -201,6 +202,16 @@ def main():
 
             mixed_ll = get_ele_torch(eval_ll, mixed_stream)
 
+            def stand(base, another_arrays=None):
+                mean, std = np.mean(base), np.std(base)
+                return_arrays = []
+                for array in another_arrays:
+                    return_arrays.append(-np.abs((array - mean) / std) * config.stand_weight)
+                return return_arrays
+
+            cifar_train_nll = get_ele_torch(eval_ll, cifar_train_flow)
+            [mixed_stand] = stand(cifar_train_nll, [mixed_ll])
+
             if not config.pretrain:
                 model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
             torch.save(model, 'last.pkl')
@@ -254,7 +265,15 @@ def main():
                                                    [config.in_dataset.name + ' Test',
                                                     config.out_dataset.name + ' Test'],
                                                    'log(bit/dims)',
-                                                   'kl_histogram', auc_pair=(0, 1)))
+                                                   'kl_histogram'))
+            mixed_kl = mixed_kl - mixed_stand
+            cifar_kl = mixed_kl[index < len(x_test)]
+            svhn_kl = mixed_kl[index >= len(x_test)]
+            loop.add_metrics(kl_with_stand_histogram=plot_fig([-cifar_kl, -svhn_kl],
+                                                              ['red', 'green'],
+                                                              [config.in_dataset.name + ' Test',
+                                                               config.out_dataset.name + ' Test'], 'log(bit/dims)',
+                                                              'kl_with_stand_histogram'))
 
 
 if __name__ == '__main__':

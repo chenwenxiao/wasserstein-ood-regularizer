@@ -197,9 +197,7 @@ def main():
                 bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
                 return T.to_numpy(bpd)
 
-            final_cifar_train_ll = []
             final_cifar_test_ll = []
-            final_svhn_train_ll = []
             final_svhn_test_ll = []
             for current_class in range(0, config.ensemble_times):
                 if restore_dir is None:
@@ -207,9 +205,7 @@ def main():
                 else:
                     model = torch.load(restore_dir + '/model_{}.pkl'.format(current_class))
 
-                final_cifar_train_ll.append(get_ele_torch(eval_ll, cifar_train_flow))
                 final_cifar_test_ll.append(get_ele_torch(eval_ll, cifar_test_flow))
-                final_svhn_train_ll.append(get_ele_torch(eval_ll, svhn_train_flow))
                 final_svhn_test_ll.append(get_ele_torch(eval_ll, svhn_test_flow))
 
             config.x_shape = x_train.shape[1:]

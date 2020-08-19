@@ -348,17 +348,13 @@ def main():
             for epoch in epoch_iterator:
 
                 if epoch == config.max_epoch + 1:
-                    final_cifar_train_ll = []
                     final_cifar_test_ll = []
-                    final_svhn_train_ll = []
                     final_svhn_test_ll = []
                     for current_class in range(0, config.ensemble_times):
                         pse_epoch = config.warm_up_start + (current_class + 1) * config.test_epoch_freq
                         loop._checkpoint_saver.restore(os.path.join(
                             restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(pse_epoch)))
-                        final_cifar_train_ll.append(get_ele(ele_test_ll, cifar_train_flow, input_x))
                         final_cifar_test_ll.append(get_ele(ele_test_ll, cifar_test_flow, input_x))
-                        final_svhn_train_ll.append(get_ele(ele_test_ll, svhn_train_flow, input_x))
                         final_svhn_test_ll.append(get_ele(ele_test_ll, svhn_test_flow, input_x))
 
                     def get_bpd_waic(arrays):

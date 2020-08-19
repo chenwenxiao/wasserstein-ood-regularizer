@@ -54,6 +54,7 @@ class ExpConfig(spt.Config):
     in_dataset_test_ratio = 1.0
     pretrain = False
     distill_ratio = 1.0
+    stand_weight = 0.1
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -461,6 +462,19 @@ def main():
                     mixed_ll = get_ele(ele_test_ll,
                                        spt.DataFlow.arrays([mixed_array], config.test_batch_size).map(normalize),
                                        input_x)
+
+                    def stand(base, another_arrays=None):
+                        mean, std = np.mean(base), np.std(base)
+                        return_arrays = []
+                        for array in another_arrays:
+                            return_arrays.append(-np.abs((array - mean) / std) * config.stand_weight)
+                        return return_arrays
+
+                    cifar_train_nll = get_ele(ele_test_ll,
+                                              spt.DataFlow.arrays([x_train], config.test_batch_size).map(normalize),
+                                              input_x)
+                    [mixed_stand] = stand(cifar_train_nll, [mixed_ll])
+
                     mixed_kl = []
                     # if restore_checkpoint is not None:
                     if not config.pretrain:
@@ -517,6 +531,14 @@ def main():
                                                                [config.in_dataset + ' Test',
                                                                 config.out_dataset + ' Test'], 'log(bit/dims)',
                                                                'kl_histogram'))
+                    mixed_kl = mixed_kl - mixed_stand
+                    cifar_kl = mixed_kl[index < len(x_test)]
+                    svhn_kl = mixed_kl[index >= len(x_test)]
+                    loop.collect_metrics(kl_with_stand_histogram=plot_fig([-cifar_kl, -svhn_kl],
+                                                               ['red', 'green'],
+                                                               [config.in_dataset + ' Test',
+                                                                config.out_dataset + ' Test'], 'log(bit/dims)',
+                                                               'kl_with_stand_histogram'))
                     loop.print_logs()
                     break
 

@@ -55,6 +55,7 @@ class ExpConfig(spt.Config):
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
     pretrain = False
+    stand_weight = 0.1
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -631,20 +632,41 @@ def main():
 
             loop.print_training_summary()
             spt.utils.ensure_variables_initialized()
+            fast_end = False
+            if config.use_transductive is False and config.out_dataset in experiment_dict and config.mixed_ratio == 1.0:
+                fast_end = True
 
             epoch_iterator = loop.iter_epochs()
             # adversarial training
             for epoch in epoch_iterator:
 
-                if epoch == config.max_epoch + 1:
+                if epoch == config.max_epoch + 1 or fast_end:
+                    cifar_train_nll, svhn_train_nll, cifar_test_nll, svhn_test_nll = make_diagram(
+                        loop, ele_test_ll, [cifar_train_flow, svhn_train_flow, cifar_test_flow, svhn_test_flow],
+                        [input_x, input_y],
+                        names=[config.in_dataset + ' Train', config.out_dataset + ' Train',
+                               config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                        fig_name='log_prob_histogram'
+                    )
+
+                    def stand(base, another_arrays=None):
+                        mean, std = np.mean(base), np.std(base)
+                        return_arrays = []
+                        for array in another_arrays:
+                            return_arrays.append(-np.abs((array - mean) / std) * config.stand_weight)
+                        return return_arrays
+
+                    [cifar_train_stand, cifar_test_stand, svhn_train_stand, svhn_test_stand] = stand(
+                        cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
+
+                    loop.collect_metrics(stand_histogram=plot_fig(
+                        data_list=[cifar_test_stand, svhn_test_stand],
+                        color_list=['red', 'green'],
+                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                        x_label='bits/dim',
+                        fig_name='stand_histogram'))
+
                     if config.self_ood:
-                        cifar_train_nll, svhn_train_nll, cifar_test_nll, svhn_test_nll = make_diagram(
-                            loop, ele_test_ll, [cifar_train_flow, svhn_train_flow, cifar_test_flow, svhn_test_flow],
-                            [input_x, input_y],
-                            names=[config.in_dataset + ' Train', config.out_dataset + ' Train',
-                                   config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                            fig_name='log_prob_histogram'
-                        )
 
                         def t_perm(base, another_arrays=None):
                             base = sorted(base)
@@ -745,20 +767,34 @@ def main():
                             x_label='bits/dim',
                             fig_name='mcmc_ll_histogram'))
 
+                    omega_op = ele_test_omega_ll
+
+                    if fast_end:
+                        restore_dir = experiment_dict[config.out_dataset] + '/checkpoint'
+                        restore_checkpoint = os.path.join(
+                            restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(config.warm_up_start))
+                        omega_op = ele_test_ll
+
                     make_diagram(loop,
-                                 ele_test_omega_ll,
-                                 [cifar_test_flow, svhn_test_flow],
-                                 [input_x, input_y],
+                                 omega_op,
+                                 [cifar_test_flow, svhn_test_flow], input_x,
                                  names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
                                  fig_name='log_prob_mixed_histogram'
                                  )
 
                     make_diagram(loop,
-                                 -ele_test_kl,
-                                 [cifar_test_flow, svhn_test_flow],
-                                 [input_x, input_y],
+                                 -omega_op,
+                                 [cifar_test_flow, svhn_test_flow], input_x,
                                  names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                                 fig_name='kl_histogram'
+                                 fig_name='kl_histogram', addtion_data=[cifar_test_nll, svhn_test_nll]
+                                 )
+                    make_diagram(loop,
+                                 -omega_op,
+                                 [cifar_test_flow, svhn_test_flow],
+                                 [input_x],
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                 fig_name='kl_with_stand_histogram',
+                                 addtion_data=[cifar_test_nll + cifar_test_stand, svhn_test_nll + svhn_test_stand]
                                  )
 
                     loop.print_logs()

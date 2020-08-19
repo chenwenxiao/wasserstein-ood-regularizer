@@ -201,6 +201,22 @@ def main():
                 fig_name='log_prob_histogram'
             )
 
+            def stand(base, another_arrays=None):
+                mean, std = np.mean(base), np.std(base)
+                return_arrays = []
+                for array in another_arrays:
+                    return_arrays.append(-np.abs((array - mean) / std) * config.stand_weight)
+                return return_arrays
+
+            [cifar_train_stand, cifar_test_stand, svhn_train_stand, svhn_test_stand] = stand(
+                cifar_train_ll, [cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll])
+
+            loop.add_metrics(stand_histogram=plot_fig(
+                data_list=[cifar_test_stand, svhn_test_stand],
+                color_list=['red', 'green'],
+                label_list=[config.out_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                x_label='bits/dim', fig_name='stand_histogram'))
+
             if config.self_ood:
                 def t_perm(base, another_arrays=None):
                     base = sorted(base)
@@ -216,7 +232,7 @@ def main():
                 loop.add_metrics(T_perm_histogram=plot_fig(
                     data_list=[cifar_test_nll_t, svhn_test_nll_t],
                     color_list=['red', 'green'],
-                    label_list=[config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                    label_list=[config.out_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                     x_label='bits/dim', fig_name='T_perm_histogram'))
 
                 loop.add_metrics(ll_with_complexity_histogram=plot_fig(
@@ -265,8 +281,15 @@ def main():
                     label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                     x_label='bits/dim', fig_name='origin_log_prob_histogram'))
 
+            fast_end = False
+            if config.use_transductive is False and config.out_dataset in experiment_dict and config.mixed_ratio == 1.0:
+                fast_end = True
+
             if config.self_ood and restore_checkpoint is not None:
                 model = torch.load(restore_checkpoint + '/omega_model.pkl')
+            elif fast_end:
+                restore_checkpoint = experiment_dict[config.out_dataset.name]
+                model = torch.load(restore_checkpoint + '/model.pkl')
             else:
                 mixed_array = get_mixed_array(
                     config,
@@ -326,6 +349,14 @@ def main():
                 names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='kl_histogram',
                 addtion_data=[cifar_test_ll, svhn_test_ll]
+            )
+
+            make_diagram_torch(
+                loop, lambda x: -eval_ll(x),
+                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                fig_name='kl_with_stand_histogram',
+                addtion_data=[cifar_test_ll + cifar_test_stand, svhn_test_ll + svhn_test_stand]
             )
 
 
