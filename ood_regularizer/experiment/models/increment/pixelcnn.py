@@ -50,7 +50,7 @@ class ExpConfig(spt.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 128
+    mixed_train_epoch = 32
     mixed_train_skip = 4096
     dynamic_epochs = False
     retrain_for_batch = False
@@ -58,6 +58,7 @@ class ExpConfig(spt.Config):
     in_dataset_test_ratio = 1.0
     pretrain = False
     distill_ratio = 1.0
+    stand_weight = 0.1
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -345,7 +346,7 @@ def main():
                         return return_arrays
 
                     cifar_train_nll = get_ele(ele_test_ll,
-                                              spt.DataFlow.arrays([x_train], config.test_batch_size).map(normalize),
+                                              spt.DataFlow.arrays([x_train], config.test_batch_size),
                                               input_x)
                     [mixed_stand] = stand(cifar_train_nll, [mixed_ll])
 

@@ -42,7 +42,7 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 200
+    max_epoch = 150
     warm_up_start = 100
 
     min_distance = 0.2

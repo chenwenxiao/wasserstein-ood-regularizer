@@ -773,6 +773,7 @@ def main():
                         restore_dir = experiment_dict[config.out_dataset] + '/checkpoint'
                         restore_checkpoint = os.path.join(
                             restore_dir, 'checkpoint', 'checkpoint.dat-{}'.format(config.warm_up_start))
+                        loop._checkpoint_saver.restore(restore_checkpoint)
                         omega_op = ele_test_ll
 
                     make_diagram(loop,

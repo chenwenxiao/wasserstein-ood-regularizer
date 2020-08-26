@@ -45,6 +45,7 @@ class ExperimentConfig(mltk.Config):
     noise_type = "mutation"  # or unit
     in_dataset_test_ratio = 1.0
     pretrain = False
+    stand_weight = 0.1
 
     compressor = 2  # 0 for jpeg, 1 for png, 2 for flif
 

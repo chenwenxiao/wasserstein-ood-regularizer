@@ -100,7 +100,7 @@ def dropout(inputs, training=False, scope=None):
 @spt.global_reuse
 def q_net(x, observed=None, n_z=None):
     net = spt.BayesianNet(observed=observed)
-    normalizer_fn = None
+    normalizer_fn = batch_norm
 
     # compute the hidden features
     with arg_scope([spt.layers.resnet_conv2d_block],
@@ -138,7 +138,7 @@ def p_net(observed=None, n_z=None):
                         logstd=tf.zeros([1, config.z_dim]))
     z = net.add('z', normal, n_samples=n_z, group_ndims=1)
 
-    normalizer_fn = None
+    normalizer_fn = batch_norm
 
     # compute the hidden features
     with arg_scope([spt.layers.resnet_deconv2d_block],
@@ -423,20 +423,20 @@ def main():
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
-            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/89/d5/02812baa4f702d8b41f5',
-            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/91/e5/02279d802d3a94ea41f5',
-            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/61/e5/02279d802d3aa9a941f5',
-            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/00/e5/02c52d867e43048741f5',
-            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/ff/d5/02c52d867e43048741f5',
-            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/69/e5/02c52d867e43a50682f5',
-            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/e9/e5/02279d802d3ad7e382f5',
-            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/99/d5/02812baa4f7050ac41f5',
-            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/20/e5/02c52d867e430d6b41f5',
-            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/81/e5/02279d802d3ac88a41f5',
-            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/71/e5/02279d802d3a817a41f5',
-            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/79/d5/02812baa4f70048741f5',
-            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/f1/f5/02279d802d3adc3ce2f5',
-            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/60/f5/02c52d867e431b2ce2f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/5c/f5/02732c28dc8d9673d3f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6c/f5/02732c28dc8d9673d3f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/ab/16/02c52d867e439673d3f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/4c/f5/02732c28dc8d9673d3f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/51/26/02279d802d3ac5cad3f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/94/26/02279d802d3a3dc8e3f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/4d/16/02279d802d3a9673d3f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/73/f5/02812baa4f709673d3f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/dd/f5/02732c28dc8d7c1ad3f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/ce/f5/02732c28dc8dedecd3f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/41/26/02279d802d3a29bad3f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/be/f5/02732c28dc8d58dad3f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/5d/16/02279d802d3a9673d3f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/63/26/02c52d867e431dc8e3f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:

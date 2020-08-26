@@ -48,7 +48,7 @@ class ExpConfig(spt.Config):
     min_distance = 0.2
     use_transductive = True  # can model use the data in SVHN's and CIFAR's testing set
     mixed_train = False
-    mixed_train_epoch = 128
+    mixed_train_epoch = 64
     mixed_train_skip = 4096
     mixed_mean_times = 10
     dynamic_epochs = False
@@ -118,22 +118,22 @@ def G_omega(z):
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
                    kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
-        h_z = spt.layers.dense(z, 512 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
+        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[1] // 4, scope='level_0',
                                normalizer_fn=None)
         h_z = spt.ops.reshape_tail(
             h_z,
             ndims=1,
-            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 512)
+            shape=(config.x_shape[0] // 4, config.x_shape[1] // 4, 128)
         )
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 512, strides=2, scope='level_2')  # output: (7, 7, 64)
-        h_z = spt.layers.resnet_deconv2d_block(h_z, 256, strides=2, scope='level_3')  # output: (7, 7, 64)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 128, scope='level_5')  # output: (14, 14, 32)
         h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
         h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
     x_mean = spt.layers.conv2d(
         h_z, config.x_shape[-1], (1, 1), padding='same', scope='feature_map_mean_to_pixel',
-        kernel_initializer=tf.zeros_initializer(), activation_fn=tf.nn.tanh
+        kernel_initializer=tf.zeros_initializer(),  # activation_fn=tf.nn.tanh
     )
     return x_mean
 
@@ -158,8 +158,8 @@ def D_psi(x, y=None):
         h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
         h_x = spt.layers.resnet_conv2d_block(h_x, 128, scope='level_4')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 256, strides=2, scope='level_6')  # output: (7, 7, 64)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 512, strides=2, scope='level_8')  # output: (7, 7, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
 
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
         h_x = spt.layers.dense(h_x, 64, scope='level_-2')
@@ -335,7 +335,7 @@ def main():
     (svhn_train, svhn_train_y, svhn_test, svhn_test_y) = load_overall(config.out_dataset)
 
     def normalize(x):
-        return (x - 127.5) / 256.0 * 2
+        return [(x - 127.5) / 256.0 * 2]
 
     config.x_shape = x_train.shape[1:]
     config.x_shape_multiple = 1
@@ -459,7 +459,7 @@ def main():
             restore_dir = experiment_dict[config.in_dataset] + '/checkpoint'
             restore_checkpoint = os.path.join(
                 restore_dir, 'checkpoint',
-                'checkpoint.dat-{}'.format(config.max_epoch if config.self_ood else config.warm_up_start))
+                'checkpoint.dat-{}'.format(config.max_epoch))
         else:
             restore_dir = results.system_path('checkpoint')
             restore_checkpoint = None

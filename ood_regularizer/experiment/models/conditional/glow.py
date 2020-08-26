@@ -324,6 +324,14 @@ def main():
                 entropy = T.reduce_sum(odin * torch.log(odin), axis=[-1])
                 return T.to_numpy(entropy)
 
+            @torch.no_grad()
+            def eval_max_prob(x):
+                x = T.from_numpy(x)
+                predict = classifier(x)
+                prob = torch.softmax(predict, dim=-1)
+                max_prob = T.reduce_max(prob, axis=[-1])
+                return T.to_numpy(max_prob)
+
             def eval_odin(x):
                 x = T.from_numpy(x)
                 x.requires_grad = True
@@ -357,6 +365,13 @@ def main():
                 [cifar_test_flow, svhn_test_flow],
                 names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='odin_histogram'
+            )
+
+            make_diagram_torch(
+                loop, eval_max_prob,
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                fig_name='max_prob_histogram'
             )
 
             final_cifar_test_ll = np.zeros(len(x_test))
