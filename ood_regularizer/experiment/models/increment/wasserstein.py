@@ -50,7 +50,7 @@ class ExpConfig(spt.Config):
     mixed_train = False
     mixed_train_epoch = 64
     mixed_train_skip = 4096
-    mixed_mean_times = 10
+    mixed_mean_times = 100
     dynamic_epochs = False
     retrain_for_batch = False
     use_gan = False  # if use_gan == True, you should set warm_up_start to 1000 to ensure the pre-training for gan
@@ -165,7 +165,7 @@ def D_psi(x, y=None):
         h_x = spt.layers.dense(h_x, 64, scope='level_-2')
     # sample z ~ q(z|x)
     h_x = spt.layers.dense(h_x, 1, scope='level_-1')
-    h_x = tf.clip_by_value(h_x, -1000, 1000)
+    # h_x = tf.clip_by_value(h_x, -1000, 1000)
     return tf.squeeze(h_x, axis=-1)
 
 
@@ -549,8 +549,8 @@ def main():
 
                         mixed_kl.append(get_ele(ele_test_energy,
                                                 spt.DataFlow.arrays([mixed_array[i: i + config.mixed_train_skip]],
-                                                                    config.test_batch_size), input_x) - mean_energy)
-                        print(repeat_epoch, len(mixed_kl))
+                                                                    config.test_batch_size).map(normalize), input_x) - mean_energy)
+                        print(repeat_epoch, len(mixed_kl), mean_energy)
                         loop.print_logs()
 
                     mixed_kl = np.concatenate(mixed_kl)

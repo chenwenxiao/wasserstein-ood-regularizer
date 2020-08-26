@@ -360,12 +360,18 @@ def main():
                 fig_name='negative_entropy_histogram'
             )
 
-            make_diagram_torch(
-                loop, eval_odin,
-                [cifar_test_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
-                fig_name='odin_histogram'
-            )
+            M_list = [0, 0.0005, 0.001, 0.0012, 0.0014, 0.002, 0.0024, 0.005, 0.01, 0.05, 0.1, 0.2]
+            T_list = [1, 10, 100, 1000]
+            for t in T_list:
+                for m in M_list:
+                    config.odin_T = t
+                    config.odin_epsilon = m * 2  # since we normalize image to [-1, 1] instead of [0, 1]
+                    make_diagram_torch(
+                        loop, eval_odin,
+                        [cifar_test_flow, svhn_test_flow],
+                        names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                        fig_name='odin_{}_{}_histogram'.format(t, m)
+                    )
 
             make_diagram_torch(
                 loop, eval_max_prob,

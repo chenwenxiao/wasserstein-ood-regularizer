@@ -65,7 +65,7 @@ class ExperimentConfig(mltk.Config):
     test_batch_size = 64
     test_epoch_freq = 200
     plot_epoch_freq = 20
-    distill_ratio = 0.5  # or 0.3
+    distill_ratio = 1.0  # or 0.5
     distill_epoch = 20
 
     epsilon = -20.0

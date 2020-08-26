@@ -160,7 +160,7 @@ def D_psi(x, y=None):
         h_x = spt.layers.dense(h_x, 64, scope='level_-2')
     # sample z ~ q(z|x)
     h_x = spt.layers.dense(h_x, 1, scope='level_-1')
-    h_x = tf.clip_by_value(h_x, -1000, 1000)
+    # h_x = tf.clip_by_value(h_x, -1000, 1000)
     return tf.squeeze(h_x, axis=-1)
 
 
