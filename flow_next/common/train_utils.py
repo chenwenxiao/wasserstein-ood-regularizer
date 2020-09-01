@@ -111,7 +111,8 @@ def train_model(exp: mltk.Experiment,
 
     print('Test dataset information\n'
           '*************************')
-    print_dataset_info(test_dataset)
+    if test_dataset is not None:
+        print_dataset_info(test_dataset)
     print('')
 
     # prepare for the data streams
@@ -124,8 +125,8 @@ def train_model(exp: mltk.Experiment,
             'test', ['x'], batch_size=train_config.test_batch_size).to_arrays_stream()
 
     # print experiment and data information
-    examples.utils.print_experiment_summary(
-        exp, train_data=train_stream, test_data=test_stream)
+    # examples.utils.print_experiment_summary(
+    #     exp, train_data=train_stream, test_data=test_stream)
 
     # make tensor streams
     train_stream = tk.utils.as_tensor_stream(train_stream, prefetch=3)
@@ -212,10 +213,11 @@ def train_model(exp: mltk.Experiment,
         # epochs=train_config.lr_anneal_epochs
     )
     lr_scheduler.bind(loop)
-    loop.run_after_every(
-        lambda: loop.test().run(eval_step, test_stream),
-        epochs=train_config.test_epoch_freq
-    )
+    if test_dataset is not None:
+        loop.run_after_every(
+            lambda: loop.test().run(eval_step, test_stream),
+            epochs=train_config.test_epoch_freq
+        )
     loop.run_after_every(plot_samples, epochs=train_config.plot_epoch_freq)
 
     # train the model
@@ -329,5 +331,5 @@ def train_classifier(exp: mltk.Experiment,
     # do the final test
     if test_dataset is not None:
         results = mltk.TestLoop().run(eval_step, test_stream)
-    print('')
-    print(mltk.format_key_values(results, title='Results'))
+        print('')
+        print(mltk.format_key_values(results, title='Results'))

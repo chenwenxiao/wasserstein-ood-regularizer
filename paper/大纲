@@ -1,0 +1,53 @@
+大纲
+
+章节划分：
+
+Introdution：
+介绍问题，研究历史，为什么要研究基础模型上的检测器。
+介绍最近的方法，这些方法的不足（无法应对大规模的数据）
+我们提出新的方法，新的方法的优势，新的方法的局限性。
+
+Relative Wroks:
+介绍有哪些OOD的检测方法，包括分类器和生成模型的。
+
+Problem Description:
+介绍研究的问题，确定OOD数据的标准（简单可分类准则）。强调存在多种多样的情况，比如可以获取全部测试集的数据，时序数据，只允许拿一个batch的数据。
+
+Motivating observations:
+我们观测到，对于之前提出的OOD检测方法，他们应对大规模数据时的效果较差。
+举出例子，表明似然无论高或者低，或者使用T-perm指标，都存在着意外。
+对于分类器，也存在着意外。
+理论上，在训练集为Noise时，似然指标在理想情况下也无法进行异常检测。而反过来，由于Noise的似然非常低，在任何数据集上训练的模型都可以通过似然指标检测出Noise。
+
+Native Indicators:
+介绍Native Indicator的定义，以及两种简单的Native Indicator——Native KL Indicator和Native Wasserstein Indicator。受到Likelihood-Ratio研究的启发，介绍Native KL Indictor与Likelihood-Ratio和Input Complexity之间的关系。
+介绍Native Indicator的性质：
+  1. 对称性，I可以同时识别B和A。
+  2. 平移性，在Transductive的情况下，训练集变为A+åB时，其OOD检测效果与原始的Native Indicator一致。
+  3. 松弛了理论约束，Native KL Indicator不要求模型分布足够接近数据分布，只要求训练收敛。
+  4. 反过来，如果似然假设成立，Native KL Indicator也必然成立。因此从理论上来说，Native KL Indicator比似然假设约束更少，能力更强。
+  5. 实际角度来说：在Transductive的情况下，Native KL Indicator反应了数据的可优化性（一个数据如果是In-Dist那么继续在上面进行训练，其似然不再会增加）；Native Wasserstein Indicator则是通过判别器在对数据进行筛选，找出那些容易被区分出来的数据。
+
+Large-scale Research:
+介绍Large-Scale Research的目的：寻找适用于基本模型，广泛数据集，不依赖于特定参数的Indicator。
+列出性能表并进行解释。
+结论：
+1. 大部分现有的指标的泛化性较差。
+2. 这些指标性能较差的根本原因是OOD数据的不确定性，反直觉性。说明了泛化的OOD检测问题仍然有很多问题需要解决。
+3. Native Indicator对于泛化的OOD检测问题起到了指引作用
+4. Native Indicator可以再Transductive的情况下很好地工作
+5. 与传统的Transductive的情况不同，Native Indicator并不是Data-Specific和Off-line的。它也可以在部分的测试集上进行训练，并得到好的结果；而且在模拟的在线环境中达到了很好的结果。
+
+
+Limitations of the Study:
+0. 数据集的局限性，没有考虑到对抗数据（原因是不满足SCP）。
+
+1. Large-Scale Reasearch的局限性————有很多方法独自提出了针对OOD问题的模型，这些方法并未被一一研究到。为什么没有对他们进行实验？模型数量众多，调参繁琐，理论上难以推广不具备一般性。没有仔细研究参数和模型对于OOD问题的作用。
+
+2. Native Indicator依赖于测试集的数据和优化算法，特别是获取的batch_size。是否有可能提出某种优化算法，使得batch_size降低至1的效果与batch_size较大时一致？甚至设计一种逼近指标从而不需要使用优化算法？
+
+Conclusion:
+
+1. 对大量指标的泛化性进行了研究，并得出了现有的OOD检测指标泛化性不足的结论。
+2. 提出了与似然指标相比，更加泛化的Native Indicator。对Native Indicator的理论性质给出了证明。
+3. 在实验中证明了 Native Indicator 的有效性，并在Transductive，在线，只能获取一个batch的情况下进行了检验。验证了Native Indicator 的泛化性。

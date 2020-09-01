@@ -460,11 +460,12 @@ def main():
                         [cifar_train_nll_t, cifar_test_nll_t, svhn_train_nll_t, svhn_test_nll_t] = t_perm(
                             cifar_train_nll, [cifar_train_nll, cifar_test_nll, svhn_train_nll, svhn_test_nll])
 
-                        plot_fig(data_list=[cifar_test_nll_t, svhn_test_nll_t],
-                                 color_list=['red', 'green'],
-                                 label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                                 x_label='bits/dim',
-                                 fig_name='T_perm_histogram')
+                        loop.collect_metrics(T_perm_histogram=plot_fig(
+                            data_list=[cifar_test_nll_t, svhn_test_nll_t],
+                            color_list=['red', 'green'],
+                            label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                            x_label='bits/dim',
+                            fig_name='T_perm_histogram'))
                         make_diagram(loop,
                                      ele_test_ll,
                                      [cifar_test_flow, svhn_test_flow],

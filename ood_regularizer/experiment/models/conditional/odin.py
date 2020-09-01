@@ -199,24 +199,69 @@ def main():
                 np.sum(cifar_train_predict == y_train)))
 
             torch.save(classifier, 'classifier.pkl')
-
-            for current_class in range(config.class_num):
-                # construct the model
-                model = Glow(cifar_train_dataset.slots['x'], exp.config.model)
-                print('Model constructed.')
-                current_class_stream = ArraysDataStream([x_train[y_train == current_class]], config.batch_size,
-                                                        shuffle=True, skip_incomplete=True)
-                mapper = get_mapper(config.in_dataset, training=True)
-                mapper.fit(cifar_dataset.slots['x'])
-                current_class_stream = current_class_stream.map(lambda x: mapper.transform(x))
-                current_class_stream = tk.utils.as_tensor_stream(current_class_stream, prefetch=3)
-                # train the model
-                train_model(exp, model, cifar_train_dataset, cifar_test_dataset, current_class_stream)
-                torch.save(model, 'model_{}.pkl'.format(current_class))
         else:
             classifier = torch.load(restore_dir + '/classifier.pkl')
 
         with mltk.TestLoop() as loop:
+
+            features_dict = {
+
+            }
+            if config.in_dataset.name in features_dict:
+                obj = np.load(features_dict[config.in_dataset.name] + 'output_features.npz')
+                outputs_features_mean = obj['outputs_features_mean']
+                outputs_features_precision = obj['outputs_features_precision']
+            else:
+                outputs_features = [[] for i in range(config.features_nums)]
+
+                @torch.no_grad()
+                def get_each_outputs(x):
+                    x = T.from_numpy(x)
+                    # See note [TorchScript super()]
+                    x = classifier.conv1(x)
+                    x = classifier.bn1(x)
+                    x = classifier.relu(x)
+                    x = classifier.maxpool(x)
+                    outputs_features[0].append(T.to_numpy(torch.flatten(x, 1)))
+                    x = classifier.layer1(x)
+                    outputs_features[1].append(T.to_numpy(torch.flatten(x, 1)))
+                    x = classifier.layer2(x)
+                    outputs_features[2].append(T.to_numpy(torch.flatten(x, 1)))
+                    x = classifier.layer3(x)
+                    outputs_features[3].append(T.to_numpy(torch.flatten(x, 1)))
+                    x = classifier.layer4(x)
+                    outputs_features[4].append(T.to_numpy(torch.flatten(x, 1)))
+
+                    x = classifier.avgpool(x)
+                    x = torch.flatten(x, 1)
+                    x = classifier.fc(x)
+
+                    return T.to_numpy(x)
+
+                with loop.timeit():
+                    outputs_features_mean = []
+                    outputs_features_precision = []
+
+                    get_ele_torch(get_each_outputs, cifar_train_flow)
+                    for i in range(config.features_nums):
+                        outputs_features[i] = np.concatenate(outputs_features[i], axis=0)
+                        outputs_features_mean.append([])
+                        outputs_features_precision.append([])
+                        for j in range(config.class_num):
+                            index = y_train == j
+                            tmp_mean = np.mean(outputs_features[i][index], axis=0)
+                            group_lasso = EmpiricalCovariance(assume_centered=False)
+                            group_lasso.fit(outputs_features[i][index] - tmp_mean)
+                            outputs_features_mean[-1].append(tmp_mean)
+                            outputs_features_precision[-1].append(group_lasso.get_precision())
+                        outputs_features_mean[-1] = np.asarray(outputs_features_mean[-1])
+                        outputs_features_precision[-1] = np.asarray(outputs_features_precision[-1])
+
+                    outputs_features_mean = np.asarray(outputs_features_mean)
+                    outputs_features_precision = np.asarray(outputs_features_precision)
+
+                np.savez('outputs_features', outputs_features_mean=outputs_features_mean,
+                         outputs_features_precision=outputs_features_precision)
 
             @torch.no_grad()
             def eval_predict(x):
@@ -227,49 +272,114 @@ def main():
                 predict = T.argmax(predict, axis=-1)
                 return T.to_numpy(predict)
 
-            cifar_test_predict = get_ele_torch(eval_predict, cifar_test_flow)
-            svhn_test_predict = get_ele_torch(eval_predict, svhn_test_flow)
+            def get_gaussian_score(x, level):
+                outputs = []
+                x = classifier.conv1(x)
+                x = classifier.bn1(x)
+                x = classifier.relu(x)
+                x = classifier.maxpool(x)
+                outputs.append(torch.flatten(x, 1))
+                x = classifier.layer1(x)
+                outputs.append(torch.flatten(x, 1))
+                x = classifier.layer2(x)
+                outputs.append(torch.flatten(x, 1))
+                x = classifier.layer3(x)
+                outputs.append(torch.flatten(x, 1))
+                x = classifier.layer4(x)
+                outputs.append(torch.flatten(x, 1))
+                gaussian_score = []
+                for j in range(config.class_num):
+                    zero_f = outputs[i] - T.from_numpy(outputs_features_mean[level][j])
+                    gaussian_score.append(-torch.mm(
+                        torch.mm(zero_f, T.from_numpy(outputs_features_precision[level][j])), zero_f.t()).diag())
+                gaussian_score = T.stack(gaussian_score, axis=0)
+                gaussian_score = T.reduce_max(gaussian_score, axis=[0])
+                return gaussian_score
+
+            m_list = [0.0, 0.01, 0.005, 0.002, 0.0014, 0.001, 0.0005]
+            for magnitude in m_list:
+                def eval_Mahalanobis(x):
+                    x = T.from_numpy(x)
+                    x.requires_grad = True
+                    mah = []
+                    for level in range(config.features_nums):
+                        gau = get_gaussian_score(x, level)
+                        gradients = autograd.grad(gau, x, grad_outputs=torch.ones(gau.size()).cuda())[0]
+                        sign = torch.sign(gradients)
+                        x_hat = x + magnitude * sign
+                        mah.append(T.to_numpy(get_gaussian_score(x_hat, level)))
+                    return np.sum(np.asarray(mah))
+
+                make_diagram_torch(
+                    loop, eval_Mahalanobis,
+                    [cifar_test_flow, svhn_test_flow],
+                    names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                    fig_name='Mahalanobis_{}_histogram'.format(magnitude)
+                )
 
             @torch.no_grad()
-            def eval_ll(x):
+            def eval_entropy(x):
                 x = T.from_numpy(x)
-                ll, outputs = model(x)
-                bpd = -dequantized_bpd(ll, cifar_train_dataset.slots['x'])
-                return T.to_numpy(bpd)
+                predict = classifier(x)
+                odin = torch.softmax(predict, dim=-1)
+                entropy = T.reduce_sum(odin * torch.log(odin), axis=[-1])
+                return T.to_numpy(entropy)
 
-            final_cifar_test_ll = np.zeros(len(x_test))
-            final_svhn_test_ll = np.zeros(len(svhn_test))
-            for current_class in range(0, config.class_num):
-                cifar_mask = cifar_test_predict == current_class
-                svhn_mask = svhn_test_predict == current_class
-                pse_epoch = config.warm_up_start + (current_class + 1) * config.test_epoch_freq
+            @torch.no_grad()
+            def eval_max_prob(x):
+                x = T.from_numpy(x)
+                predict = classifier(x)
+                prob = torch.softmax(predict, dim=-1)
+                max_prob = T.reduce_max(prob, axis=[-1])
+                return T.to_numpy(max_prob)
 
-                if restore_dir is None:
-                    model = torch.load('model_{}.pkl'.format(current_class))
-                else:
-                    model = torch.load(restore_dir + '/model_{}.pkl'.format(current_class))
+            def eval_odin(x):
+                x = T.from_numpy(x)
+                x.requires_grad = True
+                S = torch.softmax(classifier(x) / config.odin_T, dim=-1)
+                S = T.reduce_max(S, axis=[-1])
+                log_S = torch.log(S)
+                gradients = autograd.grad(-log_S, x, grad_outputs=torch.ones(log_S.size()).cuda())[0]
+                sign = torch.sign(gradients)
+                x_hat = x - config.odin_epsilon * sign
 
-                test_mapper = get_mapper(config.in_dataset, training=False)
-                test_mapper.fit(cifar_dataset.slots['x'])
-                if np.sum(cifar_mask) > 0:
-                    cifar_test_ll = get_ele_torch(eval_ll, ArraysDataStream([
-                        x_test[cifar_mask]
-                    ], config.test_batch_size, False, False).map(lambda x: test_mapper.transform(x)))
-                    final_cifar_test_ll[cifar_mask] = cifar_test_ll
+                odin = torch.softmax(classifier(x_hat) / config.odin_T, dim=-1)
 
-                if np.sum(svhn_mask) > 0:
-                    svhn_test_ll = get_ele_torch(eval_ll, ArraysDataStream([
-                        svhn_test[svhn_mask]
-                    ], config.test_batch_size, False, False).map(lambda x: test_mapper.transform(x)))
-                    final_svhn_test_ll[svhn_mask] = svhn_test_ll
+                return T.to_numpy(odin)
 
-            loop.add_metrics(log_prob_histogram=plot_fig(
-                [final_cifar_test_ll, final_svhn_test_ll],
-                color_list=['red', 'green'],
-                label_list=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
-                x_label='log(bit/dims)',
-                fig_name='log_prob_histogram', auc_pair=(0, 1)
-            ))
+            make_diagram_torch(
+                loop, eval_entropy,
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                fig_name='entropy_histogram'
+            )
+
+            make_diagram_torch(
+                loop, lambda x: -eval_entropy(x),
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                fig_name='negative_entropy_histogram'
+            )
+
+            M_list = [0, 0.0004, 0.0008, 0.0012, 0.0016, 0.002, 0.0024, 0.0028, 0.0032, 0.0036, 0.004]
+            T_list = [1, 10, 100, 1000]
+            for t in T_list:
+                for m in M_list:
+                    config.odin_T = t
+                    config.odin_epsilon = m * 2  # since we normalize image to [-1, 1] instead of [0, 1]
+                    make_diagram_torch(
+                        loop, eval_odin,
+                        [cifar_test_flow, svhn_test_flow],
+                        names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                        fig_name='odin_{}_{}_histogram'.format(t, m)
+                    )
+
+            make_diagram_torch(
+                loop, eval_max_prob,
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                fig_name='max_prob_histogram'
+            )
 
 
 if __name__ == '__main__':

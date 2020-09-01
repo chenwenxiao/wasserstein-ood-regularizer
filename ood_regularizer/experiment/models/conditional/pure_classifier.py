@@ -285,8 +285,12 @@ def main():
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
+    mixed_array = np.concatenate([x_test, y_test])
+    mixed_y = np.zeros(len(mixed_array))
+
     train_flow = spt.DataFlow.arrays([
-        np.concatenate([x_train, svhn_train]), np.concatenate([y_train, svhn_train_y])],
+        np.concatenate([x_train, svhn_train if config.use_transductive else mixed_array]),
+        np.concatenate([y_train, svhn_train_y if config.use_transductive else mixed_y])],
         config.batch_size, shuffle=True,
         skip_incomplete=True)
 

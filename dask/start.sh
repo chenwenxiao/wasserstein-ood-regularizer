@@ -93,7 +93,13 @@ dataset=('--in_dataset=celeba --out_dataset=tinyimagenet'
 '--in_dataset=noise28 --out_dataset=kmnist28'
 '--in_dataset=noise28 --out_dataset=not_mnist28'
 '--in_dataset=noise28 --out_dataset=omniglot28'
-'--in_dataset=noise28 --out_dataset=constant28')
+'--in_dataset=noise28 --out_dataset=constant28'
+'--in_dataset=cifar10 --out_dataset=tinyimagenet'
+'--in_dataset=cifar10 --out_dataset=cifar100'
+'--in_dataset=cifar100 --out_dataset=tinyimagenet'
+'--in_dataset=cifar100 --out_dataset=cifar10'
+'--in_dataset=tinyimagenet --out_dataset=cifar10'
+'--in_dataset=tinyimagenet --out_dataset=cifar100')
 
 algorithm=('models/likelihood/vae.py --self_ood=True --count_experiment=True'
 'models/likelihood/vae.py --use_transductive=False --count_experiment=True'
@@ -133,7 +139,8 @@ algorithm=('models/likelihood/vae.py --self_ood=True --count_experiment=True'
 'models/increment/glow.py --retrain_for_batch=True --count_experiment=True'
 'models/ensemble/glow.py --count_experiment=True'
 'models/conditional/glow.py --count_experiment=True'
-'models/batch_norm/glow.py --count_experiment=True')
+'models/batch_norm/glow.py --count_experiment=True'
+'models/conditional/odin.py --count_experiment=True')
 
 mlrun --legacy -- python ${algorithm[$1]} ${dataset[$2]}
 

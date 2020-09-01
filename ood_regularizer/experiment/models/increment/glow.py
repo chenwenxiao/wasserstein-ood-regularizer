@@ -46,7 +46,7 @@ class ExperimentConfig(mltk.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 128
+    mixed_train_epoch = 64
     mixed_train_skip = 4096
     dynamic_epochs = False
     retrain_for_batch = False
@@ -71,7 +71,7 @@ class ExperimentConfig(mltk.Config):
     test_batch_size = 64
     test_epoch_freq = 200
     plot_epoch_freq = 20
-    distill_ratio = 1.0  # or 0.5
+    distill_ratio = 0.5
     distill_epoch = 5000
 
     epsilon = -20.0

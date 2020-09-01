@@ -65,7 +65,7 @@ class ExperimentConfig(mltk.Config):
     test_batch_size = 64
     test_epoch_freq = 200
     plot_epoch_freq = 20
-    distill_ratio = 1.0  # or 0.5
+    distill_ratio = 0.5
     distill_epoch = 20
 
     epsilon = -20.0
@@ -194,11 +194,11 @@ def main():
                 log_det = -dequantized_bpd(log_det, cifar_train_dataset.slots['x'])
                 return T.to_numpy(log_det)
 
-            cifar_train_ll, cifar_test_ll, svhn_train_ll, svhn_test_ll = make_diagram_torch(
+            cifar_train_ll, svhn_train_ll, cifar_test_ll, svhn_test_ll = make_diagram_torch(
                 loop, eval_ll,
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Train', config.in_dataset.name + ' Test',
-                       config.out_dataset.name + ' Train', config.out_dataset.name + ' Test'],
+                [cifar_train_flow, svhn_train_flow, cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Train', config.out_dataset.name + ' Train',
+                       config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='log_prob_histogram'
             )
 
@@ -283,7 +283,7 @@ def main():
                     x_label='bits/dim', fig_name='origin_log_prob_histogram'))
 
             fast_end = False
-            if config.use_transductive is False and config.out_dataset in experiment_dict and config.mixed_ratio == 1.0:
+            if config.use_transductive is False and config.out_dataset.name in experiment_dict and config.mixed_ratio == 1.0:
                 fast_end = True
 
             if config.self_ood and restore_checkpoint is not None:
@@ -346,7 +346,7 @@ def main():
 
             make_diagram_torch(
                 loop, lambda x: -eval_ll(x),
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                [cifar_test_flow, svhn_test_flow],
                 names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='kl_histogram',
                 addtion_data=[cifar_test_ll, svhn_test_ll]
@@ -354,7 +354,7 @@ def main():
 
             make_diagram_torch(
                 loop, lambda x: -eval_ll(x),
-                [cifar_train_flow, cifar_test_flow, svhn_train_flow, svhn_test_flow],
+                [cifar_test_flow, svhn_test_flow],
                 names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                 fig_name='kl_with_stand_histogram',
                 addtion_data=[cifar_test_ll + cifar_test_stand, svhn_test_ll + svhn_test_stand]

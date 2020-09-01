@@ -1,0 +1,63 @@
+This is BibTeX, Version 0.99d (TeX Live 2017)
+Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
+The top-level auxiliary file: /Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.aux
+The style file: ../aaai21.bst
+Database file #1: ../reference.bib.bib
+Repeated entry---line 278 of file ../reference.bib.bib
+ : @inproceedings{song2019generative
+ :                                  ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 352 of file ../reference.bib.bib
+ : @article{song2017pixeldefend
+ :                             ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 359 of file ../reference.bib.bib
+ : @article{choi2018waic
+ :                      ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 419 of file ../reference.bib.bib
+ : @article{kumar2019maximum
+ :                          ,
+I'm skipping whatever remains of this entry
+You've used 23 entries,
+            2951 wiz_defined-function locations,
+            710 strings with 9054 characters,
+and the built_in function-call counts, 16859 in all, are:
+= -- 1372
+> -- 855
+< -- 1
++ -- 318
+- -- 286
+* -- 1062
+:= -- 2647
+add.period$ -- 92
+call.type$ -- 23
+change.case$ -- 188
+chr.to.int$ -- 24
+cite$ -- 23
+duplicate$ -- 1220
+empty$ -- 1193
+format.name$ -- 351
+if$ -- 3394
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 240
+newline$ -- 124
+num.names$ -- 92
+pop$ -- 652
+preamble$ -- 1
+purify$ -- 168
+quote$ -- 0
+skip$ -- 625
+stack$ -- 0
+substring$ -- 720
+swap$ -- 556
+text.length$ -- 1
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 207
+warning$ -- 0
+while$ -- 125
+width$ -- 0
+write$ -- 297
+(There were 4 error messages)
