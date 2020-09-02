@@ -317,25 +317,33 @@ In the definition of OoD problem, we do not give any assumption about the probab
 
 It is important to notice that assumption 3 can not be deduced from assumption 2 obviously. For example, when $\pin = \frac{1}{2}(\mathcal{N}(0, 1) + \mathcal{N}(-10, 1))$ and $\pout = \frac{1}{2}(\mathcal{N}(0, 1) + \mathcal{N}(10, 1))$, $KL(\pin, \pout) \approx 25.05 \gg 0$ but $\log \pin(x) - \log \pout(x) \approx 0$.  In such example, $\pin$ and $\pout$ is distinguishing by KL-divergence but is not simply classified because no classier can detect whether a sample in $\mathcal{N}(0, 1)$ is from $\pin$ or $\pout$. We assume that assumption 3 holds when $\pin$ and $\pout$ is simply classified. 
 
-Above assumption means that if $D$ can distinguishing the probability distribution in-distribution and out-of-distribution, then $f$ can be used as an indicator for detecting whether a sample is OoD. $f$ is called the Native Indictor based on $D$. 
+Above assumption means that if $D$ can distinguishing the probability distribution                                                                                                        in-distribution and out-of-distribution, then $f$ can be used as an indicator for detecting whether a sample is OoD. $f$ is called the Native Indictor based on $D$. 
 
 For detailed research, \EG how to use native indictor when we do not know out-of-distribution, we need more property of $div$. 
 We will introduce two kinds of Native Indictors: Native KL Indictor and Native Wasserstein Indictor. 
 
 \subsection{Native KL Indicator}
-We select KL-divergence as $D$, then $KL(\pin, \pout) = \E_{\pin(x)} [\log \pin(x) - \log \pout(x)]$ and Native KL Indictor is $\log \pin(x) - \log \pout(x)$. However, $\pout$ is unknown under the limitation of OoD problem. Therefore, we try to use another tractable term to replace $\pout$. 
+We select KL-divergence as $D$, then $KL(\pin, \pout) = \E_{\pin(x)} [\log \pin(x) - \log \pout(x)]$ and Native KL Indictor is $\log \pin(x) - \log \pout(x)$. \cref{fig3} interprets the motivation of native KL indictor. 
+\begin{figure}
+	\center
+	\includegraphics[width=0.9\columnwidth]{diagram}
+	\caption{Diagrammatic sketch for the motivation of Native KL Indictor. The in-distribution is in [0, 10] and out-of-distribution in [10, 20]. Intuitively, $p_\theta$ has a lower density than $p_\omega$ for samples from in-distribution and higher density for samples from out-of-distribution. 
+	Different to the assumption of log-likelihood indictor, we do not assume that $p_\theta(x_2)$ or $p_\in(x_2)$ is a very lower density for $x_2 \sim \pout$. By the assumption 1,2,3,4, we can induce that $\pin(x_1) < \pout(x_1)$ and $\pin(x_2) > \pout(x_2)$. We expect that $p_\theta$ and $p_\omega$ also have this property, \IE $p_\theta(x) - p_\omega(x)$ is an indictor for OoD detection. }
+	\label{fig3}
+\end{figure}
 
 \begin{theorem}\label{thm1}
 	$\log \pin(x) - \log \pout(x)$ is a symmetric indictor, \IE it reaches same performance in experiment A vs B and B vs A.  
 \end{theorem}
+Likelihood is not a symmetric indictor since it uses $p_A$ as indictor in experiment A vs B and $p_B$ as indictor in experiment A vs B. An interesting phenomenon is that if likelihood indictor reaches a good performance on experiment A vs B, then it will usually fail in experiment B vs A, in appendix B. 
 
-Likelihood is not a symmetric indictor since it uses $p_A$ as indictor in experiment A vs B and $p_B$ as indictor in experiment A vs B . 
+However, $\pout$ is unknown under the limitation of OoD problem. Therefore, we try to use another tractable term to replace $\pout$. 
 
 \begin{theorem}\label{thm2}
 	For any mixture distribution $\pmix = \alpha \pin + \beta \pout$ where $\alpha + \beta = 1$ and $\alpha, \beta > 0$, the performance of indictor $\log \pin(x) - \log \pmix(x)$ and indictor $\log \pin(x) - \log \pout(x)$ are equal for OoD detection. A special example is the experiment of Noise vs any dataset. The optimal model of Noise dataset is uniform distribution, however, it can not detect any OoD. In the experiment of any dataset vs Noise, likelihood reaches nearly best performance since the log-likelihood of noise is significantly lower than any datasets. 
 \end{theorem}
 
-If we can get enough data from the mixture distribution, By \cref{thm1}, a model $p_\gamma$ that is trained to approximate $\pmix$ can be used to replace the term $\pout$ in Native KL Indictor and ensure the same performance. It is also observed in our experiments, shown in \cref{tab1}. Next, we try to explain why native KL indictor can reach great performance.
+If we can get enough data from the mixture distribution, By \cref{thm1}, a model $p_\gamma$ that is trained to approximate $\pmix$ can be used to replace the term $\pout$ in Native KL Indictor and ensure the same performance. It is also observed in our experiments, shown in \cref{tab1}. Next, we try to explain why native KL indictor can reach outstanding performance.
 
 Compared to log-likelihood indictor and likelihood-ratio indicator, Native KL Indictor can always get better performance. 
 \begin{theorem}\label{thm3}
@@ -346,10 +354,12 @@ By the assumption that log-likelihood can detect OoD, $\log \pin(x_1) > \log \pi
 For any likelihood-ratio indictor in formula $\log \pin(x) - \log g(x)$ where $g$ is a continuous differentiable probability distribution, Native KL Indictor outperforms them in OoD problem with suitable mathematical simplification. 
 \end{theorem}
 
-By above theorems, we show that Native KL Indictor can be obtained by mixture distribution. Next, we will consider the property of modeled distribution. Let $p_\theta, p_\gamma$ models $\pin, \pmix$, \IE $\theta = \arg \max_\theta \E_{\pin(x)} \log p_\theta$ and $\gamma = \arg \max_\gamma \E_{\pmix(x)} \log p_\omega$. $\log p_\gamma(x) - \log p_\theta(x)$ acts as the indictor. 
+By above theorems, we show that Native KL Indictor can be obtained by mixture distribution. It is natural to use two modeled distribution to model in-distribution and mixture distribution. 
+
+Next, we will show the property of modeled distribution. Let $p_\theta, p_\gamma$ models $\pin, \pmix$, \IE $\theta = \arg \max_\theta \E_{\pin(x)} \log p_\theta$ and $\gamma = \arg \max_\gamma \E_{\pmix(x)} \log p_\omega$. $\log p_\gamma(x) - \log p_\theta(x)$ acts as the indictor. 
 
 \begin{theorem}\label{thm5}
-	$\log p_\theta(x) - \log p_\gamma(x)$ can be used for detecting OoD without the condition that $p_\theta$ sufficiently approaches $\pin$ and $p_\gamma$ sufficiently approaches $\pout$ with suitable mathematical simplification. Moreover, $\log p_\theta(x) - \log p_\gamma(x)$ reflects whether a sample $x$ in mixture distribution have been optimized in the training process of $\theta$. 
+	$\log p_\theta(x) - \log p_\gamma(x)$ can be used for detecting OoD, only requiring that the training converges, without the condition that $p_\theta$ sufficiently approaches $\pin$ and $p_\gamma$ sufficiently approaches $\pout$ with suitable mathematical simplification. Moreover, $\log p_\theta(x) - \log p_\gamma(x)$ reflects whether a sample $x$ in mixture distribution have been optimized in the training process of $\theta$. 
 \end{theorem}
 
 \cref{thm4} shows $\log p_\theta(x) - \log p_\gamma(x)$ reflects the optimizability: if a sample $x$ is OoD, then $p_\theta(x)$ will be lower than $p_\gamma(x)$ since $x \sim \pmix$ and $\gamma$ can optimize $x$ more than $\theta$. By \cref{thm4}, we will not require that $\theta$ approach $\pin$ sufficiently and $\gamma$ approach $\pmix$ sufficiently but only the training of $\theta$ and $\gamma$ converges. It alleviates the requirements for training and then we can discuss how to train models on online system. 
@@ -373,7 +383,7 @@ where $x_i^{in}$ is sampled from in-distribution and $x_j^{out}$ is sampled from
 Similar to Native KL Indicator, we will show some theorems to show the property of Native Wasserstein Indicator to ensure that it can be obtained without any information of $\pout$. 
 
 \begin{theorem}\label{thm6}
-	Assumption 2 is a corollary of definition of OoD problem.  
+	Assumption 2 is a corollary of definition of OoD problem when $div$ is Wasserstein distance.  
 \end{theorem}
 
 \begin{theorem}\label{thm7}
@@ -396,13 +406,15 @@ We have proposed a method to exploit the samples of mixture distribution to trai
 	\item Is this method \textbf{data-specify}? \IE does this method only work on the data that it has seen in training? 
 	\item Can this method work on \textbf{online system}? \IE for a new testing data, model should give the indictor before the next texting data comes.  
 	\item Can this method works only with \textbf{a batch of samples}? \IE model must detect immediately while it only knows in-distribution data and a batch of mixture distribution. 
+	\item Is it better to train \textbf{pre-train} models (trained on in-distribution) or \textbf{initialized} models on on mixture distribution?
 \end{itemize} 
 
-To solve these concerns, we design corresponding experiments:
+To solve the concerns, we design following experiments:
 \begin{itemize}
 	\item In experiment A vs B, only 20\% data in mixture distribution can be used for training. 
 	\item We simulate the online system --- the data in mixture distribution is streaming and requires the indicator immediately. 
 	\item We splits the data from mixture distribution into several batches and model can only know the in-distribution and the batch that it is detecting. 
+	\item Experiments for pre-train models and initialized models. 
 \end{itemize}
 
 \section{Experiments}
@@ -443,14 +455,38 @@ Following metrics are adopted to measure the effectiveness of a method in out-of
 \subsection{Setups} 
 For fair comparison, all indictors are based on common models with standard training, including 34-layer ResNet, VAE, PixelCNN, Glow and Wasserstein GAN. ResNet34 is trained to classify the in-distribution and out-of-distribution for validate whether they are simply classified. ResNet34 is also trained for classification and serves for the OoD indictors based on classifier. Deep generative models are trained as their proposer suggests without any other tricks. 
 
-In our experiments, there are not validation set. For the indictors depending on hyper-parameters, we try grid-searching and report the performance with all hyper-parameters considered. To ensure the generality over all datasets, it is forbidden to specify the hyper-parameters or architectures on any dataset. 
+In our experiments, there are not validation set. For the indictors depending on hyper-parameters, we try grid-searching as their proposers suggest and report the performance with all hyper-parameters considered. To ensure the generality over all datasets, it is forbidden to specify the hyper-parameters or architectures on any dataset. 
 The detailed architecture and parameters are shown in appendix B. 
 
 \subsection{Major Results}
 
+The main results for indictors of past works are summarized in \cref{tab1}. The main results for Native KL Indictor and Native Wasserstein Indictors are summarized in \cref{tab2}. 
 
+\subsection{Validation of Theorem}
 
-\section{Limitations of the Study}
+\cref{thm1} is supported by the detail experiments shown in appendix B. \cref{thm2} is supported by the performance of native KL indictor based on mixture distribution. 
+\cref{fig4} shows that native KL indictor can also get same performance when log-likelihood can reach outstanding performance, to support \cref{thm3}. 
+
+We compare the precision-recall curve and ROC curve of native KL indictor, log-likelihood indictor, likelihood ratio indictor and log-likelihood with input complexity in \cref{fig5}, to show native KL indictor is the best version of log-likelihood ratio indictor, to support \cref{thm4}. \cref{fig6} shows the change of AUROC during training on mixture distribution to support \cref{thm5}. 
+
+\cref{thm7} is supported by the detail experiments shown in appendix B. The performance The detection ability of native Wasserstein indictor is shown in \cref{fig7}. The performance of the native Wasserstein indictor trained on mixture distribution is near same as the native Wasserstein indictor trained on out-of-distribution, which validates \cref{thm8}. The outstanding performance of the native Wasserstein indictor supports the \cref{thm9}. 
+
+\subsection{Concerns}
+
+The experiments about concerns are showing in \cref{tab3}. \cref{fig8} shows the change of AUROC while the size of batch varies. These experiments show that native KL indicator and native Wasserstein indictor are effective, robust, general, online and not data-specify. It also show the weakness of these native indictors that it can not work well when only a few data from mixture distribution is provided. 
+
+\section{Limitations of the Study} In this section, we will discuss the limitation of our paper in datasets, models and native indictors. 
+
+\subsection{Limitation of datasets}
+In our paper, we try large-scale datasets to show the generality of indictors. However, we only consider natural OoD datasets \cref{chen2020robust} and do not consider attacked OoD. An important reason is that it is quite hard to design a principle like simply classified, to measure these attacked OoD datasets. 
+
+\subsection{Limitation of models} 
+In our paper, for fair comparison and the research for generality, we only consider the common models, including ResNet, VAE, PixelCNN, Glow and WGAN. However, there are numerous models careful-designed for OoD detection. Limited by our computation resource, we can not give the performance of them over large-scale datasets. 
+We have emphasized that it is unreliable to evaluate the models for OoD in a few datasets in this paper and we expect that it can become a common sense in OoD domain. 
+
+\subsection{Limitation of native indictors} 
+While native indictors show outstanding performance in our experiments, we have also observed some defects of them. They depend on the model (\EG Native KL Indicator based on Glow is data-specify) and optimizer (\EG when data from mixture distribution is not enough for training, optimizer can not give the expected $p_\gamma$ expect). It is natural to design an indicator to approximate $\log p_\gamma(x) - \log p_\theta(x)$ without optimizer, \EG by Taylor Expansion. We leave it for future work. 
+Native indictors will lead to many works since it rise simply, fundamental and practical indictors with solid experiments and theories. 
 
 \section{Conclusion}
 

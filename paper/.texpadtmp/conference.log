@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.7.14)  1 SEP 2020 14:41
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.7.14)  2 SEP 2020 16:12
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -340,38 +340,76 @@ Underfull \hbox (badness 1137) in paragraph at lines 320--321
 []\OT1/ptm/m/n/10 Above as-sump-tion means that if $\OML/cmm/m/it/10 D$ \OT1/ptm/m/n/10 can dis-tin-guish-
  []
 
-[3 <./counterexample_complexity1.png> <./counterexample_complexity2.png> <./counterexample_complexity3.png> <./counterexample_complexity4.png>]
+[3 <./counterexample_complexity1.png> <./counterexample_complexity2.png> <./counterexample_complexity3.png> <./counterexample_complexity4.png>] <diagram.png, id=37, 513.92pt x 354.32375pt>
+File: diagram.png Graphic file (type png)
+ <use diagram.png>
+Package pdftex.def Info: diagram.png used on input line 329.
+(pdftex.def)             Requested size: 215.45348pt x 148.54463pt.
 
-LaTeX Warning: Reference `tab1' on page 1 undefined on input line 338.
 
-[4]
-Underfull \hbox (badness 2073) in paragraph at lines 446--448
-\OT1/ptm/m/n/10 searching and re-port the per-for-mance with all hyper-
+LaTeX Warning: Reference `tab1' on page 1 undefined on input line 346.
+
+
+Underfull \hbox (badness 2617) in paragraph at lines 359--360
+[]\OT1/ptm/m/n/10 Next, we will show the prop-erty of mod-eled dis-
  []
 
-(/Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.bbl [5]
+
+Underfull \hbox (badness 8075) in paragraph at lines 359--360
+\OT1/ptm/m/n/10 tri-bu-tion. Let $\OML/cmm/m/it/10 p[]; p[]$ \OT1/ptm/m/n/10 mod-els $\OML/cmm/m/it/10 p[]; p[]$\OT1/ptm/m/n/10 , \OT1/ptm/m/it/10 i.e.\OT1/ptm/m/n/10 , $\OML/cmm/m/it/10 ^^R \OT1/cmr/m/n/10 =
+ []
+
+[4 <./diagram.png>] [5]
+
+LaTeX Warning: Reference `tab1' on page 1 undefined on input line 463.
+
+
+LaTeX Warning: Reference `tab2' on page 1 undefined on input line 463.
+
+
+LaTeX Warning: Reference `fig4' on page 1 undefined on input line 468.
+
+
+LaTeX Warning: Reference `fig5' on page 1 undefined on input line 470.
+
+
+LaTeX Warning: Reference `fig6' on page 1 undefined on input line 470.
+
+
+LaTeX Warning: Reference `fig7' on page 1 undefined on input line 472.
+
+
+LaTeX Warning: Reference `tab3' on page 1 undefined on input line 476.
+
+
+LaTeX Warning: Reference `fig8' on page 1 undefined on input line 476.
+
+
+LaTeX Warning: Reference `chen2020robust' on page 1 undefined on input line 481.
+
+(/Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.bbl [6]
 Underfull \hbox (badness 1502) in paragraph at lines 73--76
 \OT1/ptm/m/n/10 Gen-er-a-tors for Energy-Based Mod-els.  \OT1/ptm/m/it/10 arXiv preprint
  []
 
-) [6] (/Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.aux)
+) [7] (/Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.aux)
 
 LaTeX Warning: There were undefined references.
 
  ) 
 Here is how much of TeX's memory you used:
- 5773 strings out of 492995
- 96661 string characters out of 6132704
- 177343 words of memory out of 5000000
- 9243 multiletter control sequences out of 15000+600000
+ 5788 strings out of 492995
+ 96850 string characters out of 6132704
+ 175343 words of memory out of 5000000
+ 9257 multiletter control sequences out of 15000+600000
  20565 words of font info for 43 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 39i,13n,39p,680b,287s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 39i,13n,39p,680b,295s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2017/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on /Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.pdf (6 pages, 547690 bytes).
+Output written on /Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.pdf (7 pages, 590047 bytes).
 PDF statistics:
- 93 PDF objects out of 1000 (max. 8388607)
- 58 compressed objects within 1 object stream
+ 100 PDF objects out of 1000 (max. 8388607)
+ 62 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 41 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 46 words of extra memory for PDF output out of 10000 (max. 10000000)
 

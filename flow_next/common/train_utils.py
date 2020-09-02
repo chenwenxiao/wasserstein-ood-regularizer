@@ -234,8 +234,8 @@ def train_model(exp: mltk.Experiment,
     plot_samples('final')
     if test_dataset is not None:
         results = mltk.TestLoop().run(eval_step, test_stream)
-    print('')
-    print(mltk.format_key_values(results, title='Results'))
+        print('')
+        print(mltk.format_key_values(results, title='Results'))
 
 
 def train_classifier(exp: mltk.Experiment,
@@ -253,8 +253,9 @@ def train_classifier(exp: mltk.Experiment,
 
     print('Test dataset information\n'
           '*************************')
-    print_dataset_info(test_dataset)
-    print('')
+    if test_dataset is not None:
+        print_dataset_info(test_dataset)
+        print('')
 
     # prepare for the data streams
     train_stream = train_dataset.get_stream(
