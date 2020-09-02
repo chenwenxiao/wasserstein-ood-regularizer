@@ -1,4 +1,4 @@
-\begin{thebibliography}{23}
+\begin{thebibliography}{24}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \providecommand{\urlprefix}{URL }
@@ -85,6 +85,13 @@ Lee, K.; Lee, K.; Lee, H.; and Shin, J. 2018.
 Nalisnick, E.; Matsukawa, A.; et~al. 2018.
 \newblock Do deep generative models know what they don't know?
 \newblock \emph{arXiv preprint arXiv:1810.09136} .
+
+\bibitem[{Nguyen, Yosinski, and Clune(2015)}]{nguyen2015deep}
+Nguyen, A.; Yosinski, J.; and Clune, J. 2015.
+\newblock Deep neural networks are easily fooled: High confidence predictions
+  for unrecognizable images.
+\newblock In \emph{Proceedings of the IEEE conference on computer vision and
+  pattern recognition}, 427--436.
 
 \bibitem[{Ren et~al.(2019)Ren, Liu, Fertig, Snoek, Poplin, Depristo, Dillon,
   and Lakshminarayanan}]{ren2019likelihood}

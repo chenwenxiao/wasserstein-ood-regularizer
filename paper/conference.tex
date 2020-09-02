@@ -22,7 +22,7 @@
 % For /Title, add Title in Mixed Case. No accents or commands. Retain the parentheses.
 \pdfinfo{
 /Title (Generalized Out-of-distribution Indicator via Deep Generative Models)
-/Author (Wenxiao Chen, Dan Pei)
+/Author (Wenxiao Chen, Xiaohui Nie, Mingliang Li, Dan Pei)
 /TemplateVersion (2021.1)
 } %Leave this
 % /Title ()
@@ -114,12 +114,14 @@
 \author{
     %Authors
     % All authors must be in the same font size and format.
-%    Wenxiao Chen, Dan Pei
+%    Wenxiao Chen, Xiaohui Nie, Mingliang Li, Dan Pei
 }
 \affiliations{
     %Afiliations
 
 %    Department of Computer Science and Technology, Tsinghua University
+%    China Unicom
+	
     %If you have multiple authors and multiple affiliations
     % use superscripts in text and roman font to identify them.
     %For example,
@@ -181,20 +183,10 @@ Our indicators are based on the theoretical derivation that the mixture distribu
 \end{abstract}
 
 \section{Introduction}
-Congratulations on having a paper selected for inclusion in an AAAI Press proceedings or technical report! This document details the requirements necessary to get your accepted paper published using PDF\LaTeX{}. If you are using Microsoft Word, instructions are provided in a different document. AAAI Press does not support any other formatting software.
+Machine learning has achieved impressive success in classification domain through deep neural network classifiers. However, these classifiers can be easily fooled by the data from other datasets (called out-of-distribution OoD)~\cite{nguyen2015deep}, which might lead to potential risks in practice. It is necessary to detect OoD data to ensure that applications based on classifiers are robust and stable. Ostensibly, it is intuitive to train a density model $p_\theta(x)$ to approximate the empirical distribution of training data, and refuse the sample $x$ when $p_\theta(x)$ is sufficiently low~\cref{bishop1994novelty}. 
+Recently, deep generative models are quickly developed and have been able to generate realistic samples, which indicates that deep generative models assign high density to the samples of the training data, and density can be used for detecting out-of-distribution. 
 
-The instructions herein are provided as a general guide for experienced \LaTeX{} users. If you do not know how to use \LaTeX{}, please obtain assistance locally. AAAI cannot provide you with support and the accompanying style files are \textbf{not} guaranteed to work. If the results you obtain are not in accordance with the specifications you received, you must correct your source file to achieve the correct result.
-
-These instructions are generic. Consequently, they do not include specific dates, page charges, and so forth. Please consult your specific written conference instructions for details regarding your submission. Please review the entire document for specific instructions that might apply to your particular situation. All authors must comply with the following:
-
-\begin{itemize}
-\item You must use the 2021 AAAI Press \LaTeX{} style file and the aaai21.bst bibliography style files, which are located in the 2021 AAAI Author Kit (aaai21.sty, aaai21.bst).
-\item You must complete, sign, and return by the deadline the AAAI copyright form (unless directed by AAAI Press to use the AAAI Distribution License instead).
-\item You must read and format your paper source and PDF according to the formatting instructions for authors.
-\item You must submit your electronic files and abstract using our electronic submission form \textbf{on time.}
-\item You must pay any required page or formatting charges to AAAI Press so that they are received by the deadline.
-\item You must check your paper before submitting it, ensuring that it compiles without error, and complies with the guidelines found in the AAAI Author Kit.
-\end{itemize}
+However, contrary to popular belief, recent works show that density estimates by deep generative models assign higher density to the most samples from out-of-distribution and fail to detect OoD. 
 
 \section{Background}
 Likelihood-based generative models are widely viewed to be robust to detect out-of-distribution samples by the model density intuitively. However, the densities of common likelihood-based models, \EG RealNVP~\cite{dinh2016density}, VAE~\cite{tomczak2018vae,takahashi2019variational} and PixelCNN~\cite{van2016conditional}, have been shown to be problematic for detecting out-of-distributions~\cite{nalisnick2018deep}. 
@@ -403,7 +395,7 @@ Because the Native Wasserstein Indicator is only depend on $D$, by \cref{thm5} w
 \subsection{Concerns}
 We have proposed a method to exploit the samples of mixture distribution to train a model for OoD detection. However, there are three major concerns about this idea: 
 \begin{itemize}
-	\item Is this method \textbf{data-specify}? \IE does this method only work on the data that it has seen in training? 
+	\item Is this method \textbf{data-specific}? \IE does this method only work on the data that it has seen in training? 
 	\item Can this method work on \textbf{online system}? \IE for a new testing data, model should give the indictor before the next texting data comes.  
 	\item Can this method works only with \textbf{a batch of samples}? \IE model must detect immediately while it only knows in-distribution data and a batch of mixture distribution. 
 	\item Is it better to train \textbf{pre-train} models (trained on in-distribution) or \textbf{initialized} models on on mixture distribution?
@@ -473,7 +465,7 @@ We compare the precision-recall curve and ROC curve of native KL indictor, log-l
 
 \subsection{Concerns}
 
-The experiments about concerns are showing in \cref{tab3}. \cref{fig8} shows the change of AUROC while the size of batch varies. These experiments show that native KL indicator and native Wasserstein indictor are effective, robust, general, online and not data-specify. It also show the weakness of these native indictors that it can not work well when only a few data from mixture distribution is provided. 
+The experiments about concerns are showing in \cref{tab3}. \cref{fig8} shows the change of AUROC while the size of batch varies. These experiments show that native KL indicator and native Wasserstein indictor are effective, robust, general, online and not data-specific. It also show the weakness of these native indictors that it can not work well when only a few data from mixture distribution is provided. 
 
 \section{Limitations of the Study} In this section, we will discuss the limitation of our paper in datasets, models and native indictors. 
 
@@ -485,7 +477,7 @@ In our paper, for fair comparison and the research for generality, we only consi
 We have emphasized that it is unreliable to evaluate the models for OoD in a few datasets in this paper and we expect that it can become a common sense in OoD domain. 
 
 \subsection{Limitation of native indictors} 
-While native indictors show outstanding performance in our experiments, we have also observed some defects of them. They depend on the model (\EG Native KL Indicator based on Glow is data-specify) and optimizer (\EG when data from mixture distribution is not enough for training, optimizer can not give the expected $p_\gamma$ expect). It is natural to design an indicator to approximate $\log p_\gamma(x) - \log p_\theta(x)$ without optimizer, \EG by Taylor Expansion. We leave it for future work. 
+While native indictors show outstanding performance in our experiments, we have also observed some defects of them. They depend on the model (\EG Native KL Indicator based on Glow is data-specific) and optimizer (\EG when data from mixture distribution is not enough for training, optimizer can not give the expected $p_\gamma$ expect). It is natural to design an indicator to approximate $\log p_\gamma(x) - \log p_\theta(x)$ without optimizer, \EG by Taylor Expansion. We leave it for future work. 
 Native indictors will lead to many works since it rise simply, fundamental and practical indictors with solid experiments and theories. 
 
 \section{Conclusion}
