@@ -19,45 +19,45 @@ Repeated entry---line 419 of file ../reference.bib.bib
  : @article{kumar2019maximum
  :                          ,
 I'm skipping whatever remains of this entry
-You've used 24 entries,
+You've used 25 entries,
             2951 wiz_defined-function locations,
-            715 strings with 9293 characters,
-and the built_in function-call counts, 17693 in all, are:
-= -- 1443
-> -- 893
+            723 strings with 9447 characters,
+and the built_in function-call counts, 18235 in all, are:
+= -- 1490
+> -- 905
 < -- 1
-+ -- 331
-- -- 298
-* -- 1115
-:= -- 2767
-add.period$ -- 96
-call.type$ -- 24
-change.case$ -- 197
-chr.to.int$ -- 25
-cite$ -- 24
-duplicate$ -- 1281
-empty$ -- 1256
-format.name$ -- 366
-if$ -- 3570
++ -- 336
+- -- 302
+* -- 1146
+:= -- 2856
+add.period$ -- 100
+call.type$ -- 25
+change.case$ -- 202
+chr.to.int$ -- 26
+cite$ -- 25
+duplicate$ -- 1324
+empty$ -- 1305
+format.name$ -- 370
+if$ -- 3677
 int.to.chr$ -- 1
 int.to.str$ -- 1
-missing$ -- 251
-newline$ -- 129
-num.names$ -- 96
-pop$ -- 686
+missing$ -- 260
+newline$ -- 134
+num.names$ -- 100
+pop$ -- 703
 preamble$ -- 1
-purify$ -- 175
+purify$ -- 180
 quote$ -- 0
-skip$ -- 658
+skip$ -- 672
 stack$ -- 0
-substring$ -- 763
-swap$ -- 586
+substring$ -- 799
+swap$ -- 607
 text.length$ -- 1
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 216
+type$ -- 225
 warning$ -- 0
-while$ -- 132
+while$ -- 138
 width$ -- 0
-write$ -- 310
+write$ -- 323
 (There were 4 error messages)

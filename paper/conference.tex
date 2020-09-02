@@ -176,17 +176,32 @@
 \begin{abstract}
 
 We consider the problem of detecting out-of-distribution images by deep generative models. We reviewed the recent researches about out-of-distribution based on deep generative models and found a critical weakness that the number of datasets in these works is not enough to support the generality of their indicators. 
-Therefore, we do a large-scale research for these indicators on more datasets and find that the performance of these indicators is not well. 
+Therefore, we do a large-scale research for these indicators on more datasets and find that the performance of these indicators is as not well as they claim on large-scale datasets. 
 We propose the native indicators based on Kullback–Leibler divergence and Wasserstein distance for detecting out-of-distribution. 
-Our indicators are based on the theoretical derivation that the mixture distribution can be used to replace the out-distribution while the former is available. Our indicators outperform past works by a large margin. Moreover, we test our indicators under other limitations to show that our indicators are not data-specific and can be deployed on online system. 
+Our indicators are general with solid theoretical basis and proven to be better than log-likelihood indictor, which is expected to guide the development of deep generative models in OoD domain. 
+Our indicators outperform past works by a large margin. Moreover, we test our indicators under other limitations to show that our indicators are not data-specific and can be deployed on online system. 
  
 \end{abstract}
 
 \section{Introduction}
-Machine learning has achieved impressive success in classification domain through deep neural network classifiers. However, these classifiers can be easily fooled by the data from other datasets (called out-of-distribution OoD)~\cite{nguyen2015deep}, which might lead to potential risks in practice. It is necessary to detect OoD data to ensure that applications based on classifiers are robust and stable. Ostensibly, it is intuitive to train a density model $p_\theta(x)$ to approximate the empirical distribution of training data, and refuse the sample $x$ when $p_\theta(x)$ is sufficiently low~\cref{bishop1994novelty}. 
+Machine learning has achieved impressive success in classification domain through deep neural network classifiers. However, these classifiers can be easily fooled by the data from other datasets (called out-of-distribution OoD)~\cite{nguyen2015deep}, which might lead to potential risks in practice. It is necessary to detect OoD data to ensure that applications based on classifiers are robust and stable. Ostensibly, it is intuitive to train a density model $p_\theta(x)$ to approximate the empirical distribution of training data, and refuse the sample $x$ when $p_\theta(x)$ is sufficiently low~\cite{bishop1994novelty}. 
 Recently, deep generative models are quickly developed and have been able to generate realistic samples, which indicates that deep generative models assign high density to the samples of the training data, and density can be used for detecting out-of-distribution. 
 
-However, contrary to popular belief, recent works show that density estimates by deep generative models assign higher density to the most samples from out-of-distribution and fail to detect OoD. 
+However, contrary to popular belief, recent works~\cite{nalisnick2018deep,choi2018waic,hendrycks2018deep} show that density estimates by deep generative models assign higher density to the most samples from out-of-distribution and fail to detect OoD. This phenomenon occurs in CIFAR (as training dataset) vs SVHN (as out-of-distribution) for different likelihood-based generative models, while the data in CIFAR and SVHN have significant different semantic. 
+
+Alternative indictors based on likelihood estimates have been proposed~\cite{serra2019input,song2017pixeldefend,choi2018waic,ren2019likelihood,song2019unsupervised,che2019deep} to alleviate this issue. However, we found that the datasets considered in these works are quite less, even only CIFAR and SVHN. It is a natural question whether these indictors work well on large-scale datasets, because a robust model should detect samples from any out-of-distribution by the definition of OoD problem. Therefore, we do a large-scale research for these indicators on more datasets and find that the performance of these indicators is as not well as they claim on large-scale datasets. Based on this observation, we argue that the few datasets will cause unreliable evaluation and evaluation on large-scale datasets should be a common sense in OoD domain. 
+
+Based on the observation on large-scale datasets, we found a common phenomenon that $p_\theta$ has a lower density for samples from in-distribution and higher density for samples from out-of-distribution than $p_\omega$, which is trained on the out-of-distribution. 
+Based on this phenomenon and theoretical proof, we propose the native KL indictor, $\log p_\theta(x) - \log p_\gamma(x)$ for OoD detection, where $p_\gamma$ is trained on the mixture distribution. Based on the similar theoretical inference, the discriminator in WGAN can also be used for OoD, called native Wasserstein indictor. 
+
+Our indicators outperform past works by a large margin. Moreover, we test our indicators under other limitations to show that our indicators are not data-specific and can be deployed on online system.
+
+The main contributions of this paper are in the following:
+\begin{itemize}
+	\item We do a large-scale research for these indicators on more datasets and find that the performance of these indicators is as not well as they claim on large-scale datasets. We argue that the few datasets will cause unreliable evaluation and evaluation on large-scale datasets should be a common sense in OoD domain. 
+	\item We propose the native indicators based on Kullback–Leibler divergence and Wasserstein distance for detecting out-of-distribution instead traditional likelihood assumption. It is a novel idea for guiding the indictors based on deep generative models. 
+	\item Native KL Indictor and Native Wasserstein Indictor outperforms past works by a large margin. They are not data-specific and can be deployed on online system.
+\end{itemize}
 
 \section{Background}
 Likelihood-based generative models are widely viewed to be robust to detect out-of-distribution samples by the model density intuitively. However, the densities of common likelihood-based models, \EG RealNVP~\cite{dinh2016density}, VAE~\cite{tomczak2018vae,takahashi2019variational} and PixelCNN~\cite{van2016conditional}, have been shown to be problematic for detecting out-of-distributions~\cite{nalisnick2018deep}. 
@@ -204,7 +219,7 @@ To solve this problem, some researches proposed some variants of these models fo
 LLR(x) = \log p_\theta(x) - \log p_{\theta_0}(x)
 \end{equation}
 
-\cite{nalisnick2018deep} observed that input complexity excessively affects the generative models' likelihoods. Based on this observation, they proposed an estimation for input complexity $L(x)$, to derive a parameter-free OoD indicator $S(x)$:
+\cite{serra2019input} observed that input complexity excessively affects the generative models' likelihoods. Based on this observation, they proposed an estimation for input complexity $L(x)$, to derive a parameter-free OoD indicator $S(x)$:
 \begin{equation}
 	S(x) = -\log p_\theta(x) - L(x)
 \end{equation}
@@ -272,7 +287,8 @@ We reproduce the indicators~\cite{alemi2018uncertainty,song2017pixeldefend,ren20
 \subfigure[AUROC = 0.9999]{
 \includegraphics[width=0.45\columnwidth]{counterexample_complexity4}
 }
-\caption{We select Omniglot as in-distribution and other grey datasets as out-of-distribution. (a) shows the correlation between likelihoods trained on Omniglot and complexity estimate. (b) shows the histogram of log-likelihood. The average AUROC over all testing datasets is 0.9867. (c) shows that indictor $S(x)$ might reach lower the performance than log-likelihood. It means that $L(x)$ is rough and we need a more precise, stable and interpretable estimate to assist log-likelihood for detecting OoD. (d) shows $\log p_\theta(x) - \log p_\omega(x)$ might be a good choice where $p_\omega$ is trained on out-of-distribution. }
+\caption{We select Omniglot as in-distribution and other grey datasets as out-of-distribution. (a) shows the correlation between likelihoods trained on Omniglot and complexity estimate. (b) shows the histogram of log-likelihood. The average AUROC over all testing datasets is 0.9867. (c) shows that indictor $S(x)$ might reach lower the performance than log-likelihood. It means that $L(x)$ is rough and we need a more precise, stable and interpretable estimate to assist log-likelihood for detecting OoD. (d) shows $\log p_\theta(x) - \log p_\omega(x)$ might be a good choice where $p_\omega$ is trained on out-of-distribution.%（e) TODO shows that the density of samples on out-of-distribution increase instead decrease during training. 
+}
 \label{fig2}
 \end{figure}
 
@@ -305,6 +321,7 @@ In the definition of OoD problem, we do not give any assumption about the probab
 	\item There exists a divergence $div$, satisfying that $div(\pin, \pout) \gg 0$ and $div(\pout, \pin) \gg 0$. 
 	\item If $div(\pin, \pout)$ and $div(\pout, \pin)$ can be represented by sampling formula, \IE $div(\pin, \pout) \approx \sum_{i} f(x_i)$, then $f(x_i) \gg 0$ for almost  $x_i$. 
 	\item $f: \mathcal{X} \rightarrow \mathcal{R}$ maps the distribution $\pin, \pout$ into two Gaussian distribution with constant variance. 
+	\item 3 and 4 holds for any indictor $\hat{f}$ approximating $f$. 
 \end{enumerate} 
 
 It is important to notice that assumption 3 can not be deduced from assumption 2 obviously. For example, when $\pin = \frac{1}{2}(\mathcal{N}(0, 1) + \mathcal{N}(-10, 1))$ and $\pout = \frac{1}{2}(\mathcal{N}(0, 1) + \mathcal{N}(10, 1))$, $KL(\pin, \pout) \approx 25.05 \gg 0$ but $\log \pin(x) - \log \pout(x) \approx 0$.  In such example, $\pin$ and $\pout$ is distinguishing by KL-divergence but is not simply classified because no classier can detect whether a sample in $\mathcal{N}(0, 1)$ is from $\pin$ or $\pout$. We assume that assumption 3 holds when $\pin$ and $\pout$ is simply classified. 
@@ -319,20 +336,20 @@ We select KL-divergence as $D$, then $KL(\pin, \pout) = \E_{\pin(x)} [\log \pin(
 \begin{figure}
 	\center
 	\includegraphics[width=0.9\columnwidth]{diagram}
-	\caption{Diagrammatic sketch for the motivation of Native KL Indictor. The in-distribution is in [0, 10] and out-of-distribution in [10, 20]. Intuitively, $p_\theta$ has a lower density than $p_\omega$ for samples from in-distribution and higher density for samples from out-of-distribution. 
-	Different to the assumption of log-likelihood indictor, we do not assume that $p_\theta(x_2)$ or $p_\in(x_2)$ is a very lower density for $x_2 \sim \pout$. By the assumption 1,2,3,4, we can induce that $\pin(x_1) < \pout(x_1)$ and $\pin(x_2) > \pout(x_2)$. We expect that $p_\theta$ and $p_\omega$ also have this property, \IE $p_\theta(x) - p_\omega(x)$ is an indictor for OoD detection. }
+	\caption{Diagrammatic sketch for the motivation of Native KL Indictor. The in-distribution is in [0, 10] and out-of-distribution in [10, 20]. Intuitively, $p_\theta$ has a lower density for samples from in-distribution and higher density for samples from out-of-distribution than $p_\omega$ . 
+	Different to the assumption of log-likelihood indictor, we do not assume that $p_\theta(x_2)$ or $p_\in(x_2)$ is a very lower density for $x_2 \sim \pout$. By the assumptions, we can induce that $\pin(x_1) < \pout(x_1)$ and $\pin(x_2) > \pout(x_2)$. $p_\theta$ and $p_\omega$ also have this property, \IE $p_\theta(x) - p_\omega(x)$ is an indictor for OoD detection. }
 	\label{fig3}
 \end{figure}
 
 \begin{theorem}\label{thm1}
-	$\log \pin(x) - \log \pout(x)$ is a symmetric indictor, \IE it reaches same performance in experiment A vs B and B vs A.  
+	$\log \pin(x) - \log \pout(x)$ is a symmetric indictor, \IE it reaches same performance in experiment A vs B and B vs A, with a natural threshold zero. 
 \end{theorem}
-Likelihood is not a symmetric indictor since it uses $p_A$ as indictor in experiment A vs B and $p_B$ as indictor in experiment A vs B. An interesting phenomenon is that if likelihood indictor reaches a good performance on experiment A vs B, then it will usually fail in experiment B vs A, in appendix B. 
+Likelihood is not a symmetric indictor since it uses $p_A$ as indictor in experiment A vs B and $p_B$ as indictor in experiment A vs B. An interesting phenomenon is that if likelihood indictor reaches a good performance on experiment A vs B, then it will usually fail in experiment B vs A, in appendix B. A special example is the experiment of Noise vs any dataset. The optimal model of Noise dataset is uniform distribution, however, it can not detect any OoD. In the experiment of any dataset vs Noise, likelihood reaches nearly best performance since the log-likelihood of noise is significantly lower than any datasets. 
 
 However, $\pout$ is unknown under the limitation of OoD problem. Therefore, we try to use another tractable term to replace $\pout$. 
 
 \begin{theorem}\label{thm2}
-	For any mixture distribution $\pmix = \alpha \pin + \beta \pout$ where $\alpha + \beta = 1$ and $\alpha, \beta > 0$, the performance of indictor $\log \pin(x) - \log \pmix(x)$ and indictor $\log \pin(x) - \log \pout(x)$ are equal for OoD detection. A special example is the experiment of Noise vs any dataset. The optimal model of Noise dataset is uniform distribution, however, it can not detect any OoD. In the experiment of any dataset vs Noise, likelihood reaches nearly best performance since the log-likelihood of noise is significantly lower than any datasets. 
+	For any mixture distribution $\pmix = \alpha \pin + \beta \pout$ where $\alpha + \beta = 1$ and $\alpha, \beta > 0$, the performance of indictor $\log \pin(x) - \log \pmix(x)$ and indictor $\log \pin(x) - \log \pout(x)$ are equal for OoD detection. 
 \end{theorem}
 
 If we can get enough data from the mixture distribution, By \cref{thm1}, a model $p_\gamma$ that is trained to approximate $\pmix$ can be used to replace the term $\pout$ in Native KL Indictor and ensure the same performance. It is also observed in our experiments, shown in \cref{tab1}. Next, we try to explain why native KL indictor can reach outstanding performance.
@@ -459,9 +476,15 @@ The main results for indictors of past works are summarized in \cref{tab1}. The 
 \cref{thm1} is supported by the detail experiments shown in appendix B. \cref{thm2} is supported by the performance of native KL indictor based on mixture distribution. 
 \cref{fig4} shows that native KL indictor can also get same performance when log-likelihood can reach outstanding performance, to support \cref{thm3}. 
 
+\begin{figure}
+	\includegraphics[width=1.0\columnwidth]{roc_prc}
+	\caption{ROC and Precision-Recall Curve on CIFAR-100 vs CelebA based on VAE model. The native KL Indictor outperforms other indictors. }
+	\label{fig5}
+\end{figure}
+
 We compare the precision-recall curve and ROC curve of native KL indictor, log-likelihood indictor, likelihood ratio indictor and log-likelihood with input complexity in \cref{fig5}, to show native KL indictor is the best version of log-likelihood ratio indictor, to support \cref{thm4}. \cref{fig6} shows the change of AUROC during training on mixture distribution to support \cref{thm5}. 
 
-\cref{thm7} is supported by the detail experiments shown in appendix B. The performance The detection ability of native Wasserstein indictor is shown in \cref{fig7}. The performance of the native Wasserstein indictor trained on mixture distribution is near same as the native Wasserstein indictor trained on out-of-distribution, which validates \cref{thm8}. The outstanding performance of the native Wasserstein indictor supports the \cref{thm9}. 
+\cref{thm7} is supported by the detail experiments shown in appendix B. In table \cref{tab2}, the performance of the native Wasserstein indictor trained on mixture distribution is near same as the native Wasserstein indictor trained on out-of-distribution, which validates \cref{thm8}. The outstanding performance of the native Wasserstein indictor supports the \cref{thm9}. 
 
 \subsection{Concerns}
 
@@ -480,7 +503,8 @@ We have emphasized that it is unreliable to evaluate the models for OoD in a few
 While native indictors show outstanding performance in our experiments, we have also observed some defects of them. They depend on the model (\EG Native KL Indicator based on Glow is data-specific) and optimizer (\EG when data from mixture distribution is not enough for training, optimizer can not give the expected $p_\gamma$ expect). It is natural to design an indicator to approximate $\log p_\gamma(x) - \log p_\theta(x)$ without optimizer, \EG by Taylor Expansion. We leave it for future work. 
 Native indictors will lead to many works since it rise simply, fundamental and practical indictors with solid experiments and theories. 
 
-\section{Conclusion}
+\section{Conclusion and Future Work}
+
 
 \bibliography{reference.bib}
 

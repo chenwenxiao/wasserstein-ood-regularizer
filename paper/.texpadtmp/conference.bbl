@@ -1,4 +1,4 @@
-\begin{thebibliography}{24}
+\begin{thebibliography}{25}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \providecommand{\urlprefix}{URL }
@@ -16,6 +16,12 @@ Alemi, A.~A.; Fischer, I.; and Dillon, J.~V. 2018.
 Arjovsky, M.; Chintala, S.; et~al. 2017.
 \newblock Wasserstein generative adversarial networks.
 \newblock In \emph{International conference on machine learning}, 214--223.
+
+\bibitem[{Bishop(1994)}]{bishop1994novelty}
+Bishop, C.~M. 1994.
+\newblock Novelty detection and neural network validation.
+\newblock \emph{IEE Proceedings-Vision, Image and Signal processing} 141(4):
+  217--222.
 
 \bibitem[{Che et~al.(2019)Che, Liu, Li, Ge, Zhang, Xiong, and
   Bengio}]{che2019deep}
