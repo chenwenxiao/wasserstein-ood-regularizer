@@ -191,7 +191,7 @@ However, contrary to popular belief, recent works~\cite{nalisnick2018deep,choi20
 
 Alternative indictors based on likelihood estimates have been proposed~\cite{serra2019input,song2017pixeldefend,choi2018waic,ren2019likelihood,song2019unsupervised,che2019deep} to alleviate this issue. However, we found that the datasets considered in these works are quite less, even only CIFAR and SVHN. It is a natural question whether these indictors work well on large-scale datasets, because a robust model should detect samples from any out-of-distribution by the definition of OoD problem. Therefore, we do a large-scale research for these indicators on more datasets and find that the performance of these indicators is as not well as they claim on large-scale datasets. Based on this observation, we argue that the few datasets will cause unreliable evaluation and evaluation on large-scale datasets should be a common sense in OoD domain. 
 
-Based on the observation on large-scale datasets, we found a common phenomenon that $p_\theta$ has a lower density for samples from in-distribution and higher density for samples from out-of-distribution than $p_\omega$, which is trained on the out-of-distribution. 
+Based on the observation on large-scale datasets, we found a common phenomenon that $p_\theta$ has a higher density for samples from in-distribution and lower density for samples from out-of-distribution than $p_\omega$, which is trained on the out-of-distribution. 
 Based on this phenomenon and theoretical proof, we propose the native KL indictor, $\log p_\theta(x) - \log p_\gamma(x)$ for OoD detection, where $p_\gamma$ is trained on the mixture distribution. Based on the similar theoretical inference, the discriminator in WGAN can also be used for OoD, called native Wasserstein indictor. 
 
 Our indicators outperform past works by a large margin. Moreover, we test our indicators under other limitations to show that our indicators are not data-specific and can be deployed on online system.
@@ -199,7 +199,7 @@ Our indicators outperform past works by a large margin. Moreover, we test our in
 The main contributions of this paper are in the following:
 \begin{itemize}
 	\item We do a large-scale research for these indicators on more datasets and find that the performance of these indicators is as not well as they claim on large-scale datasets. We argue that the few datasets will cause unreliable evaluation and evaluation on large-scale datasets should be a common sense in OoD domain. 
-	\item We propose the native indicators based on Kullback–Leibler divergence and Wasserstein distance for detecting out-of-distribution instead traditional likelihood assumption. It is a novel idea for guiding the indictors based on deep generative models. 
+	\item We propose the native indicators based on Kullback–Leibler divergence and Wasserstein distance for detecting out-of-distribution by a new theoretical framework instead of traditional likelihood assumption. It is a novel idea for guiding the indictors based on deep generative models. 
 	\item Native KL Indictor and Native Wasserstein Indictor outperforms past works by a large margin. They are not data-specific and can be deployed on online system.
 \end{itemize}
 
@@ -490,21 +490,23 @@ We compare the precision-recall curve and ROC curve of native KL indictor, log-l
 
 The experiments about concerns are showing in \cref{tab3}. \cref{fig8} shows the change of AUROC while the size of batch varies. These experiments show that native KL indicator and native Wasserstein indictor are effective, robust, general, online and not data-specific. It also show the weakness of these native indictors that it can not work well when only a few data from mixture distribution is provided. 
 
-\section{Limitations of the Study} In this section, we will discuss the limitation of our paper in datasets, models and native indictors. 
+\subsection{Limitations of the Study.} In this section, we will discuss the limitation of our paper in datasets, models and native indictors. 
 
-\subsection{Limitation of datasets}
+\textbf{Limitation of datasets.}
 In our paper, we try large-scale datasets to show the generality of indictors. However, we only consider natural OoD datasets \cref{chen2020robust} and do not consider attacked OoD. An important reason is that it is quite hard to design a principle like simply classified, to measure these attacked OoD datasets. 
 
-\subsection{Limitation of models} 
+\textbf{Limitation of models.} 
 In our paper, for fair comparison and the research for generality, we only consider the common models, including ResNet, VAE, PixelCNN, Glow and WGAN. However, there are numerous models careful-designed for OoD detection. Limited by our computation resource, we can not give the performance of them over large-scale datasets. 
 We have emphasized that it is unreliable to evaluate the models for OoD in a few datasets in this paper and we expect that it can become a common sense in OoD domain. 
 
-\subsection{Limitation of native indictors} 
+\textbf{Limitation of native indictors.} 
 While native indictors show outstanding performance in our experiments, we have also observed some defects of them. They depend on the model (\EG Native KL Indicator based on Glow is data-specific) and optimizer (\EG when data from mixture distribution is not enough for training, optimizer can not give the expected $p_\gamma$ expect). It is natural to design an indicator to approximate $\log p_\gamma(x) - \log p_\theta(x)$ without optimizer, \EG by Taylor Expansion. We leave it for future work. 
 Native indictors will lead to many works since it rise simply, fundamental and practical indictors with solid experiments and theories. 
 
 \section{Conclusion and Future Work}
+In this paper, we show the terrible generality of existing OoD detection method based on common models over large-scale datasets and call on that the evaluation over large-scale datasets is necessary on OoD domain. We propose the native KL indictor and the native Wasserstein indictor through the native indictor theoretical framework, which is a novel idea that could guide OoD indictors based on deep generative models. We show our indictors is able to achieve state-of-the-art performance on large-scale datasets, significantly better than others. 
 
+For future work, it would be interesting to approximate native KL indictor without optimizer or develop optimizer that only requires few data to train model on mixture distribution, for solving the limitation of native indictors.  We believe our indicators would provide insight for the development of OoD indicators based on deep generative models. 
 
 
 \bibliography{reference.bib}
