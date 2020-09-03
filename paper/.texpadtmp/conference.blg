@@ -19,6 +19,10 @@ Repeated entry---line 419 of file ../reference.bib.bib
  : @article{kumar2019maximum
  :                          ,
 I'm skipping whatever remains of this entry
+Repeated entry---line 481 of file ../reference.bib.bib
+ : @article{hendrycks2018deep
+ :                           ,
+I'm skipping whatever remains of this entry
 You've used 25 entries,
             2951 wiz_defined-function locations,
             723 strings with 9447 characters,
@@ -60,4 +64,4 @@ warning$ -- 0
 while$ -- 138
 width$ -- 0
 write$ -- 323
-(There were 4 error messages)
+(There were 5 error messages)
