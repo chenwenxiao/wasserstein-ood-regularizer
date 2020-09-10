@@ -470,14 +470,14 @@ Next, we will show the property of model distribution.
 	$\log \frac{p_\theta(x)}{p_\gamma(x)}$ can be used for detecting OoD. Moreover, $\log \frac{p_\theta(x)}{p_\gamma(x)}$ represents whether a sample $x$ in mixture distribution have been optimized in the training process of $\theta$. 
 \end{theorem}
 
-\Cref{thm5} shows that $\log \frac{p_\theta(x)}{p_\gamma(x)}$ represents the optimizability: if a sample $x$ is OoD, $p_\theta(x)$ will be lower than $p_\gamma(x)$ since $x$ is also in $\pmix$ and $p_\gamma(x)$ can be optimized more than $p_\theta(x)$; if $x$ is not OoD, $p_\theta(x)$ will not be lower than $p_\gamma(x)$ since $p_\theta(x)$ is well-trained to maximize log-likelihood. \Cref{thm5} indicates that we do not need spend much time for training on mixture distribution since we only need to observe whether the likelihood of a sample can be improved, which can be shown in few epochs. It alleviates the requirements for training and then we can train models online. 
+\Cref{thm5} shows that $\log \frac{p_\theta(x)}{p_\gamma(x)}$ represents the optimizability: if a sample $x$ is OoD, $p_\theta(x)$ will be lower than $p_\gamma(x)$ since $x$ is also in $\pmix$ and $p_\gamma(x)$ can be optimized more than $p_\theta(x)$; if $x$ is not OoD, $p_\theta(x)$ will not be lower than $p_\gamma(x)$ since $p_\theta(x)$ is well-trained to maximize log-likelihood. \Cref{thm5} indicates that training on mixture distribution does not need much time since we only need to observe whether the likelihood of a sample can be improved, which can be shown in few epochs. It alleviates the requirements for training and then we can train models online. 
 
 \subsection{Wasserstein-based Indicator}
 From the view of traditional likelihood-indicator, GANs can not be used for detecting OoD since  how to evaluate the density of GANs is an open problem\cite{nalisnick2019do}. Therefore, some researches propose variants of GANs with tractable density~\cite{kumar2019maximum}. In the framework of divergence-based indicators, we can detect OoD by discriminator without the density of GANs.                                                                                                                                                                                                                                                                                                                                                                                                      
 
-In vanilla GAN~\cite{goodfellow2014generative}, a discriminator is trained to distinguish generated samples and real samples and  a generator is trained to generate samples for deceiving the discriminator.
+In vanilla GAN~\cite{goodfellow2014generative}, a discriminator is trained to distinguish generated samples and real samples and a generator is trained to generate samples for deceiving the discriminator.
 
-However, vanilla GAN is unstable during the training process. To tackle this problem, Wasserstein distance is introduced by WGAN~\cite{arjovsky2017wasserstein}:
+However, vanilla GAN is unstable during the training process. To tackle this problem, Wasserstein distance is introduced in WGAN~\cite{arjovsky2017wasserstein}:
 \begin{equation}
 	W^1(\mu, \nu) = \sup_{Lip(D) \leq 1} \{\E_{\mu(x)} D(x)  - \E_{\nu(x)} D(x)\}
 \end{equation}
@@ -486,9 +486,10 @@ We select Wasserstein distance as $div$, then
 \begin{equation}
 	W^1(\pin, \pout) \approx \sum_i \Big[D(x_i^{in}) - \sum_j D(x_j^{out})\Big]
 \end{equation} 
-where $x_i^{in}$ is sampled from in-distribution, $x_j^{out}$ is sampled from out-of-distribution and $D$ is the optimal solution in $W^1(\pin, \pout)$. Then the Wasserstein-based indicator for sample $x$ is $D(x) - \sum_{j} D(x_j^{out})$. Notice that $\sum_{j} D(x_j^{out})$ is a constant and it will not affect the performance of OoD detection. Therefore, the Wasserstein-based indicator is simply $D(x)$. The generator of WGAN does not appear in our formula since we only consider how to measure the distance between $\pin, \pout$ instead of generating. 
+where $x_i^{in}$ is sampled from in-distribution, $x_j^{out}$ is sampled from out-of-distribution and $D$ is the optimal solution in $W^1(\pin, \pout)$. Then the Wasserstein-based indicator for sample $x$ is $D(x) - \sum_{j} D(x_j^{out})$. Note that $\sum_{j} D(x_j^{out})$ is constant, which do not affect the performance of OoD detection. Thus, the Wasserstein-based indicator is simply $D(x)$. 
+% The generator of WGAN does not appear in our formula since we only consider how to measure the distance between $\pin, \pout$ instead of generating. 
 
-We will show some theorems to show the property of Wasserstein-based indicator to ensure that it can be obtained without any information of $\pout$. 
+Next theorems are used to show why Wasserstein-based indicator can reach great performance ensure that $D$ can be obtained without knowing $\pout$. 
 
 \begin{theorem}\label{thm6}
 	Assumption 2 is a corollary of definition of OoD problem when $div$ is Wasserstein distance.  
@@ -509,13 +510,13 @@ By \Cref{thm8}, $\hat{D}$ that is easy-obtained can replace $D$. Next theorem wi
 \end{theorem}
 
 \subsection{Concerns}
-We have proposed a method to exploit the samples of mixture distribution to train a model for OoD detection. However, there are three major concerns about this idea: 
+The idea of this paper is training a model for OoD detection by exploiting the samples of mixture distribution. However, there are three major concerns about this idea: 
 
 \noindent \textbf{1.} Is our method \textbf{data-specific}? \IE does this method only work on the data that it has seen in training? 
 
 \noindent \textbf{2.} Can our method work \textbf{online}? \IE for new testing data, indicators should be given before the next testing data come.  
 
-\noindent \textbf{3.} Can our method work on a \textbf{small size block} while model must detect OoD immediately while it only knows in-distribution data and this block from mixture distribution. 
+\noindent \textbf{3.} Can our method work when $\pmix$ has only \textbf{less samples}? 
 
 \noindent \textbf{4.} Is it better to train \textbf{pre-trained} models (trained on in-distribution) or \textbf{initialized} models on mixture distribution?
 
@@ -525,7 +526,7 @@ To solve the concerns, we design following experiments:
 
 \noindent \textbf{2.} We simulate the online system --- the data in mixture distribution is streaming and requires indicators immediately. 
 
-\noindent \textbf{3.} We splits the data from mixture distribution into several blocks and model can only be trained on the in-distribution and the block waiting for detection.  
+\noindent \textbf{3.} We splits the data from $\pmix$ into several blocks and model can only use $\pin$ and the block waiting for detection.  
 
 \noindent \textbf{4.} Experiments for pre-train models and initialized models. 
 
@@ -550,19 +551,20 @@ In this section, we will demonstrate the effectiveness of KL-based indicator and
 %\textbf{Noise} is created by uniformly randomly sampling. 
 %\textbf{Constant} includes images whose pixels have same color. 
 
-MNIST~\cite{lecun1998gradient-based}, FashionMNIST~\cite{xiao2017/online}, KMNIST~\cite{clanuwat2018deep}, NOT-MNIST, Omniglot~\cite{lake2015human}, CIFAR-10~\cite{krizhevsky2009learning}, CIFAR-100~\cite{krizhevsky2009learning}, TinyImagenet~\cite{deng2009imagenet}, SVHN~\cite{netzer2011reading}, iSUN~\cite{xu2015turkergaze}, CelebA~\cite{liu2015deep}, LSUN~\cite{yu2015lsun}, Noise and Constant are considered. 
+Our experiments consider following datasets: MNIST~\cite{lecun1998gradient-based}, FashionMNIST~\cite{xiao2017/online}, KMNIST~\cite{clanuwat2018deep}, NOT-MNIST, Omniglot~\cite{lake2015human}, CIFAR-10~\cite{krizhevsky2009learning}, CIFAR-100~\cite{krizhevsky2009learning}, TinyImagenet~\cite{deng2009imagenet}, SVHN~\cite{netzer2011reading}, iSUN~\cite{xu2015turkergaze}, CelebA~\cite{liu2015deep}, LSUN~\cite{yu2015lsun}, Noise and Constant. 
 
 The natural images are resized into 32x32x3 and grey images are all 28x28x1. All pair in natural image datasets and all pair in grey image datasets are considered in our experiments. Only CIFAR-10, CIFAR-100 and TinyImageNet are not simply-classified and intuitively they have similar classes. Noise and Constant includes both grey and natural images. LSUN and iSUN are only used for out-of-distribution. CelebA, Noise and Constant have no labels, and we set random labels from 0 to 9 on these datasets. 
 
 Samples of $\pin, \pout$ are from training set of $\pin, \pout$. Samples of $\pmix$ are from the testing set of $\pin, \pout$. 
 
 \subsection{Metrics}
-Following metrics are adopted to measure the effectiveness of a method in out-of-distribution detection:
+Following standard metrics are adopted to measure the effectiveness of a method in out-of-distribution detection:
 
-\noindent \textbf{AUROC} is the Area Under the Receiver Operating Characteristic curve, which is a threshold-independent metric~\cite{davis2006relationship}. AUROC can be interpreted as the probability that a sample from in-distribution is assigned a lower detection score than a sample from out-of-distribution~\cite{fawcett2006introduction}. It is widely applied in OoD domain. We select AUROC as our major metrics. 
+\noindent \textbf{AUROC} is the Area Under the Receiver Operating Characteristic curve, a threshold-independent metric~\cite{davis2006relationship} and widely used in OoD domain. 
+%AUROC can be interpreted as the probability that a sample from in-distribution is assigned a lower detection score than a sample from out-of-distribution~\cite{fawcett2006introduction}. It is widely applied in OoD domain. We select AUROC as our major metrics. 
 
 
-\noindent \textbf{AP} is the Average Precision, summarizing the precision-recall curve as the weighted mean of precisions achieved at each threshold. 
+\noindent \textbf{AP} is the Average Precision, summarizing the precision-recall curve as the weighted mean of precisions. 
 
 \noindent \textbf{FPR@TPR95} is the False Positive Rate when True Positive Rate is over 95\%., which means the probability that an out-of-distribution example is misclassified as in-distribution when over 95\% in-distribution is detected accurately.
 
@@ -605,11 +607,11 @@ $D_\gamma(x)$  & WGAN & 98.06 & 98.20 \\
 \label{tab3}
 \end{table}
 
-The main results for indicators of past works are summarized in \Cref{tab2}. The main results for KL-based indicator and Wasserstein-based indicator are summarized in \Cref{tab3}. 
+The main results of the previous works are summarized in \Cref{tab2}. The main results for KL-based indicator and Wasserstein-based indicator are summarized in \Cref{tab3}. 
 
 \subsection{Validation of Theorem}
 
-\Cref{thm1} is supported by the detail experiments shown in appendix B. \Cref{thm2} is supported by \Cref{tab3}, where the performance of $\log \frac{p_\theta(x)}{p_\gamma(x)}$ is nearly same as $\log \frac{p_\theta(x)}{p_\omega(x)}$. 
+\Cref{thm1} is supported by the detailed experiments shown in appendix B. \Cref{thm2} is supported by \Cref{tab3}, where the performance of $\log \frac{p_\theta(x)}{p_\gamma(x)}$ is nearly same as $\log \frac{p_\theta(x)}{p_\omega(x)}$. 
 
 Detailed experiments in appendix B show that KL-based indicator can get same performance when log-likelihood can reach outstanding performance, to support \Cref{thm3}. 
 
@@ -619,7 +621,7 @@ Detailed experiments in appendix B show that KL-based indicator can get same per
 	\label{fig5}
 \end{figure}
 
-We compare the precision-recall curve and ROC curve of KL-based indicator, log-likelihood indicator, likelihood ratio indicator and log-likelihood with input complexity in \Cref{fig5}, to show KL-based indicator is the best version of log-likelihood ratio indicator, to support \Cref{thm4}. 
+We compare the precision-recall curve and ROC curve of KL-based indicator, log-likelihood indicator, likelihood ratio indicator and log-likelihood with input complexity in \Cref{fig5}, which shows KL-based indicator is the best version of log-likelihood ratio indicator, to support \Cref{thm4}. 
 
 \Cref{thm7} is supported by the detailed experiments in appendix B. In \Cref{tab3}, the performance of $D_\omega(x)$ is nearly same as $D_\gamma(x)$, which supports \Cref{thm8}. The outstanding performance of $D_\omega(x), D_\gamma(x)$ supports the \Cref{thm9}. 
 
@@ -655,7 +657,7 @@ block & $D_\gamma(x)$ & WGAN & 97.66 & 97.89 \\
 % models/increment/wasserstein.py --retrain_for_batch=True --count_experiment=True kl [0.97663634 0.97891633 0.30628251 0.97891805 0.10417664]
 \bottomrule
 \end{tabular}
-\caption{The average online testing time (including training time on $\pout$) per image for VAE, PixelCNN, RNVP and WGAN is 0.18s, 0.13s, 0.58s and 0.11s. 'online' indicates that data is streaming, '20\%' indicates that only 20\% data in $\pmix$ can be used for training and 'block' indicates that only a block can be used. VAE and WGAN are more robust since their performance is near to the value in \cref{tab3}. }
+\caption{The average online testing time (including training time on $\pout$) per image for VAE, PixelCNN, RNVP and WGAN is 0.18s, 0.13s, 0.58s and 0.11s. `online' indicates that data is streaming, `20\%' indicates that only 20\% data in $\pmix$ can be used for training and `block' indicates that only a block can be used. VAE and WGAN are more robust since their performance is near to the value in \cref{tab3}. }
 \label{tab4}
 \end{table}
 
@@ -663,13 +665,12 @@ block & $D_\gamma(x)$ & WGAN & 97.66 & 97.89 \\
 \centering
 \includegraphics[width=0.45\columnwidth]{auroc_during_training}
 \includegraphics[width=0.45\columnwidth]{auroc_during_batch}
-\caption{Left figure shows the changing of average AUROC of pretrained model and un-pretrained model during the training on $\pmix$, on CIFAR-10 vs other datasets. Pretrained model can easily get a good performance after few epochs, but it will fall into the local extremum (likelihood on in-distribution has been optimized quite well in pre-training, and any modification for parameters will reduce it) and the final performance is not well. Un-pretrained model need more epochs to get a good performance, but its final performance is better than pretrained model. 
-Right figure shows the changing of AUROC of KL-based indicator when the block size varies on CIFAR-10 vs SVHN. It shows the limitation: when block size is small enough, the optimization only on one block will lead to unexpected $p_\gamma$. Training on past data (online) can alleviate this issue. Block size of 'online' means the size of data streaming at same time. }
+\caption{Left: the changing of average AUROC of pretrained model and un-pretrained model during the training on $\pmix$, on CIFAR-10 vs other datasets. Right: the changing of AUROC of KL-based indicator when the block size varies on CIFAR-10 vs SVHN. }
 \label{fig6}
 \end{figure}
 
-The experiments about concerns are showing in \Cref{tab4}. \Cref{fig6} shows the change of AUROC during training on $\pmix$. 
-\Cref{fig6} shows the change of AUROC while the size of block varies. 
+The experiments about concerns are shown in \Cref{tab4}. \Cref{fig6} shows the change of AUROC during training on $\pmix$. Pretrained model can easily get a good performance after few epochs, but it will fall into the local extremum (likelihood on in-distribution has been optimized quite well in pre-training, and any modification for parameters will reduce it) and the final performance is not well. Un-pretrained model need more epochs to get a good performance, but its final performance is better than pretrained model. 
+\Cref{fig6} shows the change of AUROC while the size of block varies. It shows the limitation: when block size is small enough, the optimization only on one block will lead to unexpected $p_\gamma$. Training on past data (online) can alleviate this issue. Block size of 'online' means the size of data streaming at same time.
 These experiments show that KL-based indicator and Wasserstein-based indicator are effective, robust, general, online and not data-specific. It also shows the weakness of that they can not work well in a small enough block. 
 
 \subsection{Limitations of the Study} 
@@ -682,7 +683,7 @@ In our paper, we use large-scale datasets to show the generality of indicators. 
 In our paper, for fair comparison and generality, we only consider the common models, including ResNet, VAE, PixelCNN, RealNVP and WGAN. However, there are numerous models careful-designed for OoD detection. Due to the resource limitation, we can not give the performance of them on large-scale datasets. We emphasize that evaluation in a few datasets is unreliable and we expect that it can become a common sense in the OoD domain. 
 
 \noindent \textbf{Limitation of divergence-based indicators.} 
-Some defects of divergence-based indicators is shown, while they reach outstanding performance. They rely on the model (\EG KL-based indicator on RNVP is more data-specific) and optimizer (\EG when data from mixture distribution is not enough for training, optimizer can not give the expected $p_\gamma$). It is a natural idea to approximate $\log \frac{ p_\theta(x)}{p_\gamma(x)}$ without optimizer, \EG Taylor Expansion on pretrained model. We leave it for future work. 
+Some defects of divergence-based indicators is shown in \cref{sec6}. They rely on the model (\EG KL-based indicator on RNVP is more data-specific) and optimizer (\EG when data from $\pmix$ is not enough, optimizer can not give the expected $p_\gamma$). It is a natural idea to approximate $\log \frac{ p_\theta(x)}{p_\gamma(x)}$ without optimizer, \EG Taylor Expansion on pretrained model. We leave it as future work. 
 Divergence-based indicators will guide future works since it can develop simply, fundamental and practical indicators from basic assumptions. 
 
 \section{Conclusion and Future Work}
