@@ -178,11 +178,8 @@
 
 \begin{abstract}
 
-Currently, deep generative models are widely researched in detecting out-of-distribution (OoD) problem. We reviewed the recent researches about out-of-distribution based on deep generative models and found one critical weakness that the number of datasets in these works is not enough to support the generality of their indicators. 
-Therefore, we do large-scale research for these indicators on 14 datasets with 97 pair experimnts and find that these indicators on common deep generative models do not perform well on large-scale datasets. 
-Here we propose the KL-based indicator and Wasserstein-based indicator for detecting out-of-distribution through a theoretical framework called divergence-based indicator. 
-Our indicators are general with solid theoretical inference and proven to be better than traditional indicators. They are expected to guide the development of deep generative models in the OoD domain. 
-Our indicators outperform past works by 10\% in AUROC and their performance is near to theoretical optimal result. Moreover, our systematic experiments show that our indicators are not data-specific and can be deployed online. 
+To ensure robust and reliable classification results, OoD (out-of-distribution) indicators based on deep generative models are proposed recently and are shown to work well on small scale experiments. In this paper, we conduct the first large-scale experiments (1 order of magnitude larger than previous ones) for existing OoD indicators and observe that none of them perform well. We thus advocate that large-scale experiments are mandatory for evaluating OoD indicators. We then propose a novel theoretical framework ROID for robust Out-of-Distribution indictors based on divergence (instead of the traditional likelihood assumption) in deep generative models. Following  this framework, we further propose two effective and robust divergence-based indictors: KL-based and Wasserstein-based. These two indictors significantly outperform past works by 10\% in AUROC and its performance is close to the optimal. Moreover, our systematic experiments show that our indicators are not data-specific and can be deployed online. 
+
  
 \end{abstract}
 
@@ -205,8 +202,8 @@ Our large-scale experiments show that our two indicators significantly outperfor
 
 The main contributions of this paper are as follows:
 \begin{itemize}
-	\item We conduct the first large-scale experiments (1 order of magnitude larger than previous ones) for existing OoD indicators and observe that none of existing OoD indicators perform well. We thus advocate that \textit{small-scale experiments is unreliable and large-scale experiments are mandatory for evaluating OoD indicators}.
-	\item We propose a novel theoretical framework~\ROID{} for robust Out-of-Distribution indictors based on divergence (instead of the traditional likelihood assumption)in deep generative models. Following  this framework, we further propose two effective and robust divergence-based indictors: KL-based and Wasserstein-based.
+	\item We conduct the first large-scale experiments (1 order of magnitude larger than previous ones) for existing OoD indicators and observe that none of them perform well. We thus advocate that \textit{small-scale experiments is unreliable and large-scale experiments are mandatory for evaluating OoD indicators}.
+	\item We propose a novel theoretical framework~\ROID{} for robust Out-of-Distribution indictors based on divergence (instead of the traditional likelihood assumption)in deep generative models. Following  this framework, we further propose two effective and robust divergence-based indictors: KL-based and Wasserstein-based. We believe that more indictors can be proposed following ~\ROID{} framework.
 	\item Our KL-based indicator and Wasserstein-based indicators significantly outperform past works by 10\% in AUROC and its performance is close to the optimal. Moreover, our systematic experiments show that our indicators are not data-specific and can be deployed online. 
 \end{itemize}
 
@@ -687,10 +684,12 @@ Some defects of divergence-based indicators is shown in \cref{sec6}. They rely o
 Divergence-based indicators will guide future works since it can develop simply, fundamental and practical indicators from basic assumptions. 
 
 \section{Conclusion and Future Work}
-In this paper, we show the terrible generality of existing OoD indicators based on common models on large-scale datasets and call on that evaluation on large-scale datasets is crucial in OoD domain. We propose the KL-based indicator and the Wasserstein-based indicator through the divergence-based indicator theoretical framework, which is a novel idea that can guide OoD indicators based on deep generative models. Our indicators achieve the state-of-the-art on large-scale datasets, outperforming past works by 10\% in AUROC.
+In this paper, we first show through large-scale experiments that none of existing OoD indicators based on deep generative models is robust. We then propose a novel theoretical framework ROID for robust Out-of-Distribution indictors based on divergence in deep generative models, and propose and prove a KL-based indicator and a Wasserstein-based indictor, both of which significantly outperform past works by 10\% in AUROC.
 
-For future work, it will be interesting to approximate KL-based indicator without optimizer or develop optimizers that only require few data to train models on mixture distribution, for solving the limitation of divergence-based indicators.  We believe our paper will provide insight into the development of OoD indicators based on deep generative models. 
 
+ We believe our paper is an important step towards developing more robust OoD indicators based on deep generative models. For future work,  it will be interesting to propose more OoD indicators following ~\ROID{} framework. It would be also interesting to approximate KL-based indicator without optimizer or develop optimizers that only require few data to train models on mixture distribution, for solving the limitation of divergence-based indicators. 
+ 
+ 
 \newpage
 \section{Ethical and societal impact}
 There is no any potential ethical impact of our work. Our work focus on pure model research. The datasets and model considered in our paper are open, clear and popular. Our work concentrate on developing new OoD detector based on deep generative models, which might play important role in anomaly detection or assisting the classification. Our paper does not have any negative societal implications.  
