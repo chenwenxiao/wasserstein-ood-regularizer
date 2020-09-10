@@ -48,7 +48,7 @@ class ExpConfig(spt.Config):
     min_distance = 0.2
     use_transductive = True  # can model use the data in SVHN's and CIFAR's testing set
     mixed_train = False
-    mixed_train_epoch = 64
+    mixed_train_epoch = 128
     mixed_train_skip = 4096
     mixed_mean_times = 100
     dynamic_epochs = False

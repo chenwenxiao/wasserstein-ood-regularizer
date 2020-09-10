@@ -3,6 +3,8 @@ Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
 The top-level auxiliary file: /Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.aux
 The style file: ../aaai21.bst
 Database file #1: ../reference.bib.bib
+Warning--entry type for "xiao2017/online" isn't style-file defined
+--line 161 of file ../reference.bib.bib
 Repeated entry---line 278 of file ../reference.bib.bib
  : @inproceedings{song2019generative
  :                                  ,
@@ -23,45 +25,56 @@ Repeated entry---line 481 of file ../reference.bib.bib
  : @article{hendrycks2018deep
  :                           ,
 I'm skipping whatever remains of this entry
-You've used 25 entries,
+Repeated entry---line 510 of file ../reference.bib.bib
+ : @inproceedings{lee2018simple
+ :                             ,
+I'm skipping whatever remains of this entry
+Warning--entry type for "clanuwat2018deep" isn't style-file defined
+--line 526 of file ../reference.bib.bib
+Repeated entry---line 565 of file ../reference.bib.bib
+ : @article{kumar2019maximum
+ :                          ,
+I'm skipping whatever remains of this entry
+Warning--empty journal in netzer2011reading
+You've used 43 entries,
             2951 wiz_defined-function locations,
-            723 strings with 9447 characters,
-and the built_in function-call counts, 18235 in all, are:
-= -- 1490
-> -- 905
+            803 strings with 12798 characters,
+and the built_in function-call counts, 31789 in all, are:
+= -- 2533
+> -- 1761
 < -- 1
-+ -- 336
-- -- 302
-* -- 1146
-:= -- 2856
-add.period$ -- 100
-call.type$ -- 25
-change.case$ -- 202
-chr.to.int$ -- 26
-cite$ -- 25
-duplicate$ -- 1324
-empty$ -- 1305
-format.name$ -- 370
-if$ -- 3677
++ -- 648
+- -- 596
+* -- 2098
+:= -- 5066
+add.period$ -- 170
+call.type$ -- 43
+change.case$ -- 367
+chr.to.int$ -- 44
+cite$ -- 44
+duplicate$ -- 2245
+empty$ -- 2152
+format.name$ -- 718
+if$ -- 6314
 int.to.chr$ -- 1
 int.to.str$ -- 1
-missing$ -- 260
-newline$ -- 134
-num.names$ -- 100
-pop$ -- 703
+missing$ -- 459
+newline$ -- 221
+num.names$ -- 172
+pop$ -- 1230
 preamble$ -- 1
-purify$ -- 180
+purify$ -- 336
 quote$ -- 0
-skip$ -- 672
+skip$ -- 1117
 stack$ -- 0
-substring$ -- 799
-swap$ -- 607
+substring$ -- 1244
+swap$ -- 1046
 text.length$ -- 1
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 225
-warning$ -- 0
-while$ -- 138
+type$ -- 387
+warning$ -- 1
+while$ -- 230
 width$ -- 0
-write$ -- 323
-(There were 5 error messages)
+write$ -- 542
+(There were 7 error messages)

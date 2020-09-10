@@ -522,6 +522,14 @@ def main():
                         'r1_r2_log_pro_histogram',
                         auc_pair=(0, 1)))
 
+                    loop.collect_metrics(abs_r1_r2_histogram=plot_fig(
+                        [-np.abs(cifar_r1 - cifar_r2), -np.abs(svhn_r1 - svhn_r2)],
+                        ['red', 'green'],
+                        [config.in_dataset + ' test',
+                         config.out_dataset + ' test'], 'log(bit/dims)',
+                        'abs_r1_r2_log_pro_histogram',
+                        auc_pair=(0, 1)))
+
                     make_diagram(loop,
                                  ele_test_ll,
                                  [cifar_test_flow, svhn_test_flow], input_x,

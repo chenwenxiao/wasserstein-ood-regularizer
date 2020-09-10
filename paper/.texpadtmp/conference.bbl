@@ -1,4 +1,4 @@
-\begin{thebibliography}{25}
+\begin{thebibliography}{43}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \providecommand{\urlprefix}{URL }
@@ -30,16 +30,42 @@ Che, T.; Liu, X.; Li, S.; Ge, Y.; Zhang, R.; Xiong, C.; and Bengio, Y. 2019.
   with deep generative models.
 \newblock \emph{arXiv preprint arXiv:1911.07421} .
 
+\bibitem[{Chen et~al.(2020)Chen, Li, Wu, Liang, and Jha}]{chen2020robust}
+Chen, J.; Li, Y.; Wu, X.; Liang, Y.; and Jha, S. 2020.
+\newblock Robust Out-of-distribution Detection via Informative Outlier Mining.
+\newblock \emph{arXiv preprint arXiv:2006.15207} .
+
+\bibitem[{Chen et~al.(2019)Chen, Xu, Li, Peiy, Chen, Qiao, Feng, and
+  Wang}]{chen2019unsupervised}
+Chen, W.; Xu, H.; Li, Z.; Peiy, D.; Chen, J.; Qiao, H.; Feng, Y.; and Wang, Z.
+  2019.
+\newblock Unsupervised anomaly detection for intricate kpis via adversarial
+  training of vae.
+\newblock In \emph{IEEE INFOCOM 2019-IEEE Conference on Computer
+  Communications}, 1891--1899. IEEE.
+
 \bibitem[{Choi, Jang et~al.(2018)}]{choi2018waic}
 Choi, H.; Jang, E.; et~al. 2018.
 \newblock Waic, but why? generative ensembles for robust anomaly detection.
 \newblock \emph{arXiv preprint arXiv:1810.01392} .
+
+\bibitem[{Clanuwat et~al.(2018)Clanuwat, Bober-Irizar, Kitamoto, Lamb,
+  Yamamoto, and Ha}]{clanuwat2018deep}
+Clanuwat, T.; Bober-Irizar, M.; Kitamoto, A.; Lamb, A.; Yamamoto, K.; and Ha,
+  D. 2018.
+\newblock Deep Learning for Classical Japanese Literature.
 
 \bibitem[{Davis and Goadrich(2006)}]{davis2006relationship}
 Davis, J.; and Goadrich, M. 2006.
 \newblock The relationship between Precision-Recall and ROC curves.
 \newblock In \emph{Proceedings of the 23rd international conference on Machine
   learning}, 233--240.
+
+\bibitem[{Deng et~al.(2009)Deng, Dong, Socher, Li, Li, and
+  Li}]{deng2009imagenet}
+Deng, J.; Dong, W.; Socher, R.; Li, L.-j.; Li, K.; and Li, F.-f. 2009.
+\newblock ImageNet: A large-scale hierarchical image database.
+\newblock \emph{CVPR} 248--255.
 
 \bibitem[{Dinh, Sohl-Dickstein et~al.(2016)}]{dinh2016density}
 Dinh, L.; Sohl-Dickstein, J.; et~al. 2016.
@@ -56,6 +82,12 @@ Goodfellow, I.; Pouget-Abadie, J.; et~al. 2014.
 \newblock Generative adversarial nets.
 \newblock In \emph{Advances in neural information processing systems},
   2672--2680.
+
+\bibitem[{He et~al.(2016)He, Zhang, Ren, and Sun}]{he2016deep}
+He, K.; Zhang, X.; Ren, S.; and Sun, J. 2016.
+\newblock Deep residual learning for image recognition.
+\newblock In \emph{Proceedings of the IEEE conference on computer vision and
+  pattern recognition}, 770--778.
 
 \bibitem[{Hendrycks and Gimpel(2016)}]{hendrycks2016baseline}
 Hendrycks, D.; and Gimpel, K. 2016.
@@ -75,10 +107,33 @@ Hsu, Y.-C.; Shen, Y.; Jin, H.; and Kira, Z. 2020.
 \newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
   and Pattern Recognition}, 10951--10960.
 
+\bibitem[{Krizhevsky, Hinton et~al.(2009)}]{krizhevsky2009learning}
+Krizhevsky, A.; Hinton, G.; et~al. 2009.
+\newblock Learning multiple layers of features from tiny images.
+\newblock Technical report, Citeseer.
+
 \bibitem[{Kumar, Goyal et~al.(2019)}]{kumar2019maximum}
 Kumar, R.; Goyal, A.; et~al. 2019.
 \newblock Maximum Entropy Generators for Energy-Based Models.
 \newblock \emph{arXiv preprint arXiv:1901.08508} .
+
+\bibitem[{Lake, Salakhutdinov et~al.(2015)}]{lake2015human}
+Lake, B.~M.; Salakhutdinov, R.; et~al. 2015.
+\newblock Human-level concept learning through probabilistic program induction.
+\newblock \emph{Science} 350(6266): 1332--1338.
+
+\bibitem[{Lakshminarayanan, Pritzel, and
+  Blundell(2017)}]{lakshminarayanan2017simple}
+Lakshminarayanan, B.; Pritzel, A.; and Blundell, C. 2017.
+\newblock Simple and Scalable Predictive Uncertainty Estimation using Deep
+  Ensembles.
+\newblock \emph{neural information processing systems} .
+
+\bibitem[{LECUN et~al.(1998)LECUN, BOTTOU, BENGIO, and
+  HAFFNER}]{lecun1998gradient-based}
+LECUN, Y.; BOTTOU, �. E.~L.; BENGIO, Y.; and HAFFNER, P. 1998.
+\newblock Gradient-Based Learning Applied to Document Recognition.
+\newblock \emph{Proceedings of the IEEE} 2278--2324.
 
 \bibitem[{Lee et~al.(2018)Lee, Lee, Lee, and Shin}]{lee2018simple}
 Lee, K.; Lee, K.; Lee, H.; and Shin, J. 2018.
@@ -87,10 +142,28 @@ Lee, K.; Lee, K.; Lee, H.; and Shin, J. 2018.
 \newblock In \emph{Advances in Neural Information Processing Systems},
   7167--7177.
 
-\bibitem[{Nalisnick, Matsukawa et~al.(2018)}]{nalisnick2018deep}
-Nalisnick, E.; Matsukawa, A.; et~al. 2018.
-\newblock Do deep generative models know what they don't know?
-\newblock \emph{arXiv preprint arXiv:1810.09136} .
+\bibitem[{Liang, Li, and Srikant(2018)}]{liang2018enhancing}
+Liang, S.; Li, Y.; and Srikant, R. 2018.
+\newblock Enhancing The Reliability of Out-of-distribution Image Detection in
+  Neural Networks.
+\newblock \emph{international conference on learning representations} .
+
+\bibitem[{Liu, Luo et~al.(2015)}]{liu2015deep}
+Liu, Z.; Luo, P.; et~al. 2015.
+\newblock Deep learning face attributes in the wild.
+\newblock In \emph{Proceedings of the IEEE international conference on computer
+  vision}, 3730--3738.
+
+\bibitem[{Nalisnick et~al.(2019)Nalisnick, Matsukawa, Teh, Görür, and
+  Lakshminarayanan}]{nalisnick2019do}
+Nalisnick, T.~E.; Matsukawa, A.; Teh, W.~Y.; Görür, D.; and Lakshminarayanan,
+  B. 2019.
+\newblock Do Deep Generative Models Know What They Don't Know?
+\newblock \emph{international conference on learning representations} .
+
+\bibitem[{Netzer, Wang et~al.(2011)}]{netzer2011reading}
+Netzer, Y.; Wang, T.; et~al. 2011.
+\newblock Reading digits in natural images with unsupervised feature learning .
 
 \bibitem[{Nguyen, Yosinski, and Clune(2015)}]{nguyen2015deep}
 Nguyen, A.; Yosinski, J.; and Clune, J. 2015.
@@ -138,6 +211,13 @@ Song, Y.; Kim, T.; et~al. 2017.
   against adversarial examples.
 \newblock \emph{arXiv preprint arXiv:1710.10766} .
 
+\bibitem[{Szegedy et~al.(2016)Szegedy, Ioffe, Vanhoucke, and
+  Alemi}]{szegedy2016inception}
+Szegedy, C.; Ioffe, S.; Vanhoucke, V.; and Alemi, A. 2016.
+\newblock Inception-v4, inception-resnet and the impact of residual connections
+  on learning.
+\newblock \emph{arXiv preprint arXiv:1602.07261} .
+
 \bibitem[{Takahashi, Iwata et~al.(2019)}]{takahashi2019variational}
 Takahashi, H.; Iwata, T.; et~al. 2019.
 \newblock Variational Autoencoder with Implicit Optimal Priors.
@@ -155,5 +235,37 @@ Van~den Oord, A.; Kalchbrenner, N.; et~al. 2016.
 \newblock Conditional image generation with pixelcnn decoders.
 \newblock In \emph{Advances in neural information processing systems},
   4790--4798.
+
+\bibitem[{Xiao, Rasul et~al.(2017)}]{xiao2017/online}
+Xiao, H.; Rasul, K.; et~al. 2017.
+\newblock Fashion-MNIST: a Novel Image Dataset for Benchmarking Machine
+  Learning Algorithms.
+
+\bibitem[{Xu et~al.(2018)Xu, Chen, Zhao, Li, Bu, Li, Liu, Zhao, Pei, Feng
+  et~al.}]{xu2018unsupervised}
+Xu, H.; Chen, W.; Zhao, N.; Li, Z.; Bu, J.; Li, Z.; Liu, Y.; Zhao, Y.; Pei, D.;
+  Feng, Y.; et~al. 2018.
+\newblock Unsupervised anomaly detection via variational auto-encoder for
+  seasonal kpis in web applications.
+\newblock In \emph{Proceedings of the 2018 World Wide Web Conference},
+  187--196.
+
+\bibitem[{Xu et~al.(2015)Xu, Ehinger, Zhang, Finkelstein, Kulkarni, and
+  Xiao}]{xu2015turkergaze}
+Xu, P.; Ehinger, A.~K.; Zhang, Y.; Finkelstein, A.; Kulkarni, R.~S.; and Xiao,
+  J. 2015.
+\newblock TurkerGaze: Crowdsourcing Saliency with Webcam based Eye Tracking.
+\newblock \emph{CoRR} .
+
+\bibitem[{yu et~al.(2015)yu, zhang, song, seff, and xiao}]{yu2015lsun}
+yu, f.; zhang, y.; song, s.; seff, a.; and xiao, j. 2015.
+\newblock LSUN: Construction of a Large-scale Image Dataset using Deep Learning
+  with Humans in the Loop.
+\newblock \emph{CoRR} .
+
+\bibitem[{Zagoruyko and Komodakis(2016)}]{zagoruyko2016wide}
+Zagoruyko, S.; and Komodakis, N. 2016.
+\newblock Wide residual networks.
+\newblock \emph{arXiv preprint arXiv:1605.07146} .
 
 \end{thebibliography}

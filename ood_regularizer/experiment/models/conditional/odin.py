@@ -139,14 +139,14 @@ def main():
                 f.close()
 
         experiment_dict = {
-            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/4a/d5/02812baa4f70936391f5',
-            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/70/e5/02c52d867e437ed261f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/0a/66/02c52d867e43a2d825f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/5a/66/02c52d867e43b46925f5',
             'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/d1/e5/02279d802d3a5a9d51f5',
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/50/e5/02c52d867e437d2851f5',
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/c1/e5/02279d802d3ab6c751f5',
             'constant': '/mnt/mfs/mlstorage-experiments/cwx17/f4/e5/02279d802d3a98e102f5',
             'noise': '/mnt/mfs/mlstorage-experiments/cwx17/b4/e5/02279d802d3aa7d002f5',
-            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/2c/d5/02732c28dc8db6c751f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/1a/66/02c52d867e43a2d825f5',
             'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/3c/d5/02732c28dc8db6c751f5',
             'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/d9/d5/02812baa4f70b68951f5',
             'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/e1/e5/02279d802d3ad38f51f5',
@@ -166,7 +166,6 @@ def main():
         print('CIFAR DataSet loaded.')
         svhn_train_dataset, svhn_test_dataset, svhn_dataset = make_dataset(config.out_dataset)
         print('SVHN DataSet loaded.')
-        config.class_num = cifar_train_dataset.slots['y'].max_val + 1
 
         cifar_train_flow = cifar_test_dataset.get_stream('train', 'x', config.batch_size)
         cifar_test_flow = cifar_test_dataset.get_stream('test', 'x', config.batch_size)
@@ -180,6 +179,7 @@ def main():
         svhn_train = svhn_dataset.get_array('train', 'x')
         svhn_test = svhn_dataset.get_array('test', 'x')
 
+        config.class_num = np.max(y_train) + 1
         if restore_dir is None:
             classifier = models.resnet34(num_classes=config.class_num).cuda()
             train_classifier(exp, classifier, cifar_test_dataset, cifar_test_dataset)
@@ -205,12 +205,28 @@ def main():
         with mltk.TestLoop() as loop:
 
             features_dict = {
-
+                'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/9f/66/02279d802d3a658925f5',
+                'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/b9/66/02c52d867e43131525f5',
+                'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/5f/66/02279d802d3a328825f5',
+                'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/77/26/02732c28dc8d928825f5',
+                'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/f9/66/02c52d867e43b28825f5',
+                'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/2a/66/02c52d867e43a8d825f5',
+                'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/3a/66/02c52d867e43520925f5',
+                'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/6f/66/02279d802d3a770925f5',
+                'noise': '/mnt/mfs/mlstorage-experiments/cwx17/8f/66/02279d802d3aa57925f5',
+                'constant': '/mnt/mfs/mlstorage-experiments/cwx17/54/16/02812baa4f70bf6925f5',
+                'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/a7/26/02732c28dc8d890925f5',
+                'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/ef/66/02279d802d3ae70135f5',
+                'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/30/76/02279d802d3a638235f5',
+                'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/9b/66/02c52d867e43fd7335f5',
             }
             if config.in_dataset.name in features_dict:
-                obj = np.load(features_dict[config.in_dataset.name] + 'output_features.npz')
-                outputs_features_mean = obj['outputs_features_mean']
-                outputs_features_precision = obj['outputs_features_precision']
+                outputs_features_mean = []
+                outputs_features_precision = []
+                for i in range(config.features_nums):
+                    obj = np.load(features_dict[config.in_dataset.name] + '/outputs_features_{}.npz'.format(i))
+                    outputs_features_mean.append(obj['outputs_features_mean'])
+                    outputs_features_precision.append(obj['outputs_features_precision'])
             else:
                 outputs_features = [[] for i in range(config.features_nums)]
 
@@ -238,7 +254,7 @@ def main():
 
                     return T.to_numpy(x)
 
-                with loop.timeit():
+                with loop.timeit('output_features_time'):
                     outputs_features_mean = []
                     outputs_features_precision = []
 
@@ -247,21 +263,26 @@ def main():
                         outputs_features[i] = np.concatenate(outputs_features[i], axis=0)
                         outputs_features_mean.append([])
                         outputs_features_precision.append([])
-                        for j in range(config.class_num):
+                        per_class = config.class_num // 10
+                        rest = config.class_num - 10 * per_class
+                        index = y_train == 0
+                        for k in range(0, rest):
+                            index = np.logical_or(index, y_train == k)
+                        for j in range(rest, config.class_num, per_class):
                             index = y_train == j
+                            for k in range(1, per_class):
+                                index = np.logical_or(index, y_train == (j + k))
                             tmp_mean = np.mean(outputs_features[i][index], axis=0)
                             group_lasso = EmpiricalCovariance(assume_centered=False)
-                            group_lasso.fit(outputs_features[i][index] - tmp_mean)
+                            data = outputs_features[i][index] - tmp_mean
+                            group_lasso.fit(data)
                             outputs_features_mean[-1].append(tmp_mean)
                             outputs_features_precision[-1].append(group_lasso.get_precision())
                         outputs_features_mean[-1] = np.asarray(outputs_features_mean[-1])
                         outputs_features_precision[-1] = np.asarray(outputs_features_precision[-1])
 
-                    outputs_features_mean = np.asarray(outputs_features_mean)
-                    outputs_features_precision = np.asarray(outputs_features_precision)
-
-                np.savez('outputs_features', outputs_features_mean=outputs_features_mean,
-                         outputs_features_precision=outputs_features_precision)
+                        np.savez('outputs_features_{}'.format(i), outputs_features_mean=outputs_features_mean[i],
+                                 outputs_features_precision=outputs_features_precision[i])
 
             @torch.no_grad()
             def eval_predict(x):
@@ -288,10 +309,11 @@ def main():
                 x = classifier.layer4(x)
                 outputs.append(torch.flatten(x, 1))
                 gaussian_score = []
-                for j in range(config.class_num):
-                    zero_f = outputs[i] - T.from_numpy(outputs_features_mean[level][j])
+                for j in range(10):
+                    zero_f = outputs[level] - T.from_numpy(outputs_features_mean[level][j], dtype=torch.float32)
                     gaussian_score.append(-torch.mm(
-                        torch.mm(zero_f, T.from_numpy(outputs_features_precision[level][j])), zero_f.t()).diag())
+                        torch.mm(zero_f, T.from_numpy(outputs_features_precision[level][j], dtype=torch.float32)),
+                        zero_f.t()).diag())
                 gaussian_score = T.stack(gaussian_score, axis=0)
                 gaussian_score = T.reduce_max(gaussian_score, axis=[0])
                 return gaussian_score
@@ -308,7 +330,7 @@ def main():
                         sign = torch.sign(gradients)
                         x_hat = x + magnitude * sign
                         mah.append(T.to_numpy(get_gaussian_score(x_hat, level)))
-                    return np.sum(np.asarray(mah))
+                    return np.sum(np.asarray(mah), axis=0)
 
                 make_diagram_torch(
                     loop, eval_Mahalanobis,
@@ -344,6 +366,7 @@ def main():
                 x_hat = x - config.odin_epsilon * sign
 
                 odin = torch.softmax(classifier(x_hat) / config.odin_T, dim=-1)
+                odin = T.reduce_max(odin, axis=[-1])
 
                 return T.to_numpy(odin)
 
@@ -361,6 +384,13 @@ def main():
                 fig_name='negative_entropy_histogram'
             )
 
+            make_diagram_torch(
+                loop, eval_max_prob,
+                [cifar_test_flow, svhn_test_flow],
+                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
+                fig_name='max_prob_histogram'
+            )
+
             M_list = [0, 0.0004, 0.0008, 0.0012, 0.0016, 0.002, 0.0024, 0.0028, 0.0032, 0.0036, 0.004]
             T_list = [1, 10, 100, 1000]
             for t in T_list:
@@ -373,13 +403,6 @@ def main():
                         names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
                         fig_name='odin_{}_{}_histogram'.format(t, m)
                     )
-
-            make_diagram_torch(
-                loop, eval_max_prob,
-                [cifar_test_flow, svhn_test_flow],
-                names=[config.in_dataset.name + ' Test', config.out_dataset.name + ' Test'],
-                fig_name='max_prob_histogram'
-            )
 
 
 if __name__ == '__main__':

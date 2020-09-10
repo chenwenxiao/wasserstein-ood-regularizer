@@ -139,14 +139,14 @@ def main():
                 f.close()
 
         experiment_dict = {
-            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/4a/d5/02812baa4f70936391f5',
-            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/70/e5/02c52d867e437ed261f5',
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/0a/66/02c52d867e43a2d825f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/5a/66/02c52d867e43b46925f5',
             'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/d1/e5/02279d802d3a5a9d51f5',
             'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/50/e5/02c52d867e437d2851f5',
             'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/c1/e5/02279d802d3ab6c751f5',
             'constant': '/mnt/mfs/mlstorage-experiments/cwx17/f4/e5/02279d802d3a98e102f5',
             'noise': '/mnt/mfs/mlstorage-experiments/cwx17/b4/e5/02279d802d3aa7d002f5',
-            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/2c/d5/02732c28dc8db6c751f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/1a/66/02c52d867e43a2d825f5',
             'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/3c/d5/02732c28dc8db6c751f5',
             'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/d9/d5/02812baa4f70b68951f5',
             'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/e1/e5/02279d802d3ad38f51f5',
@@ -166,7 +166,6 @@ def main():
         print('CIFAR DataSet loaded.')
         svhn_train_dataset, svhn_test_dataset, svhn_dataset = make_dataset(config.out_dataset)
         print('SVHN DataSet loaded.')
-        config.class_num = cifar_train_dataset.slots['y'].max_val + 1
 
         cifar_train_flow = cifar_test_dataset.get_stream('train', 'x', config.batch_size)
         cifar_test_flow = cifar_test_dataset.get_stream('test', 'x', config.batch_size)
@@ -179,6 +178,7 @@ def main():
         y_test = cifar_dataset.get_array('test', 'y')
         svhn_train = svhn_dataset.get_array('train', 'x')
         svhn_test = svhn_dataset.get_array('test', 'x')
+        config.class_num = np.max(y_train) + 1
 
         if restore_dir is None:
             classifier = models.resnet34(num_classes=config.class_num).cuda()

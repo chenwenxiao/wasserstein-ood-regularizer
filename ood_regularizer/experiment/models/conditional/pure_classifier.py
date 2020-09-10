@@ -268,7 +268,10 @@ def main():
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
-        predict = tf.argmax(resnet34(input_x), axis=-1)
+        output = resnet34(input_x)
+        predict = tf.argmax(output, axis=-1)
+        output = tf.nn.softmax(output, axis=-1)
+        prob = output[..., 1]
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
@@ -285,7 +288,7 @@ def main():
     svhn_train_flow = spt.DataFlow.arrays([svhn_train], config.test_batch_size)
     svhn_test_flow = spt.DataFlow.arrays([svhn_test], config.test_batch_size)
 
-    mixed_array = np.concatenate([x_test, y_test])
+    mixed_array = np.concatenate([x_test, svhn_test])
     mixed_y = np.zeros(len(mixed_array))
 
     train_flow = spt.DataFlow.arrays([
@@ -335,7 +338,14 @@ def main():
                                  [cifar_test_flow, svhn_test_flow],
                                  input_x,
                                  names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                                 fig_name='classify_histogram'
+                                 fig_name='simply_classify_histogram'
+                                 )
+                    make_diagram(loop,
+                                 prob,
+                                 [cifar_test_flow, svhn_test_flow],
+                                 input_x,
+                                 names=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
+                                 fig_name='classify_prob_histogram'
                                  )
 
                     loop.print_logs()

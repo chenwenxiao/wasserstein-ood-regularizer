@@ -31,7 +31,9 @@ algorithm=('models/likelihood/vae.py --self_ood=True'
 'models/likelihood/glow.py --self_ood=True'
 'models/ensemble/glow.py'
 'models/conditional/glow.py'
-'models/batch_norm/glow.py')
+'models/batch_norm/glow.py'
+'models/conditional/odin.py'
+'models/ensemble/classifier.py')
 
 mlrun --legacy -- python ${algorithm[$1]} ${dataset[$2]}
 

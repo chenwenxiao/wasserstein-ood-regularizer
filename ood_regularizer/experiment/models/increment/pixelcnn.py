@@ -50,7 +50,7 @@ class ExpConfig(spt.Config):
     uniform_scale = False
     use_transductive = True
     mixed_train = False
-    mixed_train_epoch = 32
+    mixed_train_epoch = 64
     mixed_train_skip = 4096
     dynamic_epochs = False
     retrain_for_batch = False

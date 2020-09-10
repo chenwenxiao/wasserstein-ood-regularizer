@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.7.14)  3 SEP 2020 14:20
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.7.14)  10 SEP 2020 15:55
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -163,41 +163,77 @@ LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 (Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
 )) (/usr/local/texlive/2017/texmf-dist/tex/latex/cleveref/cleveref.sty
 Package: cleveref 2013/12/28 v0.19 Intelligent cross-referencing
+) (/usr/local/texlive/2017/texmf-dist/tex/latex/booktabs/booktabs.sty
+Package: booktabs 2016/04/27 v1.618033 publication quality tables
+\heavyrulewidth=\dimen123
+\lightrulewidth=\dimen124
+\cmidrulewidth=\dimen125
+\belowrulesep=\dimen126
+\belowbottomsep=\dimen127
+\aboverulesep=\dimen128
+\abovetopsep=\dimen129
+\cmidrulesep=\dimen130
+\cmidrulekern=\dimen131
+\defaultaddspace=\dimen132
+\@cmidla=\count106
+\@cmidlb=\count107
+\@aboverulesep=\dimen133
+\@belowrulesep=\dimen134
+\@thisruleclass=\count108
+\@lastruleclass=\count109
+\@thisrulewidth=\dimen135
+) (/usr/local/texlive/2017/texmf-dist/tex/latex/lineno/lineno.sty
+Package: lineno 2005/11/02 line numbers on paragraphs v4.41
+\linenopenalty=\count110
+\output=\toks20
+\linenoprevgraf=\count111
+\linenumbersep=\dimen136
+\linenumberwidth=\dimen137
+\c@linenumber=\count112
+\c@pagewiselinenumber=\count113
+\c@LN@truepage=\count114
+\c@internallinenumber=\count115
+\c@internallinenumbers=\count116
+\quotelinenumbersep=\dimen138
+\bframerule=\dimen139
+\bframesep=\dimen140
+\bframebox=\box28
+LaTeX Info: Redefining \\ on input line 3056.
 )
-\c@theorem=\count106
-\c@lemma=\count107
-\c@proof=\count108
+\c@theorem=\count117
+\c@lemma=\count118
+\c@proof=\count119
  (/Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.aux)
 \openout1 = `conference.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 172.
-LaTeX Font Info:    ... okay on input line 172.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 172.
-LaTeX Font Info:    ... okay on input line 172.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 172.
-LaTeX Font Info:    ... okay on input line 172.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 172.
-LaTeX Font Info:    ... okay on input line 172.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 172.
-LaTeX Font Info:    ... okay on input line 172.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 172.
-LaTeX Font Info:    ... okay on input line 172.
-LaTeX Font Info:    Try loading font information for OT1+ptm on input line 172.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 173.
+LaTeX Font Info:    ... okay on input line 173.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 173.
+LaTeX Font Info:    ... okay on input line 173.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 173.
+LaTeX Font Info:    ... okay on input line 173.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 173.
+LaTeX Font Info:    ... okay on input line 173.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 173.
+LaTeX Font Info:    ... okay on input line 173.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 173.
+LaTeX Font Info:    ... okay on input line 173.
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 173.
  (/usr/local/texlive/2017/texmf-dist/tex/latex/psnfss/ot1ptm.fd
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 ) (/usr/local/texlive/2017/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count109
-\scratchdimen=\dimen123
-\scratchbox=\box28
-\nofMPsegments=\count110
-\nofMParguments=\count111
-\everyMPshowfont=\toks20
-\MPscratchCnt=\count112
-\MPscratchDim=\dimen124
-\MPnumerator=\count113
-\makeMPintoPDFobject=\count114
-\everyMPtoPDFconversion=\toks21
+\scratchcounter=\count120
+\scratchdimen=\dimen141
+\scratchbox=\box29
+\nofMPsegments=\count121
+\nofMParguments=\count122
+\everyMPshowfont=\toks21
+\MPscratchCnt=\count123
+\MPscratchDim=\dimen142
+\MPnumerator=\count124
+\makeMPintoPDFobject=\count125
+\everyMPtoPDFconversion=\toks22
 ) (/usr/local/texlive/2017/texmf-dist/tex/generic/oberdiek/pdftexcmds.sty
 Package: pdftexcmds 2017/03/19 v0.25 Utility functions of pdfTeX for LuaTeX (HO)
  (/usr/local/texlive/2017/texmf-dist/tex/generic/oberdiek/ifluatex.sty
@@ -236,199 +272,201 @@ File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 ))
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: End \AtBeginDocument code.
-\titlearea=\box29
+\titlearea=\box30
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <14.4> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 174.
-LaTeX Font Info:    Try loading font information for U+msa on input line 174.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 176.
+LaTeX Font Info:    Try loading font information for U+msa on input line 176.
  (/usr/local/texlive/2017/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Try loading font information for U+msb on input line 174.
+LaTeX Font Info:    Try loading font information for U+msb on input line 176.
  (/usr/local/texlive/2017/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 174.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 176.
 \actualheight=\skip55
 
-Overfull \hbox (2.5pt too wide) in paragraph at lines 174--174
+Overfull \hbox (2.5pt too wide) in paragraph at lines 176--176
 [][] 
  []
 
 
-Underfull \vbox (badness 10000) detected at line 174
+Underfull \vbox (badness 10000) detected at line 176
  []
 
-LaTeX Font Info:    Try loading font information for OMS+ptm on input line 174.
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 176.
 (/usr/local/texlive/2017/texmf-dist/tex/latex/psnfss/omsptm.fd
 File: omsptm.fd 
 )
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <9> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 174.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 176.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 176.
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no “ in font ptmr7t!
-
-Underfull \hbox (badness 2020) in paragraph at lines 187--189
-\OT1/ptm/m/n/10 si-fi-ca-tion do-main through deep neu-ral net-work clas-si-
- []
-
-
-Underfull \hbox (badness 1655) in paragraph at lines 187--189
-\OT1/ptm/m/n/10 the data from other datasets (called out-of-distribution
- []
-
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 178.
+LaTeX Font Info:    Try loading font information for OT1+phv on input line 185.
+ (/usr/local/texlive/2017/texmf-dist/tex/latex/psnfss/ot1phv.fd
+File: ot1phv.fd 2001/06/04 scalable font definitions for OT1/phv.
+)
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 201.
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no “ in font ptmr7t!
-[1{/usr/local/texlive/2017/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 206.
+ [1{/usr/local/texlive/2017/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
 
 
 
 ]
-Underfull \hbox (badness 1571) in paragraph at lines 207--209
+Underfull \hbox (badness 1571) in paragraph at lines 212--213
 \OT1/ptm/m/n/10 Likelihood-based gen-er-a-tive mod-els are widely viewed
  []
 
-<counterexample1.jpg, id=13, 642.4pt x 481.8pt>
-File: counterexample1.jpg Graphic file (type jpg)
- <use counterexample1.jpg>
-Package pdftex.def Info: counterexample1.jpg used on input line 251.
-(pdftex.def)             Requested size: 107.72673pt x 80.7948pt.
- <counterexample2.jpg, id=14, 642.4pt x 481.8pt>
-File: counterexample2.jpg Graphic file (type jpg)
- <use counterexample2.jpg>
-Package pdftex.def Info: counterexample2.jpg used on input line 254.
-(pdftex.def)             Requested size: 107.72673pt x 80.7948pt.
- <counterexample3.jpg, id=15, 642.4pt x 481.8pt>
-File: counterexample3.jpg Graphic file (type jpg)
- <use counterexample3.jpg>
-Package pdftex.def Info: counterexample3.jpg used on input line 258.
-(pdftex.def)             Requested size: 107.72673pt x 80.7948pt.
- <counterexample4.jpg, id=16, 642.4pt x 481.8pt>
-File: counterexample4.jpg Graphic file (type jpg)
- <use counterexample4.jpg>
-Package pdftex.def Info: counterexample4.jpg used on input line 261.
-(pdftex.def)             Requested size: 107.72673pt x 80.7948pt.
+
+Underfull \hbox (badness 5119) in paragraph at lines 214--215
+[]\OT1/ptm/m/n/10 To solve this prob-lem, some re-searches pro-posed
+ []
+
+
+Underfull \hbox (badness 3861) in paragraph at lines 214--215
+\OT1/ptm/m/n/10 some vari-ants of these mod-els for de-tect-ing out-of-
+ []
+
+
+Underfull \hbox (badness 1102) in paragraph at lines 251--252
+[]\OT1/ptm/m/n/10 All com-mon met-rics in-clud-ing AU-ROC, AUPR, AP,
+ []
+
+<counterexample1.png, id=14, 643.40375pt x 482.80376pt>
+File: counterexample1.png Graphic file (type png)
+ <use counterexample1.png>
+Package pdftex.def Info: counterexample1.png used on input line 259.
+(pdftex.def)             Requested size: 107.72673pt x 80.83052pt.
+ <counterexample2.png, id=16, 643.40375pt x 482.80376pt>
+File: counterexample2.png Graphic file (type png)
+ <use counterexample2.png>
+Package pdftex.def Info: counterexample2.png used on input line 262.
+(pdftex.def)             Requested size: 107.72673pt x 80.83052pt.
+ <counterexample3.png, id=17, 643.40375pt x 482.80376pt>
+File: counterexample3.png Graphic file (type png)
+ <use counterexample3.png>
+Package pdftex.def Info: counterexample3.png used on input line 266.
+(pdftex.def)             Requested size: 107.72673pt x 80.83052pt.
+ <counterexample4.png, id=18, 643.40375pt x 482.80376pt>
+File: counterexample4.png Graphic file (type png)
+ <use counterexample4.png>
+Package pdftex.def Info: counterexample4.png used on input line 269.
+(pdftex.def)             Requested size: 107.72673pt x 80.83052pt.
+
+Underfull \hbox (badness 3386) in paragraph at lines 275--275
+\OT1/ptm/m/n/10 and in-distribution re-spec-tively. The AU-ROC of log-
+ []
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10.95> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 266.
- [2] <counterexample_complexity1.png, id=23, 570.13pt x 425.59pt>
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 279.
+[2] <counterexample_complexity1.png, id=25, 570.13pt x 425.59pt>
 File: counterexample_complexity1.png Graphic file (type png)
  <use counterexample_complexity1.png>
-Package pdftex.def Info: counterexample_complexity1.png used on input line 280.
+Package pdftex.def Info: counterexample_complexity1.png used on input line 295.
 (pdftex.def)             Requested size: 107.72673pt x 80.41484pt.
- <counterexample_complexity2.png, id=25, 376.40625pt x 271.0125pt>
+ <counterexample_complexity2.png, id=26, 376.40625pt x 271.0125pt>
 File: counterexample_complexity2.png Graphic file (type png)
  <use counterexample_complexity2.png>
-Package pdftex.def Info: counterexample_complexity2.png used on input line 283.
+Package pdftex.def Info: counterexample_complexity2.png used on input line 298.
 (pdftex.def)             Requested size: 107.72673pt x 77.5619pt.
- <counterexample_complexity3.png, id=26, 376.40625pt x 271.0125pt>
+ <counterexample_complexity3.png, id=27, 376.40625pt x 271.0125pt>
 File: counterexample_complexity3.png Graphic file (type png)
  <use counterexample_complexity3.png>
-Package pdftex.def Info: counterexample_complexity3.png used on input line 286.
+Package pdftex.def Info: counterexample_complexity3.png used on input line 301.
 (pdftex.def)             Requested size: 107.72673pt x 77.5619pt.
- <counterexample_complexity4.png, id=27, 376.40625pt x 271.0125pt>
+ <counterexample_complexity4.png, id=28, 376.40625pt x 271.0125pt>
 File: counterexample_complexity4.png Graphic file (type png)
  <use counterexample_complexity4.png>
-Package pdftex.def Info: counterexample_complexity4.png used on input line 289.
+Package pdftex.def Info: counterexample_complexity4.png used on input line 304.
 (pdftex.def)             Requested size: 107.72673pt x 77.5619pt.
 
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-LaTeX Warning: Reference `table1' on page 1 undefined on input line 306.
 
+Underfull \hbox (badness 4467) in paragraph at lines 322--326
+\OT1/ptm/m/n/10 ha-lanobis, ODIN and dis-agree-ment are pro-posed by
+ []
 
-LaTeX Warning: Reference `table1' on page 1 undefined on input line 310.
+[3 <./counterexample1.png> <./counterexample2.png> <./counterexample3.png> <./counterexample4.png> <./counterexample_complexity1.png> <./counterexample_complexity2.png> <./counterexample_complexity3.png> <./counterexample_complexity4.png>] <diagram.pdf, id=42, 513.92pt x 354.32375pt>
+File: diagram.pdf Graphic file (type pdf)
+ <use diagram.pdf>
+Package pdftex.def Info: diagram.pdf used on input line 436.
+(pdftex.def)             Requested size: 191.51622pt x 132.04387pt.
+ [4]
+Underfull \hbox (badness 2582) in paragraph at lines 457--458
+[]\OT1/ptm/m/it/10 When log-likelihood can de-tect OoD, i.e.,
+ []
 
-[3 <./counterexample1.jpg> <./counterexample2.jpg> <./counterexample3.jpg> <./counterexample4.jpg> <./counterexample_complexity1.png> <./counterexample_complexity2.png> <./counterexample_complexity3.png> <./counterexample_complexity4.png>]
-Underfull \hbox (badness 10000) in paragraph at lines 321--322
-[]\OT1/ptm/m/n/10 There ex-ists a di-ver-gence $\OML/cmm/m/it/10 div$\OT1/ptm/m/n/10 , sat-is-fy-ing that
+[5 <./diagram.pdf>]
+Underfull \hbox (badness 2717) in paragraph at lines 551--552
+\OT1/ptm/m/n/10 MNIST, Om-niglot (Lake, Salakhut-di-nov et al. 2015),
  []
 
 
-Underfull \hbox (badness 1137) in paragraph at lines 329--330
-[]\OT1/ptm/m/n/10 Above as-sump-tion means that if $\OML/cmm/m/it/10 D$ \OT1/ptm/m/n/10 can dis-tin-guish-
- []
-
-<diagram.png, id=36, 513.92pt x 354.32375pt>
-File: diagram.png Graphic file (type png)
- <use diagram.png>
-Package pdftex.def Info: diagram.png used on input line 338.
-(pdftex.def)             Requested size: 215.45348pt x 148.54463pt.
-
-
-LaTeX Warning: Reference `tab1' on page 1 undefined on input line 355.
-
-[4 <./diagram.png>]
-Underfull \hbox (badness 2617) in paragraph at lines 368--369
-[]\OT1/ptm/m/n/10 Next, we will show the prop-erty of mod-eled dis-
+Underfull \hbox (badness 3302) in paragraph at lines 551--552
+\OT1/ptm/m/n/10 CIFAR-10 (Krizhevsky, Hin-ton et al. 2009), CIFAR-
  []
 
 
-Underfull \hbox (badness 8075) in paragraph at lines 368--369
-\OT1/ptm/m/n/10 tri-bu-tion. Let $\OML/cmm/m/it/10 p[]; p[]$ \OT1/ptm/m/n/10 mod-els $\OML/cmm/m/it/10 p[]; p[]$\OT1/ptm/m/n/10 , \OT1/ptm/m/it/10 i.e.\OT1/ptm/m/n/10 , $\OML/cmm/m/it/10 ^^R \OT1/cmr/m/n/10 =
+Underfull \hbox (badness 1168) in paragraph at lines 560--561
+\OT1/ptm/m/n/10 ac-ter-is-tic curve, which is a threshold-independent met-
  []
 
-[5]
 
-LaTeX Warning: Reference `tab1' on page 1 undefined on input line 472.
-
-
-LaTeX Warning: Reference `tab2' on page 1 undefined on input line 472.
+Underfull \hbox (badness 1231) in paragraph at lines 571--572
+\OT1/ptm/m/n/10 For fair com-par-i-son, all in-di-ca-tors are based on com-
+ []
 
 
-LaTeX Warning: Reference `fig4' on page 1 undefined on input line 477.
+Underfull \hbox (badness 1331) in paragraph at lines 571--572
+\OT1/ptm/m/n/10 mon mod-els with stan-dard train-ing, in-clud-ing 34-layer
+ []
 
-<roc_prc.png, id=47, 1491.5725pt x 554.07pt>
+<roc_prc.png, id=119, 1491.5725pt x 554.07pt>
 File: roc_prc.png Graphic file (type png)
  <use roc_prc.png>
-Package pdftex.def Info: roc_prc.png used on input line 480.
-(pdftex.def)             Requested size: 239.39438pt x 88.92355pt.
-
-
-LaTeX Warning: Reference `fig6' on page 1 undefined on input line 485.
-
-
-LaTeX Warning: Reference `tab2' on page 1 undefined on input line 487.
-
-
-LaTeX Warning: Reference `tab3' on page 1 undefined on input line 491.
-
-
-LaTeX Warning: Reference `fig8' on page 1 undefined on input line 491.
-
-[6 <./roc_prc.png>]
-
-LaTeX Warning: Reference `chen2020robust' on page 1 undefined on input line 496.
-
-(/Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.bbl
-Underfull \hbox (badness 1502) in paragraph at lines 79--82
+Package pdftex.def Info: roc_prc.png used on input line 615.
+(pdftex.def)             Requested size: 215.45348pt x 80.0295pt.
+ [6] <auroc_during_training.png, id=123, 731.73375pt x 489.83pt>
+File: auroc_during_training.png Graphic file (type png)
+ <use auroc_during_training.png>
+Package pdftex.def Info: auroc_during_training.png used on input line 662.
+(pdftex.def)             Requested size: 107.72673pt x 72.11102pt.
+ <auroc_during_batch.png, id=124, 731.73375pt x 490.83376pt>
+File: auroc_during_batch.png Graphic file (type png)
+ <use auroc_during_batch.png>
+Package pdftex.def Info: auroc_during_batch.png used on input line 663.
+(pdftex.def)             Requested size: 107.72673pt x 72.25879pt.
+ [7 <./roc_prc.png> <./auroc_during_training.png> <./auroc_during_batch.png>] (/Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.bbl [8]
+Underfull \hbox (badness 1502) in paragraph at lines 116--119
 \OT1/ptm/m/n/10 Gen-er-a-tors for Energy-Based Mod-els.  \OT1/ptm/m/it/10 arXiv preprint
  []
 
-[7]) [8
+Missing character: There is no Â in font ptmr7t!
 
-] (/Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.aux)
+Underfull \hbox (badness 4120) in paragraph at lines 134--137
+[]\OT1/ptm/m/n/10 LECUN, Y.; BOT-TOU, . E. L.; BEN-GIO, Y.; and
+ []
 
-LaTeX Warning: There were undefined references.
-
- ) 
+Missing character: There is no Ã in font ptmr7t!
+Missing character: There is no ¶ in font ptmr7t!
+Missing character: There is no Ã in font ptmr7t!
+Missing character: There is no ¼ in font ptmr7t!
+) [9] (/Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.aux) ) 
 Here is how much of TeX's memory you used:
- 5798 strings out of 492995
- 97054 string characters out of 6132704
- 177370 words of memory out of 5000000
- 9267 multiletter control sequences out of 15000+600000
- 19487 words of font info for 42 fonts, out of 8000000 for 9000
+ 6208 strings out of 492995
+ 103447 string characters out of 6132704
+ 188291 words of memory out of 5000000
+ 9663 multiletter control sequences out of 15000+600000
+ 21754 words of font info for 45 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 39i,13n,39p,889b,295s stack positions out of 5000i,500n,10000p,200000b,80000s
-{/usr/local/texlive/2017/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on /Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.pdf (8 pages, 696327 bytes).
+ 39i,13n,39p,1001b,298s stack positions out of 5000i,500n,10000p,200000b,80000s
+{/usr/local/texlive/2017/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2017/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on /Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.pdf (9 pages, 1264881 bytes).
 PDF statistics:
- 105 PDF objects out of 1000 (max. 8388607)
- 64 compressed objects within 1 object stream
+ 184 PDF objects out of 1000 (max. 8388607)
+ 122 compressed objects within 2 object streams
  0 named destinations out of 1000 (max. 500000)
- 51 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 61 words of extra memory for PDF output out of 10000 (max. 10000000)
 
