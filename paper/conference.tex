@@ -178,8 +178,8 @@
 \begin{abstract}
 
 Currently, deep generative models are widely researched in detecting out-of-distribution (OoD) problem. We reviewed the recent researches about out-of-distribution based on deep generative models and found one critical weakness that the number of datasets in these works is not enough to support the generality of their indicators. 
-Therefore, we do large-scale research for these indicators on more datasets and find that these indicators on common deep generative models do not perform well on large-scale datasets. 
-Here we propose the KL-based indicator and Wasserstein-based indicator for detecting out-of-distribution. 
+Therefore, we do large-scale research for these indicators on 14 datasets with 97 pair experimnts and find that these indicators on common deep generative models do not perform well on large-scale datasets. 
+Here we propose the KL-based indicator and Wasserstein-based indicator for detecting out-of-distribution through a theoretical framework called divergence-based indicator. 
 Our indicators are general with solid theoretical inference and proven to be better than traditional indicators. They are expected to guide the development of deep generative models in the OoD domain. 
 Our indicators outperform past works by 10\% in AUROC and their performance is near to theoretical optimal result. Moreover, our systematic experiments show that our indicators are not data-specific and can be deployed online. 
  
@@ -194,7 +194,7 @@ Recently, deep generative models are quickly developed and have been able to gen
 
 However, contrary to popular belief, recent works~\cite{nalisnick2019do,choi2018waic,hendrycks2018deep} show that density estimates by deep generative models assign higher density to samples from out-of-distribution. This phenomenon occurs in CIFAR-10 (as in-distribution) vs SVHN (as out-of-distribution) for different likelihood-based models, while the data in CIFAR-10 and SVHN have significant different semantic. 
 
-Alternative indicators based on likelihood have been proposed~\cite{serra2019input,song2017pixeldefend,choi2018waic,ren2019likelihood,song2019unsupervised,che2019deep} to alleviate the issue. However, datasets considered in these works are quite less, even only CIFAR-10 and SVHN. It is a natural question whether these indicators work well on large-scale datasets because a robust OoD detection method should detect samples from any out-of-distribution~\cite{chen2020robust}. In this paper, we do large-scale experiments for these indicators on 14 popular datasets, including MNIST, FASHION-MNIST, KMNIST, NOT-MNIST, Omniglot, CIFAR-10, CIFAR-100, TinyImagenet, SVHN, iSUN, CelebA, LSUN, Noise and Constant. These indicators on common models perform not well on large-scale datasets. Based on the observation, we argue that \textit{evaluation on the few datasets is unreliable and evaluation on large-scale datasets should be a common sense in the OoD domain}. 
+Alternative indicators based on likelihood have been proposed~\cite{serra2019input,song2017pixeldefend,choi2018waic,ren2019likelihood,song2019unsupervised,che2019deep} to alleviate the issue. However, datasets considered in these works are quite less, even only CIFAR-10 and SVHN. It is a natural question whether these indicators work well on large-scale datasets because a robust OoD detection method should detect samples from any out-of-distribution~\cite{chen2020robust}. In this paper, we do large-scale experiments for these indicators on 14 popular datasets, including MNIST, FASHION-MNIST, KMNIST, NOT-MNIST, Omniglot, CIFAR-10, CIFAR-100, TinyImagenet, SVHN, iSUN, CelebA, LSUN, Noise and Constant, with 98 pair experiments. These indicators on common models perform not well on large-scale datasets. Based on the observation, we argue that \textit{evaluation on the few datasets is unreliable and evaluation on large-scale datasets should be a common sense in the OoD domain}. 
 
 Based on the experiments on large-scale datasets, we found a common phenomenon that \textit{$p_\theta$ has a higher density for samples from in-distribution and lower density for samples from out-of-distribution than $p_\omega$}, which is trained on the out-of-distribution. 
 Based on this phenomenon and theoretical proof, we propose the KL-based indicator for likelihood-based models for OoD detection. Traditional likelihood indicator only serves for log-likelihood based models, however GANs, the most popular generative models, are not likelihood-based models. To cover more generative models, the Wasserstein-based indicator is proposed for WGAN (a popular version of GAN with more stable training) based on the same theoretical framework. 
@@ -240,11 +240,11 @@ Some researches also proposed to use labels (for classification tasks) to solve 
 
 \section{Problem Statement}\label{sec2}
 
-$\pin$ and $\pout$ denote two distinct data distributions defined on image space $\mathcal{X}$ where $\pin$ is called in-distribution and $\pout$ is called out-of-distribution. 
+$\pin$ and $\pout$ denote two distinct data distributions where $\pin$ is called in-distribution and $\pout$ is called out-of-distribution. 
 $\pmix$ denotes a mixture distribution $\pmix(x) = \alpha \pin(x) + \beta \pout(x)$ where $\alpha + \beta = 1$ and $\alpha, \beta > 0$. 
-The samples from $\pmix$, are generated by $\pin$ or $\pout$ and \textit{we wonder which of them are generated by $\pin$ without knowing any information about $\pout$}. 
+The samples from $\pmix$, are generated by $\pin$ or $\pout$ and \textit{we wonder which of them are generated by $\pin$ without knowing $\pout$}. 
 
-It is important to decide whether two datasets are distinct on large-scale datasets. Two datasets are \textbf{simply-classified} when a common classifier which is trained on the training data of two datasets for 2-class classification, \IE in-distribution as label 0 and OoD as label 1, can simply distinguish the testing data of the two datasets. If two dataset A, B are simply-classified, A vs B (A as in-distribution and B as out-of-distribution) will be an experiment. 
+It is important to decide whether two datasets are distinct on large-scale datasets. Two datasets are \textbf{simply-classified} when a common classifier trained on the training data of two datasets for 2-class classification, \IE in-distribution as label 0 and OoD as label 1, can simply distinguish the testing data of the two datasets. If two dataset A, B are simply-classified, A vs B (A as in-distribution and B as out-of-distribution) will be a pair experiment. 
 
 In this paper, we consider the problem of distinguishing the in-distribution and out-of-distribution on the common deep generative models, \IE VAE, PixelCNN, flow-based models and GANs. Large-scale common datasets are used to validate the generality of indicators, as shown in \Cref{sec6}. 
 
@@ -396,7 +396,7 @@ $\log \frac{p_\theta(x)}{p_\omega(x)}$ & \textbf{99.08} & \textbf{99.85} & \text
 \label{tab2}
 \end{table}
 
-\subsection{Observation of KL indicator}
+\subsection{Observation of KL-based indicator}
 As shown in \Cref{fig2}, complexity estimate is unstable and sometimes it might lower the performance. Therefore, we try to find another function to replace $L(x)$ in $S(x)$. 
 In experiments on large-scale datasets, we observe a common phenomenon that $p_\theta(x) < p_\omega(x)$ for almost $x \sim \pout$ and $p_\theta(x) > p_\omega(x)$ for almost $x \sim \pin$ where $p_\omega(x)$ is a likelihood-based model trained on out-of-distribution. 
 The average AUROC of $\log p_\theta(x) - \log p_\omega(x)$ reaches nearly 100\% on all datasets in \Cref{tab2}.
@@ -686,7 +686,7 @@ Divergence-based indicators will guide future works since it can develop simply,
 \section{Conclusion and Future Work}
 In this paper, we show the terrible generality of existing OoD indicators based on common models on large-scale datasets and call on that evaluation on large-scale datasets is crucial in OoD domain. We propose the KL-based indicator and the Wasserstein-based indicator through the divergence-based indicator theoretical framework, which is a novel idea that can guide OoD indicators based on deep generative models. Our indicators achieve the state-of-the-art on large-scale datasets, outperforming past works by 10\% in AUROC.
 
-For future work, it will be interesting to approximate KL-based indicator without optimizer or develop optimizers that only require few data to train models on mixture distribution, for solving the limitation of divergence-based indicators.  We believe our paper will provide insight into the development of OoD indicators based on deep generative models. as
+For future work, it will be interesting to approximate KL-based indicator without optimizer or develop optimizers that only require few data to train models on mixture distribution, for solving the limitation of divergence-based indicators.  We believe our paper will provide insight into the development of OoD indicators based on deep generative models. 
 
 \newpage
 \section{Ethical and societal impact}
