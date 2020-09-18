@@ -123,7 +123,7 @@
 
 %    Department of Computer Science and Technology, Tsinghua University
 %    China Unicom
-	
+
     %If you have multiple authors and multiple affiliations
     % use superscripts in text and roman font to identify them.
     %For example,
@@ -178,48 +178,48 @@
 
 \begin{abstract}
 
-To ensure robust and reliable classification results, OoD (out-of-distribution) indicators based on deep generative models are proposed recently and are shown to work well on small scale experiments. In this paper, we conduct the first large-scale experiments (1 order of magnitude larger than previous ones) for existing OoD indicators and observe that none of them perform well. We thus advocate that large-scale experiments are mandatory for evaluating OoD indicators. We then propose a novel theoretical framework ROID for robust Out-of-Distribution indictors based on divergence (instead of the traditional likelihood assumption) in deep generative models. Following  this framework, we further propose two effective and robust divergence-based indictors: KL-based and Wasserstein-based. These two indictors significantly outperform past works by 10\% in AUROC and its performance is close to the optimal. Moreover, our systematic experiments show that our indicators are not data-specific and can be deployed online. 
+To ensure robust and reliable classification results, OoD (out-of-distribution) indicators based on deep generative models are proposed recently and are shown to work well on small scale experiments. In this paper, we conduct the first large-scale experiments (1 order of magnitude larger than previous ones) for existing OoD indicators and observe that none of them perform well. We thus advocate that large-scale experiments are mandatory for evaluating OoD indicators. We then propose a novel theoretical framework ROID for robust Out-of-Distribution indictors based on divergence (instead of the traditional likelihood assumption) in deep generative models. Following  this framework, we further propose two effective and robust divergence-based indictors: KL-based and Wasserstein-based. These two indictors significantly outperform past works by 10\% in AUROC and its performance is close to the optimal. Moreover, our systematic experiments show that our indicators are not data-specific and can be deployed online.
 
- 
+
 \end{abstract}
 
 \section{Introduction}
 Machine learning has achieved impressive success in the classification domain through deep neural network classifiers~\cite{szegedy2016inception,he2016deep,zagoruyko2016wide}. Knowing when a machine learning (ML) model is qualified to make predictions on an input is critical to safe deployment of ML technology in the real world~\cite{choi2018waic}. When training distribution (called in-distribution) differ from test distributions (called Out-of-Distribution), neural networks may provide (with high confidence) arbitrary predictions on inputs that they are unaccustomed to seeing. This is known as the Out-of-Distribution (OoD) problem\cite{choi2018waic}.
 %
-%However, these classifiers can be easily fooled to provide with high confidence when the training and testing distribution differ (called in-distribution and out-of-distribution, OoD)~\cite{nguyen2015deep}, which might lead to potential risks in practice. 
-For example, a classifier trained on CIFAR-10~\cite{krizhevsky2009learning} may recognize the house number in SVHN~\cite{netzer2011reading} as a horse. 
+%However, these classifiers can be easily fooled to provide with high confidence when the training and testing distribution differ (called in-distribution and out-of-distribution, OoD)~\cite{nguyen2015deep}, which might lead to potential risks in practice.
+For example, a classifier trained on CIFAR-10~\cite{krizhevsky2009learning} may recognize the house number in SVHN~\cite{netzer2011reading} as a horse.
 
-Therefore, it is crucial to develop \textbf{OoD indicators} for detecting OoD data, to ensure that applications based on classifiers are robust and reliable. The common belief~\cite{bishop1994novelty} is that  the OoD indicators can be based on density model: train a density model $p_\theta(x)$ (as an OoD indicator) to approximate the empirical distribution of training data, and refuse the sample $x$ when $p_\theta(x)$ is sufficiently low. 
-%However, when Recently, deep generative models are shown to be able to generate realistic samples. , which was conjectured to be attributed to implies that deep generative models assign high density to the samples of the training data, and density can be used for detecting out-of-distribution. 
-However, recent works~\cite{nalisnick2019do,choi2018waic,hendrycks2018deep} show that density estimates by \textit{deep generative models}~\cite{dinh2016density,tomczak2018vae,takahashi2019variational,van2016conditional}, which generate realistic samples, assign higher density to samples from out-of-distribution. For example, according to ~\cite{nalisnick2019do}, this phenomenon occurs in CIFAR-10 (as in-distribution) vs SVHN (as out-of-distribution) for different likelihood-based models, while the data in CIFAR-10 and SVHN have significant different semantics. 
+Therefore, it is crucial to develop \textbf{OoD indicators} for detecting OoD data, to ensure that applications based on classifiers are robust and reliable. The common belief~\cite{bishop1994novelty} is that  the OoD indicators can be based on density model: train a density model $p_\theta(x)$ (as an OoD indicator) to approximate the empirical distribution of training data, and refuse the sample $x$ when $p_\theta(x)$ is sufficiently low.
+%However, when Recently, deep generative models are shown to be able to generate realistic samples. , which was conjectured to be attributed to implies that deep generative models assign high density to the samples of the training data, and density can be used for detecting out-of-distribution.
+However, recent works~\cite{nalisnick2019do,choi2018waic,hendrycks2018deep} show that density estimates by \textit{deep generative models}~\cite{dinh2016density,tomczak2018vae,takahashi2019variational,van2016conditional}, which generate realistic samples, assign higher density to samples from out-of-distribution. For example, according to ~\cite{nalisnick2019do}, this phenomenon occurs in CIFAR-10 (as in-distribution) vs SVHN (as out-of-distribution) for different likelihood-based models, while the data in CIFAR-10 and SVHN have significant different semantics.
 
-To to alleviate the aforementioned phenomenon, more advanced OoD indicators \cite{serra2019input,song2017pixeldefend,choi2018waic,ren2019likelihood,song2019unsupervised,che2019deep} are proposed recently based on deep generative models and shown to perform well on small-scale datasets,\EG the number of dataset pairs (in-distribution dataset, out-of-distribution dataset) are only $1$ to $10$. 
-However, a \textit{robust} OoD indicator should detect samples from any out-of-distribution~\cite{chen2020robust}, thus should be evaluated through much-larger-scale experiments. In this paper, we first conduct large-scale experiments with 98 dataset pairs (based on 14 popular image datasets, including MNIST, FASHION-MNIST, KMNIST, NOT-MNIST, Omniglot, CIFAR-10, CIFAR-100, TinyImagenet, SVHN, iSUN, CelebA, LSUN, Noise and Constant), whose scale is 1 order of magnitude larger than all above works. We observe that none of the above OoD indicators perform well on our large-scale experiments (see later in~\cref{tab2}). Based on this observation, we advocate that \textit{small-scale experiments is unreliable and large-scale experiments are mandatory for evaluating OoD indicators}.
+To to alleviate the aforementioned phenomenon, more advanced OoD indicators \cite{serra2019input,song2017pixeldefend,choi2018waic,ren2019likelihood,song2019unsupervised,che2019deep} are proposed recently based on deep generative models and shown to perform well on small-scale datasets,\EG the number of dataset pairs (in-distribution dataset, out-of-distribution dataset) are only $1$ to $10$.
+However, a \textit{robust} OoD indicator should detect samples from any out-of-distribution~\cite{chen2020robust}, thus should be evaluated through much-larger-scale experiments. In this paper, we first conduct large-scale experiments with 92 dataset pairs (based on 14 popular image datasets, including MNIST, FASHION-MNIST, KMNIST, NOT-MNIST, Omniglot, CIFAR-10, CIFAR-100, TinyImagenet, SVHN, iSUN, CelebA, LSUN, Noise and Constant), whose scale is 1 order of magnitude larger than all above works. We observe that none of the above OoD indicators perform well on our large-scale experiments (see later in~\cref{tab2}). Based on this observation, we advocate that \textit{small-scale experiments are unreliable and large-scale experiments are mandatory for evaluating OoD indicators}.
 
-Another very interesting observation that we discover by accident, as a result of the fact that we try to enumerate the dataset pairs when possible (\EG (CIFAR-10, SVHN) and (SVHN,CIFAR-10) are both in our experiment setting), is that, on all dataset pairs, \textit{$p_\theta$ has a higher density for samples from in-distribution and lower density for samples from out-of-distribution than $p_\omega$}, which is trained on the out-of-distribution. 
+Another very interesting observation that we discover by accident, as a result of the fact that we try to enumerate the dataset pairs when possible (\EG (CIFAR-10, SVHN) and (SVHN,CIFAR-10) are both in our experiment setting), is that, on all dataset pairs, \textit{$p_\theta$ has a higher density for samples from in-distribution and lower density for samples from out-of-distribution than $p_\omega$}, which is trained on the out-of-distribution.
 Inspired by this intuitive (in retrospect) observation, we propose a theoretical framework~\ROID{} for \textbf{R}obust \textbf{O}ut-of-Distribution \textbf{I}ndictors based on \textbf{D}ivergence in deep generative models. Following  this framework, we further propose two effective and robust divergence-based indictors in two mainstream deep generative models: 1) for likelihood-based models, we propose and prove a KL-based OoD indicator; 2) for WGAN (a popular version of GAN with more stable training), we propose and prove a Wasserstein-based OoD indicator.
-Our large-scale experiments show that our two indicators significantly outperform existing works by 10\% in AUROC and its performance is close to the theoretical optimal results.  
+Our large-scale experiments show that our two indicators significantly outperform existing works by 10\% in AUROC and its performance is close to the theoretical optimal results.
 
 The main contributions of this paper are as follows:
 \begin{itemize}
 	\item We conduct the first large-scale experiments (1 order of magnitude larger than previous ones) for existing OoD indicators and observe that none of them perform well. We thus advocate that \textit{small-scale experiments is unreliable and large-scale experiments are mandatory for evaluating OoD indicators}.
 	\item We propose a novel theoretical framework~\ROID{} for robust Out-of-Distribution indictors based on divergence (instead of the traditional likelihood assumption)in deep generative models. Following  this framework, we further propose two effective and robust divergence-based indictors: KL-based and Wasserstein-based. We believe that more indictors can be proposed following ~\ROID{} framework.
-	\item Our KL-based indicator and Wasserstein-based indicators significantly outperform past works by 10\% in AUROC and its performance is close to the optimal. Moreover, our systematic experiments show that our indicators are not data-specific and can be deployed online. 
+	\item Our KL-based indicator and Wasserstein-based indicators significantly outperform past works by 10\% in AUROC and its performance is close to the optimal. Moreover, our systematic experiments show that our indicators are not data-specific and can be deployed online.
 \end{itemize}
 
 \section{Background}
-Likelihood-based generative models are widely viewed to be robust to detect out-of-distribution samples by the model density intuitively. However, the densities of common likelihood-based models, \EG RealNVP~\cite{dinh2016density}, VAE~\cite{tomczak2018vae,takahashi2019variational} and PixelCNN~\cite{van2016conditional}, have been shown to be problematic for detecting out-of-distributions~\cite{nalisnick2019do}. These likelihood-based models assign higher likelihood for samples from SVHN (out-of-distribution) than samples from CIFAR-10 (in-distribution). 
+Likelihood-based generative models are widely viewed to be robust to detect out-of-distribution samples by the model density intuitively. However, the densities of common likelihood-based models, \EG RealNVP~\cite{dinh2016density}, VAE~\cite{tomczak2018vae,takahashi2019variational} and PixelCNN~\cite{van2016conditional}, have been shown to be problematic for detecting out-of-distributions~\cite{nalisnick2019do}. These likelihood-based models assign higher likelihood for samples from SVHN (out-of-distribution) than samples from CIFAR-10 (in-distribution).
 
-To solve this problem, some researches proposed some variants of these models for detecting out-of-distribution~\cite{che2019deep} and some researches proposed improved indicator to replace log-likelihood on common models~\cite{serra2019input}. Common models are widely applied in images domain and variants are not. Moreover, evaluation on numerous variants on large-scale datasets is more expensive while common models are easy for training and many indicators can share one well-trained model. Furthermore, it is necessary to check the generality of indicators on common models. By the above motivations, this paper focuses on the indicators based on common models. 
+To solve this problem, some researches proposed some variants of these models for detecting out-of-distribution~\cite{che2019deep} and some researches proposed improved indicator to replace log-likelihood on common models~\cite{serra2019input}. Common models are widely applied in images domain and variants are not. Moreover, evaluation on numerous variants on large-scale datasets is more expensive while common models are easy for training and many indicators can share one well-trained model. Furthermore, it is necessary to check the generality of indicators on common models. By the above motivations, this paper focuses on the indicators based on common models.
 
-\cite{song2017pixeldefend} considered using permutation tests statistics $T_{perm}(x)$ as the indicator to detect OoD. The rank of $p_\theta(x)$ in the training set is used as OoD indicators. Both low-likelihood and high-likelihood samples are identified as OoD. It is significantly useful to solve the counterexample of CIFAR-10 vs SVHN in \cite{nalisnick2019do}. 
+\cite{song2017pixeldefend} considered using permutation tests statistics $T_{perm}(x)$ as the indicator to detect OoD. The rank of $p_\theta(x)$ in the training set is used as OoD indicators. Both low-likelihood and high-likelihood samples are identified as OoD. It is significantly useful to solve the counterexample of CIFAR-10 vs SVHN in \cite{nalisnick2019do}.
 
 \cite{choi2018waic} used Watanabe Akaike Information Criterion (WAIC) based on model ensembles.
 \begin{equation}
 	\text{WAIC}(x) = \mathbb{E}_{\theta} [\log p_\theta(x)] - \operatorname{Var}_{\theta} [\log p_\theta(x)]
 \end{equation}
 
-\cite{ren2019likelihood} proposed a likelihood ratio indicator for deep generative models. They proposed a background model $p_{\theta_0}(x)$ to capture the general background statistics and a likelihood ratio indicator $LLR(x)$ to capture the significance of the semantics compared to the background model. 
+\cite{ren2019likelihood} proposed a likelihood ratio indicator for deep generative models. They proposed a background model $p_{\theta_0}(x)$ to capture the general background statistics and a likelihood ratio indicator $LLR(x)$ to capture the significance of the semantics compared to the background model.
 \begin{equation}
 LLR(x) = \log p_\theta(x) - \log p_{\theta_0}(x)
 \end{equation}
@@ -229,25 +229,25 @@ LLR(x) = \log p_\theta(x) - \log p_{\theta_0}(x)
 	S(x) = -\log p_\theta(x) - L(x)
 \end{equation}
 
-\cite{song2019unsupervised} observed that generative models with batch normalization assign much lower likelihood to OoD samples than in-distribution samples. 
-%Meanwhile, the corresponding log-likelihood decreases dramatically for OoD samples, but is relatively stable for in-distribution samples, as the ratio of test samples in a batch increases. 
-Based on the insight, $T_{b, r_1, r_2}(x)$ is proposed for OoD detection. 
+\cite{song2019unsupervised} observed that generative models with batch normalization assign much lower likelihood to OoD samples than in-distribution samples.
+%Meanwhile, the corresponding log-likelihood decreases dramatically for OoD samples, but is relatively stable for in-distribution samples, as the ratio of test samples in a batch increases.
+Based on the insight, $T_{b, r_1, r_2}(x)$ is proposed for OoD detection.
 
-Some researches also proposed to use labels (for classification tasks) to solve OoD. 
-\cite{che2019deep} proposed $p(x|y)$ for OoD detection. It uses conditional deep generative models to verify the predictions of classifier. \cite{alemi2018uncertainty} use VIB to model the bottleneck $I(Z;Y)-\beta I(Z;X)$ where $I$ is the mutual information. 
-\cite{hendrycks2016baseline,hendrycks2018deep,hsu2020generalized,lee2018simple,lakshminarayanan2017simple} proposed some indictors based on classifier for detecting OoD. 
+Some researches also proposed to use labels (for classification tasks) to solve OoD.
+\cite{che2019deep} proposed $p(x|y)$ for OoD detection. It uses conditional deep generative models to verify the predictions of classifier. \cite{alemi2018uncertainty} use VIB to model the bottleneck $I(Z;Y)-\beta I(Z;X)$ where $I$ is the mutual information.
+\cite{hendrycks2016baseline,hendrycks2018deep,hsu2020generalized,lee2018simple,lakshminarayanan2017simple} proposed some indictors based on classifier for detecting OoD.
 
 \section{Problem Statement}\label{sec2}
 
-$\pin$ and $\pout$ denote two distinct data distributions where $\pin$ is called in-distribution and $\pout$ is called out-of-distribution. 
-$\pmix$ denotes a mixture distribution $\pmix(x) = \alpha \pin(x) + \beta \pout(x)$ where $\alpha + \beta = 1$ and $\alpha, \beta > 0$. 
-The samples from $\pmix$, are generated by $\pin$ or $\pout$ and \textit{we wonder which of them are generated by $\pin$ without knowing $\pout$}. 
+$\pin$ and $\pout$ denote two distinct data distributions where $\pin$ is called in-distribution and $\pout$ is called out-of-distribution.
+$\pmix$ denotes a mixture distribution $\pmix(x) = \alpha \pin(x) + \beta \pout(x)$ where $\alpha + \beta = 1$ and $\alpha, \beta > 0$.
+The samples from $\pmix$, are generated by $\pin$ or $\pout$ and \textit{we wonder which of them are generated by $\pin$ without knowing $\pout$}.
 
-It is important to decide whether two datasets are distinct on large-scale datasets. Two datasets are \textbf{simply-classified} when a common classifier trained on the training data of two datasets for 2-class classification, \IE in-distribution as label 0 and OoD as label 1, can simply distinguish the testing data of the two datasets. If two dataset A, B are simply-classified, (A, B) and (B, A) dataset pairs will be considered in large-scale experiments. 
+It is important to decide whether two datasets are distinct on large-scale datasets. Two datasets are \textbf{simply-classified} when a common classifier trained on the training data of two datasets for 2-class classification, \IE in-distribution as label 0 and OoD as label 1, can simply distinguish the testing data of the two datasets. If two dataset A, B are simply-classified, A vs B and B vs A dataset pairs will be considered in large-scale experiments.
 
-In this paper, we consider the problem of distinguishing the in-distribution and out-of-distribution on the common deep generative models, \IE VAE, PixelCNN, flow-based models and GANs. Large-scale common datasets are used to validate the generality of indicators, as shown in \Cref{sec6}. 
+In this paper, we consider the problem of distinguishing the in-distribution and out-of-distribution on the common deep generative models, \IE VAE, PixelCNN, flow-based models and GANs. Large-scale common datasets are used to validate the generality of indicators, as shown in \Cref{sec6}.
 
-All common metrics including AUROC, AUPR, AP, FPR@TPR95 are considered in this paper. AUROC is selected as the major metric and other metrics are shown in appendix B. AUROC is a threshold-independent metric~\cite{davis2006relationship} and is widely used in the OoD domain. % A perfect detector can get AUROC score of 100\%. 
+All common metrics including AUROC, AUPR, AP, FPR@TPR95 are considered in this paper. AUROC is selected as the major metric and other metrics are shown in appendix B. AUROC is a threshold-independent metric~\cite{davis2006relationship} and is widely used in the OoD domain. % A perfect detector can get AUROC score of 100\%.
 
 \section{Motivating Observations}\label{sec3}
 
@@ -266,26 +266,26 @@ All common metrics including AUROC, AUPR, AP, FPR@TPR95 are considered in this p
 \subfigure[MNIST vs Omniglot]{
 \includegraphics[width=0.45\columnwidth]{counterexample4.png}
 }
-\caption{The histogram of log-likelihood of VAE. 
-% The value of log-likelihood is normalized by the size of images to BPD. 
-Green and red parts denote the log-likelihood of out-of-distribution and in-distribution respectively. 
-%Intuitively, we expect the log-likelihood of out-of-distribution are always higher than in-distribution. 
-%However, these experiments show that log-likelihood of out-of-distribution might be higher, lower or nearly same to in-distribution. 
+\caption{The histogram of log-likelihood of VAE.
+% The value of log-likelihood is normalized by the size of images to BPD.
+Green and red parts denote the log-likelihood of out-of-distribution and in-distribution respectively.
+%Intuitively, we expect the log-likelihood of out-of-distribution are always higher than in-distribution.
+%However, these experiments show that log-likelihood of out-of-distribution might be higher, lower or nearly same to in-distribution.
 The AUROC of log-likelihood in (a) (b) (c) (d) are 0.08, 0.09, 0.99, 0.59. The AUROC of $T_{perm}$ in (a) (b) (c) (d) are 0.84, 0.82, 0.98, 0.66. }
 \label{fig1}
 \end{figure}
 
 \subsection{Counterexamples}
-Generally, the log-likelihood of likelihood-based models is expected to be lower in the out-of-distribution and be higher in the in-distribution intuitively because the models are trained on in-distribution. 
-However, the observation of \cite{nalisnick2019do} shows that VAE, PixelCNN and RealNVP all assign the higher log-likelihood to samples from out-of-distribution in experiments CIFAR-10 vs SVHN and NotMNIST vs MNIST. 
-We observed that the number of datasets in \cite{nalisnick2019do} is quite small and we suspect that there might be more counterexamples at large-scale datasets. 
+Generally, the log-likelihood of likelihood-based models is expected to be lower in the out-of-distribution and be higher in the in-distribution intuitively because the models are trained on in-distribution.
+However, the observation of \cite{nalisnick2019do} shows that VAE, PixelCNN and RealNVP all assign the higher log-likelihood to samples from out-of-distribution in experiments CIFAR-10 vs SVHN and NotMNIST vs MNIST.
+We observed that the number of datasets in \cite{nalisnick2019do} is quite small and we suspect that there might be more counterexamples at large-scale datasets.
 
-Therefore, we reproduce the experiments at more datasets and find more counterexamples shown in \Cref{fig1} and appendix A. 
-These experiments show that log-likelihood is unpredictable at out-of-distribution, \IE it might be lower, higher or same to in-distribution. 
-Moreover, the methods based on the log-likelihood might have counterexamples at large-scale datasets. 
+Therefore, we reproduce the experiments at more datasets and find more counterexamples shown in \Cref{fig1} and appendix A.
+These experiments show that log-likelihood is unpredictable at out-of-distribution, \IE it might be lower, higher or same to in-distribution.
+Moreover, the methods based on the log-likelihood might have counterexamples at large-scale datasets.
 We reproduce the indicators~\cite{alemi2018uncertainty,song2017pixeldefend,ren2019likelihood,song2019generative,nalisnick2019do,che2019deep,alemi2018uncertainty} on common generative models and find counterexamples at large-scale datasets, shown in appendix A. \cite{nalisnick2019do} observed that there is a clear negative correlation between likelihoods and complexity estimates, when the model is trained on CIFAR-10 and FashionMNIST. We validate their observation on large-scale datasets. However, since $L(x)$ is rough, it matters the performance of $S(x)$, as shown in \Cref{fig2}.
- 
-Furthermore, many counter-examples for OoD indicators not based on deep generative models, are shown in appendix A. \EG, \cite{lee2018simple} reaches 98.24\% AUROC on SVHN vs CIFAR-10, but only 38.22\% AUROC on Omniglot vs FashionMNIST. These counter-examples indicate the critical generality problem in the OoD domain. An important reason of this phenomenon is that \textit{OoD indicators are always designed based on motivating observations only on few datasets, however, nothing can ensure these observations hold on large-scale datasets}. These counter-examples encourage the evaluation on large-scale datasets. 
+
+Furthermore, many counter-examples for OoD indicators not based on deep generative models, are shown in appendix A. \EG, \cite{lee2018simple} reaches 98.24\% AUROC on SVHN vs CIFAR-10, but only 38.22\% AUROC on Omniglot vs FashionMNIST. These counter-examples indicate the critical generality problem in the OoD domain. An important reason of this phenomenon is that \textit{OoD indicators are always designed based on motivating observations only on few datasets, however, nothing can ensure these observations hold on large-scale datasets}. These counter-examples encourage the evaluation on large-scale datasets.
 
 \begin{figure}[t]
 \centering
@@ -301,27 +301,27 @@ Furthermore, many counter-examples for OoD indicators not based on deep generati
 \subfigure[AUROC = 0.9999]{
 \includegraphics[width=0.45\columnwidth]{counterexample_complexity4}
 }
-\caption{We select Omniglot as in-distribution and other datasets as out-of-distribution. (a) shows the correlation between likelihoods trained on Omniglot and complexity estimate. (b) shows the histogram of log-likelihood, where the average AUROC is 0.9867. (c) shows that indicator $S(x)$ might reach lower the performance than log-likelihood. It means that $L(x)$ is rough and we need a more precise, stable and interpretable estimate to assist log-likelihood for detecting OoD. (d) shows $\log \frac{p_\theta(x)}{p_\omega(x)}$ might be a good choice where $p_\omega$ is trained on out-of-distribution.%（e) TODO shows that the density of samples on out-of-distribution increase instead decrease during training. 
+\caption{We select Omniglot as in-distribution and other datasets as out-of-distribution. (a) shows the correlation between likelihoods trained on Omniglot and complexity estimate. (b) shows the histogram of log-likelihood, where the average AUROC is 0.9867. (c) shows that indicator $S(x)$ might reach lower the performance than log-likelihood. It means that $L(x)$ is rough and we need a more precise, stable and interpretable estimate to assist log-likelihood for detecting OoD. (d) shows $\log \frac{p_\theta(x)}{p_\omega(x)}$ might be a good choice where $p_\omega$ is trained on out-of-distribution.%?e) TODO shows that the density of samples on out-of-distribution increase instead decrease during training.
 }
 \label{fig2}
 \end{figure}
 
 \subsection{Performance on Large-scale Datasets}
 
-By following reasons, large-scale datasets is used to check the generality of indicators:
+For the following reasons, large-scale datasets is used to check the generality of indicators:
 
-\noindent \textbf{1) Check observations} OoD indicators based on the motivating observation on few datasets, are unreliable. It is necessary to validate the generality of motivating observation. 
+\noindent \textbf{1) Check observations} OoD indicators based on the motivating observation on few datasets, are unreliable. It is necessary to validate the generality of motivating observation.
 
-\noindent \textbf{2) Avoid over fine-tuning} The performance on few datasets might be easily improved by fine-tuning hyper-parameters and architectures of models, but hard on large-scale datasets. 
+\noindent \textbf{2) Avoid over fine-tuning} The performance on few datasets might be easily improved by fine-tuning hyper-parameters and architectures of models, but hard on large-scale datasets.
 
-%\noindent \textbf{} By the definition of OoD problem in \Cref{sec2}, models should distinguish any $\pout$ that is distinct to $\pin$ instead of few datasets. Therefore, we should check more out-of-distribution as much as possible. 
+%\noindent \textbf{} By the definition of OoD problem in \Cref{sec2}, models should distinguish any $\pout$ that is distinct to $\pin$ instead of few datasets. Therefore, we should check more out-of-distribution as much as possible.
 
-\noindent \textbf{3) Average Performance} Average performance on large-scale datasets is better for assessing indicators. In CelebA vs LSUN, log-likelihood reaches 98\% AUROC, however, it only reaches 0.02 in CelebA vs SVHN in appendix A. Average performance will consider such experiments with lower AUROC. It is more meaningful to improve the average performance of indicators than to improve little (\EG 99.1\% to 99.2\%) in a single experiment. 
+\noindent \textbf{3) Average Performance} Average performance on large-scale datasets is better for assessing indicators. In CelebA vs LSUN, log-likelihood reaches 98\% AUROC, however, it only reaches 0.02 in CelebA vs SVHN in appendix A. Average performance will consider such experiments with lower AUROC. It is more meaningful to improve the average performance of indicators than to improve little (\EG 99.1\% to 99.2\%) in a single experiment.
 
 Indicators of previous works via common deep generative models do not perform well on large-scale datasets, as shown in \Cref{tab2}, where
-DeConf-C, MCMC Recon, MCMC $\log p_\theta(x)$, $D_\theta(x)$, $\|\nabla_x D_\theta(x)\|$, entropy, $\max_{y} p(y|x)$, Mahalanobis, ODIN and disagreement are proposed by \cite{hendrycks2016baseline,hsu2020generalized,lee2018simple,alemi2018uncertainty,liang2018enhancing,kumar2019maximum,xu2018unsupervised,chen2019unsupervised,lakshminarayanan2017simple}. Perfect classifier is the classifier used to detect simply-classified, which is the theoretical optimal result. 
-Thanking to the assistance of $L(x)$, $S(x)$ reaches the best performance among the past works, which encourages us to develop a better assistance in the next. 
-%We observe that $\log p_\theta(x) - \log p_\omega(x)$ reaches outstanding performance near to theoretical optimal result on large-scale datasets. 
+DeConf-C, MCMC Recon, MCMC $\log p_\theta(x)$, $D_\theta(x)$, $\|\nabla_x D_\theta(x)\|$, entropy, $\max_{y} p(y|x)$, Mahalanobis, ODIN and disagreement are proposed by \cite{hendrycks2016baseline,hsu2020generalized,lee2018simple,alemi2018uncertainty,liang2018enhancing,kumar2019maximum,xu2018unsupervised,chen2019unsupervised,lakshminarayanan2017simple}. Perfect classifier is the classifier used to detect simply-classified, which is the theoretical optimal result.
+Thanking to the assistance of $L(x)$, $S(x)$ reaches the best performance among the past works, which encourages us to develop a better assistance in the next.
+%We observe that $\log p_\theta(x) - \log p_\omega(x)$ reaches outstanding performance near to theoretical optimal result on large-scale datasets.
 
 \begin{table}[t]
 \centering
@@ -390,87 +390,87 @@ $\log p_\theta(x)$ with BN & 85.15 & 64.10 & 82.00 \\
 $\log \frac{p_\theta(x)}{p_\omega(x)}$ & \textbf{99.08} & \textbf{99.85} & \textbf{99.81} \\
 \bottomrule
 \end{tabular}
-\caption{Top table shows the average AUROC and AUPR of other past works on large-scale datasets. Bottom table shows the average AUROC of past works on large-scale datasets. $\log \frac{p_\theta(x)}{p_\omega(x)}$ is always outstanding, where $\omega$ is trained on OoD. 
+\caption{Top table shows the average AUROC and AUPR of other past works on large-scale datasets. Bottom table shows the average AUROC of past works on large-scale datasets. $\log \frac{p_\theta(x)}{p_\omega(x)}$ is always outstanding, where $\omega$ is trained on OoD.
 }
 \label{tab2}
 \end{table}
 
 \subsection{Observation of KL-based indicator}
-As shown in \Cref{fig2}, complexity estimate is unstable and sometimes it might lower the performance. Therefore, we try to find another function to replace $L(x)$ in $S(x)$. 
-In experiments on large-scale datasets, we observe a common phenomenon that $p_\theta(x) < p_\omega(x)$ for almost $x \sim \pout$ and $p_\theta(x) > p_\omega(x)$ for almost $x \sim \pin$ where $p_\omega(x)$ is a likelihood-based model trained on out-of-distribution. 
+As shown in \Cref{fig2}, complexity estimate is unstable and sometimes it might lower the performance. Therefore, we try to find another function to replace $L(x)$ in $S(x)$.
+In experiments on large-scale datasets, we observe a common phenomenon that $p_\theta(x) < p_\omega(x)$ for almost $x \sim \pout$ and $p_\theta(x) > p_\omega(x)$ for almost $x \sim \pin$ where $p_\omega(x)$ is a likelihood-based model trained on out-of-distribution.
 The average AUROC of $\log p_\theta(x) - \log p_\omega(x)$ reaches nearly 100\% on all datasets in \Cref{tab2}.
-From the view of complexity estimate, $L(x) = -\log_2 p(x|\mathcal{M}_0)$ is the log-likelihood of a universal model $\mathcal{M}_0$~\cite{serra2019input}. In our paper, $p_\omega(x)$ is used to replace $L(x)$ to assist log-likelihood. 
+From the view of complexity estimate, $L(x) = -\log_2 p(x|\mathcal{M}_0)$ is the log-likelihood of a universal model $\mathcal{M}_0$~\cite{serra2019input}. In our paper, $p_\omega(x)$ is used to replace $L(x)$ to assist log-likelihood.
 
-However, in OoD problem, the out-of-distribution is not known. 
-Therefore, we will explore how to develop an indicator that are not dependent on OoD and why $ \log \frac{p_\theta(x)}{p_\omega(x)}$ is almost useful for OoD theoretically. 
+However, in OoD problem, the out-of-distribution is not known.
+Therefore, we will explore how to develop an indicator that are not dependent on OoD and why $ \log \frac{p_\theta(x)}{p_\omega(x)}$ is almost useful for OoD theoretically.
 
 \section{Theorem}\label{sec5}
 \subsection{Divergence-based Indicators}
-%In the definition of OoD problem, we do not give any assumption about the probability distribution, since we try to make the definition more general. 
+%In the definition of OoD problem, we do not give any assumption about the probability distribution, since we try to make the definition more general.
 We propose a theoretical framework for \textbf{R}obust \textbf{O}oD \textbf{I}ndicators based on \textbf{D}ivergence called \ROID{}, with following assumptions (also observed in experiments):
 
 \noindent \textbf{1.} The training data and testing data of in-distribution and out-of-distribution are i.i.d. .
 
-\noindent \textbf{2.}  $div$ is a divergence , satisfying that $div(\pin, \pout) \gg 0$ and $div(\pout, \pin) \gg 0$. 
+\noindent \textbf{2.}  $div$ is a divergence , satisfying that $div(\pin, \pout) \gg 0$ and $div(\pout, \pin) \gg 0$.
 
-\noindent \textbf{3.}  If $div(\pin, \pout)$ and $div(\pout, \pin)$ can be represented by sampling formula, \IE $div(\pin, \pout) \approx \sum_{i} f(x_i)$, then $f(x_i) \gg 0$ for almost $x_i$ in $\pin$. 
+\noindent \textbf{3.}  If $div(\pin, \pout)$ and $div(\pout, \pin)$ can be represented by sampling formula, \IE $div(\pin, \pout) \approx \sum_{i} f(x_i)$, then $f(x_i) \gg 0$ for almost $x_i$ in $\pin$.
 
-\noindent \textbf{4.} $f: \mathcal{X} \rightarrow \mathcal{R}$ maps the distribution $\pin, \pout$ into two Gaussian distribution with constant variance. 
+\noindent \textbf{4.} $f: \mathcal{X} \rightarrow \mathcal{R}$ maps the distribution $\pin, \pout$ into two Gaussian distribution with constant variance.
 
-\noindent \textbf{5.} Assumption 3 and 4 hold for any $\hat{f}$ approximating $f$. 
+\noindent \textbf{5.} Assumption 3 and 4 hold for any $\hat{f}$ approximating $f$.
 
 
-It is important to notice that assumption 3 can not be deduced from assumption 2 obviously. For example, when $\pin = \frac{1}{2}(\mathcal{N}(0, 1) + \mathcal{N}(-10, 1))$ and $\pout = \frac{1}{2}(\mathcal{N}(0, 1) + \mathcal{N}(10, 1))$, $KL(\pin, \pout) \approx 25.05 \gg 0$ but $\log \pin(x) - \log \pout(x) \approx 0$ for $x$ near 0.  In such example, $\pin$ and $\pout$ is distinguishing by KL-divergence but is not simply classified because no classifier can detect whether a sample in $[-1, 1]$ is from $\pin$ or $\pout$. We assume that assumption 3 holds when $\pin$ and $\pout$ is simply classified. 
+It is important to notice that assumption 3 can not be deduced from assumption 2 obviously. For example, when $\pin = \frac{1}{2}(\mathcal{N}(0, 1) + \mathcal{N}(-10, 1))$ and $\pout = \frac{1}{2}(\mathcal{N}(0, 1) + \mathcal{N}(10, 1))$, $KL(\pin, \pout) \approx 25.05 \gg 0$ but $\log \pin(x) - \log \pout(x) \approx 0$ for $x$ near 0.  In such example, $\pin$ and $\pout$ is distinguishing by KL-divergence but is not simply classified because no classifier can detect whether a sample in $[-1, 1]$ is from $\pin$ or $\pout$. We assume that assumption 3 holds when $\pin$ and $\pout$ is simply classified.
 
-The above assumptions mean that if $div$ can distinguishing the probability distribution                                                                                                        in-distribution and out-of-distribution, then $f$ can be used as an OoD indicator, called the $div$-based indicator. 
+The above assumptions mean that if $div$ can distinguishing the probability distribution                                                                                                        in-distribution and out-of-distribution, then $f$ can be used as an OoD indicator, called the $div$-based indicator.
 
-%For detailed research, \EG how to obtain indicators without knowing OoD, we need detailed property of $div$. 
-In the next, we will introduce two concrete divergence-based indicators: KL-based and Wasserstein-based indicator, and show how to obtain them without knowing OoD. 
+%For detailed research, \EG how to obtain indicators without knowing OoD, we need detailed property of $div$.
+In the next, we will introduce two concrete divergence-based indicators: KL-based and Wasserstein-based indicator, and show how to obtain them without knowing OoD.
 
 \subsection{KL-based Indicator}
-We choose KL-divergence as $div$, then $KL(\pin, \pout) = \E_{\pin(x)} [\log \pin(x) - \log \pout(x)]$ and KL-based indicator is $\log \pin(x) - \log \pout(x)$, whose motivation is in \Cref{fig3}. 
+We choose KL-divergence as $div$, then $KL(\pin, \pout) = \E_{\pin(x)} [\log \pin(x) - \log \pout(x)]$ and KL-based indicator is $\log \pin(x) - \log \pout(x)$, whose motivation is in \Cref{fig3}.
 
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=0.8\columnwidth]{diagram.pdf}
-	\caption{Diagrammatic sketch for KL-based indicator. The in-distribution is in [0, 10] and out-of-distribution in [10, 20]. Intuitively, $\pin$ assign lower density to samples from in-distribution and higher density for samples from out-of-distribution than $\pout$ . 
+	\caption{Diagrammatic sketch for KL-based indicator. The in-distribution is in [0, 10] and out-of-distribution in [10, 20]. Intuitively, $\pin$ assign lower density to samples from in-distribution and higher density for samples from out-of-distribution than $\pout$ .
 	Different to the assumption of likelihood indicator, we do not assume that $p_\theta(x_2)$ very small for $x_2 \sim \pout$. By the assumptions in \Cref{sec5}, we can induce that $p_\theta(x_1) > p_\omega(x_1)$ and $p_\theta(x_2) < p_\omega(x_2)$. Thus $\log p_\theta(x) - \log p_\omega(x)$ is an indicator for OoD detection. }
 	\label{fig3}
 \end{figure}
 
 \begin{theorem}\label{thm1}
-	$\log \pin(x) - \log \pout(x)$ is a symmetric indicator with great performance, \IE it reaches same performance in experiment A vs B and B vs A, with threshold zero. 
+	$\log \pin(x) - \log \pout(x)$ is a symmetric indicator with great performance, \IE it reaches same performance in experiment A vs B and B vs A, with threshold zero.
 \end{theorem}
-Likelihood is not a symmetric indicator since it uses $p_A$ as indicator in experiment A vs B and $p_B$ as indicator in experiment B vs A. An interesting phenomenon is that if likelihood indicator reaches a good performance on experiment A vs B, it will usually fail in experiment B vs A, in appendix B. Especially, in experiments of Noise vs any dataset, the optimal model for Noise dataset is uniform distribution, but it can not detect any OoD. In the experiment of any dataset vs Noise, likelihood reaches nearly 100\% AUROC since the likelihood of noise is significantly lower than any datasets. 
+Likelihood is not a symmetric indicator since it uses $p_A$ as indicator in experiment A vs B and $p_B$ as indicator in experiment B vs A. An interesting phenomenon is that if likelihood indicator reaches a good performance on experiment A vs B, it will usually fail in experiment B vs A, in appendix B. Especially, in experiments of Noise vs any dataset, the optimal model for Noise dataset is uniform distribution, but it can not detect any OoD. In the experiment of any dataset vs Noise, likelihood reaches nearly 100\% AUROC since the likelihood of noise is significantly lower than any datasets.
 
-However, $\pout$ is unknown in the OoD problem. Therefore, we try to use another tractable term to replace $\pout$. 
+However, $\pout$ is unknown in the OoD problem. Therefore, we try to use another tractable term to replace $\pout$.
 
 \begin{theorem}\label{thm2}
-	For any mixture distribution $\pmix = \alpha \pin + \beta \pout$ where $\alpha + \beta = 1$ and $\alpha, \beta > 0$, the performance of indicator $\log \pin(x) - \log \pmix(x)$ and indicator $\log \pin(x) - \log \pout(x)$ is equal for OoD detection. 
+	For any mixture distribution $\pmix = \alpha \pin + \beta \pout$ where $\alpha + \beta = 1$ and $\alpha, \beta > 0$, the performance of indicator $\log \pin(x) - \log \pmix(x)$ and indicator $\log \pin(x) - \log \pout(x)$ is equal for OoD detection.
 \end{theorem}
 
 If we can get enough data from the mixture distribution, by \Cref{thm1}, $\pmix$ can be used to replace the term $\pout$ in KL-based indicator and keep the same performance, which is shown in experiments in \Cref{tab3}. Next, we try to explain why KL-based indicator can reach outstanding performance.
 
-Compared to likelihood indicator and likelihood-ratio indicator, KL-based indicator can get better performance. 
+Compared to likelihood indicator and likelihood-ratio indicator, KL-based indicator can get better performance.
 \begin{theorem}\label{thm3}
-When log-likelihood can detect OoD, \IE $\log \pin(x_1) > \log \pin(x_2)$ for almost $x_1 \sim \pin$ and $x_2 \sim \pout$, KL-based indicator can be also used to detect OoD. 
+When log-likelihood can detect OoD, \IE $\log \pin(x_1) > \log \pin(x_2)$ for almost $x_1 \sim \pin$ and $x_2 \sim \pout$, KL-based indicator can be also used to detect OoD.
 \end{theorem}
 
 \begin{theorem}\label{thm4}
-For any likelihood-ratio indicator $\log \pin(x) - \log g(x)$ where $g$ is a continuous differentiable probability distribution, KL-based indicator outperforms them. 
+For any likelihood-ratio indicator $\log \pin(x) - \log g(x)$ where $g$ is a continuous differentiable probability distribution, KL-based indicator outperforms them.
 \end{theorem}
 
-Above theorems show that $\log \frac{\pin(x)}{\pmix(x)}$ is a good OoD indicator. It is a natural idea to model in-distribution and mixture distribution by $p_\theta, p_\gamma$, \IE $\max_\theta \E_{\pin(x)} \log p_\theta(x)$ and $\max_\gamma \E_{\pmix(x)} \log p_\gamma(x)$ are used as loss to train model. 
-Next, we will show the property of model distribution. 
+Above theorems show that $\log \frac{\pin(x)}{\pmix(x)}$ is a good OoD indicator. It is a natural idea to model in-distribution and mixture distribution by $p_\theta, p_\gamma$, \IE $\max_\theta \E_{\pin(x)} \log p_\theta(x)$ and $\max_\gamma \E_{\pmix(x)} \log p_\gamma(x)$ are used as loss to train model.
+Next, we will show the property of model distribution.
 
 \begin{theorem}\label{thm5}
-	$\log \frac{p_\theta(x)}{p_\gamma(x)}$ can be used for detecting OoD. Moreover, $\log \frac{p_\theta(x)}{p_\gamma(x)}$ represents whether a sample $x$ in mixture distribution have been optimized in the training process of $\theta$. 
+	$\log \frac{p_\theta(x)}{p_\gamma(x)}$ can be used for detecting OoD. Moreover, $\log \frac{p_\theta(x)}{p_\gamma(x)}$ represents whether a sample $x$ in mixture distribution have been optimized in the training process of $\theta$.
 \end{theorem}
 
-\Cref{thm5} shows that $\log \frac{p_\theta(x)}{p_\gamma(x)}$ represents the optimizability: if a sample $x$ is OoD, $p_\theta(x)$ will be lower than $p_\gamma(x)$ since $x$ is also in $\pmix$ and $p_\gamma(x)$ can be optimized more than $p_\theta(x)$; if $x$ is not OoD, $p_\theta(x)$ will not be lower than $p_\gamma(x)$ since $p_\theta(x)$ is well-trained to maximize log-likelihood. \Cref{thm5} indicates that training on mixture distribution does not need much time since we only need to observe whether the likelihood of a sample can be improved, which can be shown in few epochs. It alleviates the requirements for training and then we can train models online. 
+\Cref{thm5} shows that $\log \frac{p_\theta(x)}{p_\gamma(x)}$ represents the optimizability: if a sample $x$ is OoD, $p_\theta(x)$ will be lower than $p_\gamma(x)$ since $x$ is also in $\pmix$ and $p_\gamma(x)$ can be optimized more than $p_\theta(x)$; if $x$ is not OoD, $p_\theta(x)$ will not be lower than $p_\gamma(x)$ since $p_\theta(x)$ is well-trained to maximize log-likelihood. \Cref{thm5} indicates that training on mixture distribution does not need much time since we only need to observe whether the likelihood of a sample can be improved, which can be shown in few epochs. It alleviates the requirements for training and then we can train models online.
 
 \subsection{Wasserstein-based Indicator}
-From the view of traditional likelihood-indicator, GANs can not be used for detecting OoD since  how to evaluate the density of GANs is an open problem\cite{nalisnick2019do}. Therefore, some researches propose variants of GANs with tractable density~\cite{kumar2019maximum}. In the framework of divergence-based indicators, we can detect OoD by discriminator without the density of GANs.                                                                                                                                                                                                                                                                                                                                                                                                      
+From the view of traditional likelihood-indicator, GANs can not be used for detecting OoD since  how to evaluate the density of GANs is an open problem\cite{nalisnick2019do}. Therefore, some researches propose variants of GANs with tractable density~\cite{kumar2019maximum}. In the framework of divergence-based indicators, we can detect OoD by discriminator without the density of GANs.
 
 In vanilla GAN~\cite{goodfellow2014generative}, a discriminator is trained to distinguish generated samples and real samples and a generator is trained to generate samples for deceiving the discriminator.
 
@@ -482,97 +482,97 @@ However, vanilla GAN is unstable during the training process. To tackle this pro
 We select Wasserstein distance as $div$, then
 \begin{equation}
 	W^1(\pin, \pout) \approx \sum_i \Big[D(x_i^{in}) - \sum_j D(x_j^{out})\Big]
-\end{equation} 
-where $x_i^{in}$ is sampled from in-distribution, $x_j^{out}$ is sampled from out-of-distribution and $D$ is the optimal solution in $W^1(\pin, \pout)$. Then the Wasserstein-based indicator for sample $x$ is $D(x) - \sum_{j} D(x_j^{out})$. Note that $\sum_{j} D(x_j^{out})$ is constant, which do not affect the performance of OoD detection. Thus, the Wasserstein-based indicator is simply $D(x)$. 
-% The generator of WGAN does not appear in our formula since we only consider how to measure the distance between $\pin, \pout$ instead of generating. 
+\end{equation}
+where $x_i^{in}$ is sampled from in-distribution, $x_j^{out}$ is sampled from out-of-distribution and $D$ is the optimal solution in $W^1(\pin, \pout)$. Then the Wasserstein-based indicator for sample $x$ is $D(x) - \sum_{j} D(x_j^{out})$. Note that $\sum_{j} D(x_j^{out})$ is constant, which do not affect the performance of OoD detection. Thus, the Wasserstein-based indicator is simply $D(x)$.
+% The generator of WGAN does not appear in our formula since we only consider how to measure the distance between $\pin, \pout$ instead of generating.
 
-Next theorems are used to show why Wasserstein-based indicator can reach great performance ensure that $D$ can be obtained without knowing $\pout$. 
+Next theorems are used to show why Wasserstein-based indicator can reach great performance ensure that $D$ can be obtained without knowing $\pout$.
 
 \begin{theorem}\label{thm6}
-	Assumption 2 is a corollary of definition of OoD problem when $div$ is Wasserstein distance.  
+	Assumption 2 is a corollary of definition of OoD problem when $div$ is Wasserstein distance.
 \end{theorem}
 
 \begin{theorem}\label{thm7}
-	$D(x)$ is a symmetric indicator. 
+	$D(x)$ is a symmetric indicator.
 \end{theorem}
 
 \begin{theorem}\label{thm8}
-	$\hat{D}$ that is optimal solution in $W^1(\pin, \pmix)$ is same to the optimal solution $D$ in $W^1(\pin, \pout)$. Moreover, the neural networks trained by $W^1(\pin, \pmix)$ and $W^1(\pin, \pout)$ will share the same optimization process. 
+	$\hat{D}$ that is optimal solution in $W^1(\pin, \pmix)$ is same to the optimal solution $D$ in $W^1(\pin, \pout)$. Moreover, the neural networks trained by $W^1(\pin, \pmix)$ and $W^1(\pin, \pout)$ will share the same optimization process.
 \end{theorem}
 
-By \Cref{thm8}, $\hat{D}$ that is easy-obtained can replace $D$. Next theorem will ensure the performance of it. 
+By \Cref{thm8}, $\hat{D}$ that is easy-obtained can replace $D$. Next theorem will ensure the performance of it.
 
 \begin{theorem}\label{thm9}
-	The discriminator in $W^1(\pin, \pout)$ is the best indicator among all indicators that is 1-Lipschitz. Moreover, it is the best indicator who has limited gradient. 
+	The discriminator in $W^1(\pin, \pout)$ is the best indicator among all indicators that is 1-Lipschitz. Moreover, it is the best indicator who has limited gradient.
 \end{theorem}
 
-\subsection{Concerns}
-The idea of this paper is training a model for OoD detection by exploiting the samples of mixture distribution. However, there are three major concerns about this idea: 
+\subsection{Addressing concerns}
+The idea of this paper is training a model for OoD detection by exploiting the samples of mixture distribution. However, there are three major concerns about this idea:
 
-\noindent \textbf{1.} Is our method \textbf{data-specific}? \IE does this method only work on the data that it has seen in training? 
+\noindent \textbf{1.} Is our method \textbf{data-specific}? \IE does this method only work on the data that it has seen in training?
 
-\noindent \textbf{2.} Can our method work \textbf{online}? \IE for new testing data, indicators should be given before the next testing data come.  
+\noindent \textbf{2.} Can our method work \textbf{online}? \IE for new testing data, indicators should be given before the next testing data come.
 
-\noindent \textbf{3.} Can our method work when $\pmix$ has only \textbf{less samples}? 
+\noindent \textbf{3.} Can our method work when $\pmix$ has only \textbf{less samples}?
 
 \noindent \textbf{4.} Is it better to train \textbf{pre-trained} models (trained on in-distribution) or \textbf{initialized} models on mixture distribution?
 
-To solve the concerns, we design following experiments:
+To address concerns, we design following experiments:
 
-\noindent \textbf{1.} In experiment A vs B, only 20\% data in mixture distribution can be used for training. 
+\noindent \textbf{1.} In experiment A vs B, only 20\% data in mixture distribution can be used for training.
 
-\noindent \textbf{2.} We simulate the online system --- the data in mixture distribution is streaming and requires indicators immediately. 
+\noindent \textbf{2.} We simulate the online system --- the data in mixture distribution is streaming and requires indicators immediately.
 
-\noindent \textbf{3.} We splits the data from $\pmix$ into several blocks and model can only use $\pin$ and the block waiting for detection.  
+\noindent \textbf{3.} We splits the data from $\pmix$ into several blocks and model can only use $\pin$ and the block waiting for detection.
 
-\noindent \textbf{4.} Experiments for pre-train models and initialized models. 
+\noindent \textbf{4.} Experiments for pre-train models and initialized models.
 
 \section{Experiments}\label{sec6}
-In this section, we will demonstrate the effectiveness of KL-based indicator and Wasserstein-based indicator on large-scale computer vision benchmark datasets. 
-%We run all experiments with Pytorch and Tensorflow and we submit the code to reproduce all experimental results. 
+In this section, we will demonstrate the effectiveness of KL-based indicator and Wasserstein-based indicator on large-scale computer vision benchmark datasets.
+%We run all experiments with Pytorch and Tensorflow and we submit the code to reproduce all experimental results.
 
 \subsection{Datasets}
 %All the datasets considered are listed below:
-%\textbf{CIFAR-10}~\cite{krizhevsky2009learning} is a natural image datasets with 10 classes including animal, ship, airplane and etc. 
-%\textbf{CIFAR-100}~\cite{krizhevsky2009learning} is just like CIFAR-10, including 100 classes. 
-%\textbf{SVHN}~\cite{netzer2011reading} includes house numbers from 0 to 9. 
-%\textbf{CelebA}~\cite{liu2015deep} is a large-scale face attributes dataset. 
+%\textbf{CIFAR-10}~\cite{krizhevsky2009learning} is a natural image datasets with 10 classes including animal, ship, airplane and etc.
+%\textbf{CIFAR-100}~\cite{krizhevsky2009learning} is just like CIFAR-10, including 100 classes.
+%\textbf{SVHN}~\cite{netzer2011reading} includes house numbers from 0 to 9.
+%\textbf{CelebA}~\cite{liu2015deep} is a large-scale face attributes dataset.
 %\textbf{TinyImageNet} consists of a subset of ImageNet images. It contains 200 different classes.
-%\textbf{LSUN} has a testing set of 10 different scenes. 
+%\textbf{LSUN} has a testing set of 10 different scenes.
 %\textbf{iSUN} is subset of SUN, including 8925 scene images in 899 different scenes.
-%\textbf{MNIST} consists of handwritten digits from 0 to 9. 
-%\textbf{Fashion MNIST} includes 10 kinds of clothes and shoes. 
-%\textbf{Not MNIST} includes letters from A to J on various typefaces. 
+%\textbf{MNIST} consists of handwritten digits from 0 to 9.
+%\textbf{Fashion MNIST} includes 10 kinds of clothes and shoes.
+%\textbf{Not MNIST} includes letters from A to J on various typefaces.
 %\textbf{KMNIST} includes 10 kinds of Kanji characters.
-%\textbf{Omniglot} contains 1623 different handwritten characters from 50 different alphabets. 
-%\textbf{Noise} is created by uniformly randomly sampling. 
-%\textbf{Constant} includes images whose pixels have same color. 
+%\textbf{Omniglot} contains 1623 different handwritten characters from 50 different alphabets.
+%\textbf{Noise} is created by uniformly randomly sampling.
+%\textbf{Constant} includes images whose pixels have same color.
 
-Our experiments consider following datasets: MNIST~\cite{lecun1998gradient-based}, FashionMNIST~\cite{xiao2017/online}, KMNIST~\cite{clanuwat2018deep}, NOT-MNIST, Omniglot~\cite{lake2015human}, CIFAR-10~\cite{krizhevsky2009learning}, CIFAR-100~\cite{krizhevsky2009learning}, TinyImagenet~\cite{deng2009imagenet}, SVHN~\cite{netzer2011reading}, iSUN~\cite{xu2015turkergaze}, CelebA~\cite{liu2015deep}, LSUN~\cite{yu2015lsun}, Noise and Constant. 
+We consider following datasets: MNIST~\cite{lecun1998gradient-based}, FashionMNIST~\cite{xiao2017/online}, KMNIST~\cite{clanuwat2018deep}, NOT-MNIST, Omniglot~\cite{lake2015human}, CIFAR-10~\cite{krizhevsky2009learning}, CIFAR-100~\cite{krizhevsky2009learning}, TinyImagenet~\cite{deng2009imagenet}, SVHN~\cite{netzer2011reading}, iSUN~\cite{xu2015turkergaze}, CelebA~\cite{liu2015deep}, LSUN~\cite{yu2015lsun}, Noise and Constant.
 
-The natural images are resized into 32x32x3 and grey images are all 28x28x1. All pair in natural image datasets and all pair in grey image datasets are considered in our experiments. Only CIFAR-10, CIFAR-100 and TinyImageNet are not simply-classified and intuitively they have similar classes. Noise and Constant includes both grey and natural images. LSUN and iSUN are only used for out-of-distribution. CelebA, Noise and Constant have no labels, and we set random labels from 0 to 9 on these datasets. 
+Natural images are resized to 32x32x3 and grey images are 28x28x1. All pair in natural image datasets and all pair in grey image datasets are considered in our experiments. Only CIFAR-10, CIFAR-100 and TinyImageNet are not simply-classified and intuitively they have similar classes. Noise and Constant includes both grey and natural images. LSUN and iSUN are only used for out-of-distribution. CelebA, Noise and Constant have no labels, and we set random labels from 0 to 9 on these datasets. We ended up with 92 dataset pairs.
 
-Samples of $\pin, \pout$ are from training set of $\pin, \pout$. Samples of $\pmix$ are from the testing set of $\pin, \pout$. 
+Samples of $\pin, \pout$ are from training set of $\pin, \pout$. Samples of $\pmix$ are from the testing set of $\pin, \pout$.
 
 \subsection{Metrics}
 Following standard metrics are adopted to measure the effectiveness of a method in out-of-distribution detection:
 
-\noindent \textbf{AUROC} is the Area Under the Receiver Operating Characteristic curve, a threshold-independent metric~\cite{davis2006relationship} and widely used in OoD domain. 
-%AUROC can be interpreted as the probability that a sample from in-distribution is assigned a lower detection score than a sample from out-of-distribution~\cite{fawcett2006introduction}. It is widely applied in OoD domain. We select AUROC as our major metrics. 
+\noindent \textbf{AUROC} is the Area Under the Receiver Operating Characteristic curve, a threshold-independent metric~\cite{davis2006relationship} and widely used in OoD domain.
+%AUROC can be interpreted as the probability that a sample from in-distribution is assigned a lower detection score than a sample from out-of-distribution~\cite{fawcett2006introduction}. It is widely applied in OoD domain. We select AUROC as our major metrics.
 
 
-\noindent \textbf{AP} is the Average Precision, summarizing the precision-recall curve as the weighted mean of precisions. 
+\noindent \textbf{AP} is the Average Precision, summarizing the precision-recall curve as the weighted mean of precisions.
 
 \noindent \textbf{FPR@TPR95} is the False Positive Rate when True Positive Rate is over 95\%., which means the probability that an out-of-distribution example is misclassified as in-distribution when over 95\% in-distribution is detected accurately.
 
-\noindent \textbf{AUPR} is the Area under the Precision-Recall curve, which is also threshold independent~\cite{saito2015precision}. % AUPR-In and AUPR-Out denotes the AUPR where in-distribution and out-of-distribution are positive, respectively.  
+\noindent \textbf{AUPR} is the Area under the Precision-Recall curve, which is also threshold independent~\cite{saito2015precision}. % AUPR-In and AUPR-Out denotes the AUPR where in-distribution and out-of-distribution are positive, respectively.
 
 
-\subsection{Setups} 
-For fair comparison, all indicators are based on common models with standard training, including 34-layer ResNet, VAE, PixelCNN, RealNVP and Wasserstein GAN. ResNet34 is trained for classification and serves for the OoD indicators based on classifier. ResNet34 is also trained to classify in-distribution and out-of-distribution for validating whether they are simply classified. Deep generative models are trained as their proposers suggest. 
+\subsection{Setups}
+For fair comparison, all indicators are based on common models with standard training, including 34-layer ResNet, VAE, PixelCNN, RealNVP and Wasserstein GAN. ResNet34 is trained for classification and serves for the OoD indicators based on classifier. ResNet34 is also trained to classify in-distribution and out-of-distribution for validating whether they are simply classified. Deep generative models are trained as their proposers suggest.
 
-In our experiments, there is no validation set. For indicators depending on hyper-parameters, we try grid-searching as their proposers suggest and report the performance with all hyper-parameters considered. To ensure the generality on all datasets, it is forbidden to specify the hyper-parameters or architectures on special dataset. 
-The detailed architecture and parameters are shown in appendix B. 
+In our experiments, there is no validation set. For indicators depending on hyper-parameters, we try grid-searching as their proposers suggest and report the performance with all hyper-parameters considered. To ensure the generality on all datasets, it is forbidden to specify the hyper-parameters or architectures on special dataset.
+The detailed architecture and parameters are shown in appendix B.
 
 \subsection{Major Results}
 
@@ -604,13 +604,13 @@ $D_\gamma(x)$  & WGAN & 98.06 & 98.20 \\
 \label{tab3}
 \end{table}
 
-The main results of the previous works are summarized in \Cref{tab2}. The main results for KL-based indicator and Wasserstein-based indicator are summarized in \Cref{tab3}. 
+The main results of the previous works are summarized in \Cref{tab2}. The main results for KL-based indicator and Wasserstein-based indicator are summarized in \Cref{tab3}.
 
 \subsection{Validation of Theorem}
 
-\Cref{thm1} is supported by the detailed experiments shown in appendix B. \Cref{thm2} is supported by \Cref{tab3}, where the performance of $\log \frac{p_\theta(x)}{p_\gamma(x)}$ is nearly same as $\log \frac{p_\theta(x)}{p_\omega(x)}$. 
+\Cref{thm1} is supported by the detailed experiments shown in appendix B. \Cref{thm2} is supported by \Cref{tab3}, where the performance of $\log \frac{p_\theta(x)}{p_\gamma(x)}$ is nearly same as $\log \frac{p_\theta(x)}{p_\omega(x)}$.
 
-Detailed experiments in appendix B show that KL-based indicator can get same performance when log-likelihood can reach outstanding performance, to support \Cref{thm3}. 
+Detailed experiments in appendix B show that KL-based indicator can get same performance when log-likelihood can reach outstanding performance, to support \Cref{thm3}.
 
 \begin{figure}[t]
 	\includegraphics[width=0.9\columnwidth]{roc_prc}
@@ -618,9 +618,9 @@ Detailed experiments in appendix B show that KL-based indicator can get same per
 	\label{fig5}
 \end{figure}
 
-We compare the precision-recall curve and ROC curve of KL-based indicator, log-likelihood indicator, likelihood ratio indicator and log-likelihood with input complexity in \Cref{fig5}, which shows KL-based indicator is the best version of log-likelihood ratio indicator, to support \Cref{thm4}. 
+We compare the precision-recall curve and ROC curve of KL-based indicator, log-likelihood indicator, likelihood ratio indicator and log-likelihood with input complexity in \Cref{fig5}, which shows KL-based indicator is the best version of log-likelihood ratio indicator, to support \Cref{thm4}.
 
-\Cref{thm7} is supported by the detailed experiments in appendix B. In \Cref{tab3}, the performance of $D_\omega(x)$ is nearly same as $D_\gamma(x)$, which supports \Cref{thm8}. The outstanding performance of $D_\omega(x), D_\gamma(x)$ supports the \Cref{thm9}. 
+\Cref{thm7} is supported by the detailed experiments in appendix B. In \Cref{tab3}, the performance of $D_\omega(x)$ is nearly same as $D_\gamma(x)$, which supports \Cref{thm8}. The outstanding performance of $D_\omega(x), D_\gamma(x)$ supports the \Cref{thm9}.
 
 \subsection{Concerns}
 \begin{table}[htbp]
@@ -654,7 +654,7 @@ block & $D_\gamma(x)$ & WGAN & 97.66 & 97.89 \\
 % models/increment/wasserstein.py --retrain_for_batch=True --count_experiment=True kl [0.97663634 0.97891633 0.30628251 0.97891805 0.10417664]
 \bottomrule
 \end{tabular}
-\caption{The average online testing time (including training time on $\pout$) per image for VAE, PixelCNN, RNVP and WGAN is 0.18s, 0.13s, 0.58s and 0.11s. `online' indicates that data is streaming, `20\%' indicates that only 20\% data in $\pmix$ can be used for training and `block' indicates that only a block can be used. VAE and WGAN are more robust since their performance is near to the value in \cref{tab3}. }
+\caption{The average online testing time (including training time on $\pout$) per image for VAE, PixelCNN, RNVP and WGAN is 0.18s, 0.13s, 0.58s and 0.11s. `online' indicates that data is streaming (4096 data is coming at same time), `20\%' indicates that only 20\% data in $\pmix$ can be used for training and `block' indicates that only a block (including 4096 data) can be used. VAE and WGAN are more robust since their performance is near to the value in \cref{tab3}. }
 \label{tab4}
 \end{table}
 
@@ -666,33 +666,33 @@ block & $D_\gamma(x)$ & WGAN & 97.66 & 97.89 \\
 \label{fig6}
 \end{figure}
 
-The experiments about concerns are shown in \Cref{tab4}. \Cref{fig6} shows the change of AUROC during training on $\pmix$. Pretrained model can easily get a good performance after few epochs, but it will fall into the local extremum (likelihood on in-distribution has been optimized quite well in pre-training, and any modification for parameters will reduce it) and the final performance is not well. Un-pretrained model need more epochs to get a good performance, but its final performance is better than pretrained model. 
+The experiments about concerns are shown in \Cref{tab4}. \Cref{fig6} shows the change of AUROC during training on $\pmix$. Pretrained model can easily get a good performance after few epochs, but it will fall into the local extremum (likelihood on in-distribution has been optimized quite well in pre-training, and any modification for parameters will reduce it) and the final performance is not well. Un-pretrained model need more epochs to get a good performance, but its final performance is better than pretrained model.
 \Cref{fig6} shows the change of AUROC while the size of block varies. It shows the limitation: when block size is small enough, the optimization only on one block will lead to unexpected $p_\gamma$. Training on past data (online) can alleviate this issue. Block size of 'online' means the size of data streaming at same time.
-These experiments show that KL-based indicator and Wasserstein-based indicator are effective, robust, general, online and not data-specific. It also shows the weakness of that they can not work well in a small enough block. 
+These experiments show that KL-based indicator and Wasserstein-based indicator are effective, robust, general, online and not data-specific. It also shows the weakness of that they can not work well in a small enough block.
 
-\subsection{Limitations of the Study} 
-%In this section, we will discuss the limitation of our paper in datasets, models and divergence-based indicators. 
+\subsection{Limitations of this Study}
+%In this section, we will discuss the limitation of our paper in datasets, models and divergence-based indicators.
 
 \noindent \textbf{Limitation of datasets.}
-In our paper, we use large-scale datasets to show the generality of indicators. However, we only consider natural OoD datasets and do not consider attacked OoD, which are categorized by \cite{chen2020robust}. An important reason is that there is not a universal principle like simply classified, to measure these attacked OoD datasets. 
+In our paper, we use large-scale datasets to show the generality of indicators. However, we only consider natural OoD datasets and do not consider attacked OoD, which are categorized by \cite{chen2020robust}. An important reason is that there is not a universal principle like simply classified, to measure these attacked OoD datasets.
 
-\noindent \textbf{Limitation of models.} 
-In our paper, for fair comparison and generality, we only consider the common models, including ResNet, VAE, PixelCNN, RealNVP and WGAN. However, there are numerous models careful-designed for OoD detection. Due to the resource limitation, we can not give the performance of them on large-scale datasets. We emphasize that evaluation in a few datasets is unreliable and we expect that it can become a common sense in the OoD domain. 
+\noindent \textbf{Limitation of models.}
+In our paper, for fair comparison and generality, we only consider the common models, including ResNet, VAE, PixelCNN, RealNVP and WGAN. However, there are numerous models careful-designed for OoD detection. Due to the resource limitation, we can not give the performance of them on large-scale datasets. We emphasize that small-scale experiments are unreliable and large-scale experiments are mandatory for evaluating OoD indicators.
 
-\noindent \textbf{Limitation of divergence-based indicators.} 
-Some defects of divergence-based indicators is shown in \cref{sec6}. They rely on the model (\EG KL-based indicator on RNVP is more data-specific) and optimizer (\EG when data from $\pmix$ is not enough, optimizer can not give the expected $p_\gamma$). It is a natural idea to approximate $\log \frac{ p_\theta(x)}{p_\gamma(x)}$ without optimizer, \EG Taylor Expansion on pretrained model. We leave it as future work. 
-Divergence-based indicators will guide future works since it can develop simply, fundamental and practical indicators from basic assumptions. 
+\noindent \textbf{Limitation of divergence-based indicators.}
+Some defects of divergence-based indicators is shown in \cref{sec6}. They rely on the model (\EG KL-based indicator on RNVP is more data-specific) and optimizer (\EG when data from $\pmix$ is not enough, optimizer can not give the expected $p_\gamma$). It is a natural idea to approximate $\log p_\theta(x) - \log p_\gamma(x)$ without optimizer, \EG Taylor Expansion on pretrained model. We leave it as future work.
+Divergence-based indicators will guide future works since it can develop simply, fundamental and practical indicators from basic assumptions.
 
 \section{Conclusion and Future Work}
-In this paper, we first show through large-scale experiments that none of existing OoD indicators based on deep generative models is robust. We then propose a novel theoretical framework ROID for robust Out-of-Distribution indictors based on divergence in deep generative models, and propose and prove a KL-based indicator and a Wasserstein-based indictor, both of which significantly outperform past works by 10\% in AUROC.
+In this paper, we first show through large-scale experiments that none of existing OoD indicators based on deep generative models is robust. We then propose a novel theoretical framework \ROID{} for robust Out-of-Distribution indictors based on divergence in deep generative models (instead of the 10 traditional likelihood assumption), and propose and prove the KL-based indicator and the Wasserstein-based indictor, both of which significantly outperform past works by 10\% in AUROC.
 
 
- We believe our paper is an important step towards developing more robust OoD indicators based on deep generative models. For future work,  it will be interesting to propose more OoD indicators following ~\ROID{} framework. It would be also interesting to approximate KL-based indicator without optimizer or develop optimizers that only require few data to train models on mixture distribution, for solving the limitation of divergence-based indicators. 
- 
- 
+ We believe our paper is an important step towards developing more robust OoD indicators based on deep generative models. For future work,  it will be interesting to propose more OoD indicators following ~\ROID{} framework. It would be also interesting to approximate KL-based indicator without optimizer or develop optimizers that only require few data to train models on mixture distribution, for solving the limitation of divergence-based indicators.
+
+
 \newpage
 \section{Ethical and societal impact}
-There is no any potential ethical impact of our work. Our work focus on pure model research. The datasets and model considered in our paper are open, clear and popular. Our work concentrate on developing new OoD detector based on deep generative models, which might play important role in anomaly detection or assisting the classification. Our paper does not have any negative societal implications.  
+There is no any potential ethical impact of our work. Our work focus on pure model research. The datasets and model considered in our paper are open, clear and popular. Our work concentrate on developing new OoD detector based on deep generative models, which might play important role in anomaly detection or assisting the classification. Our paper does not have any negative societal implications.
 \bibliography{reference.bib}
 
 \end{document}

@@ -1,0 +1,80 @@
+This is BibTeX, Version 0.99d (TeX Live 2017)
+Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
+The top-level auxiliary file: /Users/shiro/GitProject/wasserstein-ood-regularizer/paper/.texpadtmp/conference.aux
+The style file: ../aaai21.bst
+Database file #1: ../reference.bib.bib
+Warning--entry type for "xiao2017/online" isn't style-file defined
+--line 161 of file ../reference.bib.bib
+Repeated entry---line 278 of file ../reference.bib.bib
+ : @inproceedings{song2019generative
+ :                                  ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 352 of file ../reference.bib.bib
+ : @article{song2017pixeldefend
+ :                             ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 359 of file ../reference.bib.bib
+ : @article{choi2018waic
+ :                      ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 419 of file ../reference.bib.bib
+ : @article{kumar2019maximum
+ :                          ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 481 of file ../reference.bib.bib
+ : @article{hendrycks2018deep
+ :                           ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 510 of file ../reference.bib.bib
+ : @inproceedings{lee2018simple
+ :                             ,
+I'm skipping whatever remains of this entry
+Warning--entry type for "clanuwat2018deep" isn't style-file defined
+--line 526 of file ../reference.bib.bib
+Repeated entry---line 565 of file ../reference.bib.bib
+ : @article{kumar2019maximum
+ :                          ,
+I'm skipping whatever remains of this entry
+Warning--empty journal in netzer2011reading
+You've used 41 entries,
+            2951 wiz_defined-function locations,
+            791 strings with 12524 characters,
+and the built_in function-call counts, 30409 in all, are:
+= -- 2415
+> -- 1711
+< -- 1
++ -- 628
+- -- 580
+* -- 2014
+:= -- 4857
+add.period$ -- 162
+call.type$ -- 41
+change.case$ -- 353
+chr.to.int$ -- 42
+cite$ -- 42
+duplicate$ -- 2141
+empty$ -- 2040
+format.name$ -- 699
+if$ -- 6031
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 439
+newline$ -- 211
+num.names$ -- 164
+pop$ -- 1179
+preamble$ -- 1
+purify$ -- 324
+quote$ -- 0
+skip$ -- 1070
+stack$ -- 0
+substring$ -- 1163
+swap$ -- 995
+text.length$ -- 1
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 369
+warning$ -- 1
+while$ -- 217
+width$ -- 0
+write$ -- 516
+(There were 7 error messages)
