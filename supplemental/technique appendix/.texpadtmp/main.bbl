@@ -1,0 +1,10 @@
+\begin{thebibliography}{1}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\providecommand{\doi}[1]{https://doi.org/#1}
+
+\bibitem{gelfand2000calculus}
+Gelfand, I.M., Silverman, R.A., et~al.: Calculus of variations. Courier
+  Corporation (2000)
+
+\end{thebibliography}

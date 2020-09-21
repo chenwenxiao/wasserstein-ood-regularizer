@@ -1,0 +1,459 @@
+\documentclass[a3paper]{article}
+\usepackage[hyphens]{url}
+\usepackage[utf8]{inputenc}
+\usepackage[pdftex]{graphicx}
+\usepackage{epstopdf}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage{booktabs}
+\usepackage[ruled,linesnumbered]{algorithm2e}
+\usepackage{cleveref}
+\usepackage[misc]{ifsym}
+\usepackage{longtable}
+\urlstyle{same}
+\usepackage[a4paper, total={7in, 10in}]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{cleveref}
+\usepackage{booktabs}
+\usepackage[switch]{lineno} 
+\usepackage{ntheorem}
+
+\usepackage{float}
+\restylefloat{table}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem*{proof}{\it{Proof.}\rm}
+
+\newcommand{\IE}{\textit{i.e.}, }
+\newcommand{\EG}{\textit{e.g.}, }
+\newcommand{\ET}{\textit{et al.}}
+\newcommand{\ST}{\textit{s.t.}}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\vv}[1]{\bm{\mathrm{{#1}}}}
+\newcommand{\E}{\operatorname{\mathbb{E}}}
+\newcommand{\EE}[1]{\operatorname{\mathbb{E}}\left[{#1}\right]}
+\newcommand{\EEE}[2]{\operatorname{\mathbb{E}}_{{#1}}\left[{#2}\right]}
+\newcommand{\KLD}{\operatorname{KL}}
+\newcommand{\KLDD}[2]{\operatorname{KL}\left[{#1}\,\big\|\,{#2}\right]}
+\newcommand{\abs}[1]{\left|#1\right|}
+\newcommand{\Entropy}{\operatorname{H}}
+\newcommand{\Entropyy}[1]{\operatorname{H}\left[#1\right]}
+\newcommand{\pin}{p_{in}}
+\newcommand{\pout}{p_{out}}
+\newcommand{\pmix}{p_{mix}}
+\newcommand*{\QED}{\hfill\ensuremath{\square}}  %自定义，空心
+% Following comment is from ijcai97-submit.tex:
+% The preparation of these files was supported by Schlumberger Palo Alto
+% Research, AT\&T Bell Laboratories, and Morgan Kaufmann Publishers.
+% Shirley Jowell, of Morgan Kaufmann Publishers, and Peter F.
+% Patel-Schneider, of AT\&T Bell Laboratories collaborated on their
+% preparation.
+
+% These instructions can be modified and used in other conferences as long
+% as credit to the authors and supporting agencies is retained, this notice
+% is not changed, and further modification or reuse is not restricted.
+% Neither Shirley Jowell nor Peter F. Patel-Schneider can be listed as
+% contacts for providing assistance without their prior permission.
+
+% To use for other conferences, change references to files and the
+% conference appropriate and use other authors, contacts, publishers, and
+% organizations.
+% Also change the deadline and address for returning papers and the length and
+% page charge instructions.
+% Put where the files are available in the appropriate places.
+
+
+\title{Technique Appendix}
+\begin{document}
+
+\pagestyle{plain} 
+
+\section{Appendix A Counter-examples}
+
+\begin{figure}[H]
+\includegraphics[width=0.5\columnwidth]{figures/log_prob_histogram}
+\includegraphics[width=0.5\columnwidth]{figures/log_prob_histogram-1}
+\caption{Counter example of $\log p_\theta(x)$ with AUROC 0.0609 and 0.1104}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=0.5\columnwidth]{figures/log_prob_histogram-3}
+\includegraphics[width=0.5\columnwidth]{figures/log_prob_histogram-4}
+\caption{Counter example of $T_{perm}(x)$ with AUROC 0.3933 and 0.4692}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=0.5\columnwidth]{figures/grad_norm_histogram}
+\includegraphics[width=0.5\columnwidth]{figures/grad_norm_histogram-1}
+\caption{Counter example of $\|\nabla_x \log p_\theta(x)\|$ with AUROC 0.0196 and 0.0023}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=0.5\columnwidth]{figures/ll_with_complexity_histogram}
+\includegraphics[width=0.5\columnwidth]{figures/ll_with_complexity_histogram-1}
+\caption{Counter example of $S(x)$ with AUROC 0.2636 and 0.0062}
+\end{figure}
+
+
+\begin{figure}[H]
+\includegraphics[width=0.5\columnwidth]{figures/kl_histogram}
+\includegraphics[width=0.5\columnwidth]{figures/kl_histogram-1}
+\caption{Counter example of $LLR(x)$ with AUROC 0.1054 and 0.5143}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=0.5\columnwidth]{figures/ll_waic_histogram}
+\includegraphics[width=0.5\columnwidth]{figures/ll_waic_histogram-1}
+\caption{Counter example of $WAIC(x)$ with AUROC 0.1041 and 0.2135}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=0.5\columnwidth]{figures/var_log_prob_histogram}
+\includegraphics[width=0.5\columnwidth]{figures/var_log_prob_histogram-1}
+\caption{Counter example of $\mathop{VAR}_\theta \log p_\theta(x)$ with AUROC 0.5358 and 0.3756}
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=0.5\columnwidth]{figures/log_prob_histogram-5}
+\includegraphics[width=0.5\columnwidth]{figures/log_prob_histogram-6}
+\caption{Counter example of $\log p_\theta(x|y)$ with AUROC 0.3822 and 0.1150}
+\end{figure}
+
+
+\section{Appendix B Experiments}
+
+The description of data is shown in the data appendix. 
+
+The architecture of VAE is: 
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lllllll}
+Layer     & Channel & Stride & Kernel & Activation  \\
+\toprule
+Resnet & 16 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet & 32 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet & 64 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet & 128 & 2x2 & 3x3 & Leaky ReLU \\
+Resnet & 128 & 2x2 & 3x3 & Leaky ReLU \\
+Resnet & 128 & 2x2 & 3x3 & Leaky ReLU \\
+Flatten & \\
+Dense & 256 &  &  & None \\
+\bottomrule
+\end{tabular}
+\caption{Encoder architecture of VAE}
+\end{table}
+
+Before the decoder, we will use dense layer to map $z$ to a tensor with shape $8hw$ and reshape $(h / 4, w / 4, 128)$ where $h, w$ is the height and width of data. 
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lllllll}
+Layer     & Channel & Stride & Kernel & Activation  \\
+\toprule
+Resnet Deconv & 128 & 2x2 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 128 & 2x2 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 128 & 2x2 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 64 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 32 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 16 & 1x1 & 3x3 & Leaky ReLU \\
+Conv2d & 3 or 1 & 1x1 & 1x1 & None \\
+\bottomrule
+\end{tabular}
+\caption{Decoder architecture of VAE}
+\end{table}
+We apply a Discretized Logistic Distribution as $p_\theta(x|z)$ and gaussian as $q_\phi(z|x)$. 
+
+
+The architecture of PixelCNN is: 
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lllllll}
+Layer     & Channel & Vertical Kernel & Horizontal Kernel& Activation & Dropout  \\
+\toprule
+Resnet & 64 & 2x3 & 2x2 & Leaky ReLU & 0.2\\
+Resnet & 64 & 2x3 & 2x2 & Leaky ReLU & 0.2\\
+Resnet & 64 & 2x3 & 2x2 & Leaky ReLU & 0.2\\
+Resnet & 64 & 2x3 & 2x2 & Leaky ReLU & 0.2\\
+Resnet & 64 & 2x3 & 2x2 & Leaky ReLU & 0.2\\
+Resnet & 256 & 2x3 & 2x2 & Leaky ReLU & 0.2\\
+Flatten & \\
+Dense & 256 &  &  & None \\
+\bottomrule
+\end{tabular}
+\caption{Architecture of PixelCNN}
+\end{table}
+
+
+The architecture of Wasserstein is: 
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lllllll}
+Layer     & Channel & Stride & Kernel & Activation  \\
+\toprule
+Resnet Deconv & 128 & 2x2 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 128 & 2x2 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 128 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 64 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 32 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet Deconv & 16 & 1x1 & 3x3 & Leaky ReLU \\
+Conv2d & 1 & 1x1 & 1x1 & None \\
+\bottomrule
+\end{tabular}
+\caption{Generator architecture of WGAN}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lllllll}
+Layer     & Channel & Stride & Kernel & Activation  \\
+\toprule
+Resnet & 16 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet & 32 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet & 64 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet & 128 & 1x1 & 3x3 & Leaky ReLU \\
+Resnet & 128 & 2x2 & 3x3 & Leaky ReLU \\
+Resnet & 128 & 2x2 & 3x3 & Leaky ReLU \\
+\bottomrule
+\end{tabular}
+\caption{Discriminator architecture of WGAN}
+\end{table}
+
+RealNVP has 3 level and 6 blocks at each level. Channel is 128 and activation is ReLU in each block. 
+
+The hyper-parameters for VAE, PixelCNN, WGAN and Glow are shown in the scripts, shown in code appendix. 
+
+The detailed experiments are shown in appendix D. 
+
+The average runtime memory of VAE, PixelCNN, WGAN and Glow are 2.949GB, 2.851GB, 2.826GB and 2.917GB. 
+
+\section{Appendix C Proofs}
+
+We will derive the theorems in our papers by the assumptions:
+
+\noindent \textbf{1.} The training data and testing data of in-distribution and out-of-distribution are i.i.d. .
+
+\noindent \textbf{2.}  $div$ is a divergence , satisfying that $div(\pin, \pout) \gg 0$ and $div(\pout, \pin) \gg 0$.
+
+\noindent \textbf{3.}  If $div(\pin, \pout)$ and $div(\pout, \pin)$ can be represented by sampling formula, \IE $div(\pin, \pout) \approx \sum_{i} f(x_i)$, then $f(x_i) \gg 0$ for almost $x_i$ in $\pin$.
+
+\noindent \textbf{4.} $f: \mathcal{X} \rightarrow \mathcal{R}$ maps the distribution $\pin, \pout$ into two Gaussian distribution with constant variance.
+
+\noindent \textbf{5.} Assumption 3 and 4 hold for any $\hat{f}$ approximating $f$.
+
+\begin{lemma}\label{lemma1}
+	Indicators $f_0$ and $f_1$ satisfying that if $f_0(x_1) < f_0(x_2)$ then $f_1(x_1) < f_1(x_2)$ and if $f_0(x_1) > f_0(x_2)$ then $f_1(x_1) > f_1(x_2)$ for $x_1, x_2$ in mixture distriution, have same performance for OoD. We call $f_0 \triangleq f_1$. 
+\end{lemma}
+
+\begin{proof}\rm
+	Assume we get data $x_0, x_1, \ldots, x_n$ from mixture distribution. The metrics AUROC, AUPR, FPR@TPR95 and AP for indicator $f$ are all dependent on the order of $f(x_0), f(x_1), \ldots, f(x_n)$. The array $f_0(x_0), f_0(x_1), \ldots, f_0(x_n)$ and $f_1(x_0), f_1(x_1), \ldots, f_1(x_n)$ have the same order and then they have same performance for all metrics considered in OoD. \QED
+\end{proof}
+
+\begin{theorem}
+	\label{thm1}
+	$\log \pin(x) - \log \pout(x)$ is a symmetric indicator with great performance, \IE it reaches same performance in experiment A vs B and B vs A, with threshold zero.
+\end{theorem}
+
+\begin{proof}\rm
+	We select $KL$ as $div$. By assumption 4, we have
+	\begin{equation*}
+		\log \pin(x_1) - \log \pout(x_1) \gg 0 \quad and \quad \log \pin(x_2) - \log \pout(x_2) \ll 0 
+	\end{equation*}
+	where $x_1 \sim \pin$ and $x_2 \sim \pout$. By assumption 5, above equation holds for $\log p_\theta(x) - \log p_\omega(x)$. Therefore, $\log \pin(x) - \log \pout(x)$ and $\log p_\theta(x) - \log p_\omega(x)$ can detect most of OoD, with threshold zero. 
+	
+	In experiment A vs B and B vs A, the indicator is $\log p_A(x) - \log p_B(x)$ and $\log p_B(x) - \log p_A(x)$. These two experiments have same mixture distribution. For any testing data $x_1, x_2$ in mixture distribution, if $\log p_A(x_1) - \log p_B(x_1) > \log p_A(x_2) - \log p_B(x_2)$, then $\log p_B(x_1) - \log p_A(x_1) < \log p_B(x_2) - \log p_A(x_2)$. Conversely, if $\log p_A(x_1) - \log p_B(x_1) < \log p_A(x_2) - \log p_B(x_2)$, then $\log p_B(x_1) - \log p_A(x_1) > \log p_B(x_2) - \log p_A(x_2)$. Thus, they have inverse order. 
+	Noting that the positive and negative labels in experiment A vs B and B vs A are also inverse, $\log \pin(x) - \log \pout(x)$ reaches same performance in experiment A vs B and B vs A. \QED
+\end{proof}
+
+\begin{theorem}\label{thm2}
+	For any mixture distribution $\pmix = \alpha \pin + \beta \pout$ where $\alpha + \beta = 1$ and $\alpha, \beta > 0$, the performance of indicator $\log \pin(x) - \log \pmix(x)$ and indicator $\log \pin(x) - \log \pout(x)$ is equal for OoD detection. 
+\end{theorem}
+
+\begin{proof}\rm
+	For any $x1,x2$ satisfying $\log \pin(x_1) - \log \pout(x_1) < \log \pin(x_2) - \log \pout(x_2)$, we have $\log \pin(x_1) - \log \pmix(x_1) < \log \pin(x_2) - \log \pmix(x_2)$ by
+	\begin{align*}
+		&\log \pin(x) - \log \pmix(x) = -\log \frac{\alpha \pin(x) + \beta \pout(x)}{\pin(x)} = -\log 
+		\Big(\alpha + \beta \frac{\pout(x)}{\pin(x)}\Big) \\
+		&\log \frac{\pin(x_1)}{\pout(x_1)} < \log \frac{\pin(x_2)}{\pout(x_2)} \Rightarrow \frac{\pin(x_1)}{\pout(x_1)} < \frac{\pin(x_2)}{\pout(x_2)} \Rightarrow \frac{\pout(x_1)}{\pin(x_1)} > \frac{\pout(x_2)}{\pin(x_2)} \\
+	 &\Rightarrow \log \Big(\alpha + \beta \frac{\pout(x_1)}{\pin(x_1)}\Big) > \log 
+		\Big(\alpha + \beta \frac{\pout(x_2)}{\pin(x_2)}\Big) \\
+		&\Rightarrow -(\log \pin(x_1) - \log \pmix(x_1)) > -(\log \pin(x_2) - \log \pmix(x_2)) \\
+		&\Rightarrow \log \frac{\pin(x_1)}{\pmix(x_1)} < \log \frac{\pin(x_2)}{\pmix(x_2)} 
+	\end{align*}
+	
+	By the same way, for any $x1,x2$ satisfying $\log \pin(x_1) - \log \pout(x_1) > \log \pin(x_2) - \log \pout(x_2)$, we have $\log \pin(x_1) - \log \pmix(x_1) > \log \pin(x_2) - \log \pmix(x_2)$.  By \cref{lemma1}, performance of indicator $\log \pin(x) - \log \pmix(x)$ and indicator $\log \pin(x) - \log \pout(x)$ is equal for OoD detection.
+	
+	\noindent \textbf{Remark.} In the proof, we do not use the condition that $\alpha > 0$ but only $\beta > 0$ and $\pmix(x) > 0$. It means that \cref{thm1} holds when $\alpha < 0, \beta > 0$ and $\pmix(x) > 0$. 
+\QED
+\end{proof}
+
+\begin{theorem}\label{thm3}
+When log-likelihood can detect OoD, \IE $\log \pin(x_1) > \log \pin(x_2)$ for almost $x_1 \sim \pin$ and $x_2 \sim \pout$, KL-based indicator can be also used to detect OoD.
+\end{theorem}
+\begin{proof}\rm
+	Assume $\log \pout(x_1) < \log \pout(x_2)$, then $\log \pin(x_1) - \log \pout(x_1) > \log \pin(x_2) - \log \pout(x_2)$.
+	KL-based indicator will get better performance than log-likelihood indicator. 
+	
+	Assume $\log \pout(x_1) > \log \pout(x_2)$, then likelihood indicator will make mistake in experiment B vs A (if current experiment is A vs B). Meanwhile KL-based indicator can detect OoD in both A vs B and B vs A by \cref{thm1}.  
+	
+	It means KL-based indicator is always better than log-likelihood indicator. 
+\end{proof}
+
+For the proofing of following theorems, we need an additional mathmatical simplification: by assumption 4 and 5, the indicators for OoD maps the distribution $\pin, \pout$ into two Gaussian distribution with constant variance, therefore, the AUROC between these two Gaussian distribution is dependent on the difference of their mean, \IE $\E_{\pin(x)} f(x) - \E_{\pout(x)} f(x)$ is our simplified metric for mathematical inference. 
+
+\begin{theorem}\label{thm4}
+For any likelihood-ratio indicator $\log \pin(x) - \log g(x)$ where $g$ is a continuous differentiable probability distribution, KL-based indicator outperforms them.
+\end{theorem}
+\begin{proof}\rm
+	Consider the following optimization with subsidiary conditions for searching the optimal $g$ for likelihood ratio:
+	\begin{align*}
+	\max_g \Big\{\E_{\pin(x)} \big[\log \pin(x) - \log g(x)\big] &- \E_{\pout(x)} \big[\log \pin(x) - \log g(x)\big]\Big\} \\
+	\textbf{s.t.} KL(\pin, g) = L \text{ and } &\int g(x) \dd x = 1 
+	\end{align*}
+	where $L$ is a constraint to the optimization domain of $g$. It could be solved by Lagrange multiplier method introduced by calculus of variation~\cite{gelfand2000calculus}. 
+	Let $\lambda, \psi > 0$ be Lagrange Multiplier for the two constraint. The Lagrange function is 
+	\begin{align*}
+		J[g] &= \E_{\pin(x)} \big[\log \pin(x) - \log g(x)\big] - \E_{\pout(x)} \big[\log \pin(x) - \log g(x)\big] \\
+		&-\lambda KL(\pin, g) - \psi \int g(x) \dd x \\
+		&= \int \pin(x) \log \pin(x) - \pin(x) \log g(x) - \pout(x) \log \pin(x) \\ 
+		&+ \pout(x) \log g(x) - \lambda \pin(x) \log \frac{\pin(x)}{g} - \psi g(x) \dd x = \int F(g, x) \dd x
+	\end{align*}
+	By calculus of variation, the extremal point for $J[g]$ satisfies that $\delta J = 0$, which is equal to
+	\begin{align*}
+		\frac{\partial F(g, x)}{\partial g} = 0 \Rightarrow -\frac{\pin(x)}{g(x)} + \frac{\pout(x)}{g(x)} + \frac{\lambda \pin(x)}{g(x)} - \psi = 0 \\
+		\Rightarrow g(x) = \frac{1}{\psi} ((\lambda - 1)\pin(x) + \pout(x))
+	\end{align*}
+	Considering the subsidiary condition $\int g(x) \dd x = 1$, we have
+	\begin{equation*}
+		\int g(x) \dd x = \frac{1}{\psi} \int (\lambda - 1) \pin(x) + \pout(x) \dd x = \frac{1}{\psi} ((\lambda - 1) + 1) = \frac{\lambda}{\psi} = 1
+	\end{equation*}
+	Therefore, $\lambda = \psi$ and $g^*(x) = \frac{\lambda - 1}{\lambda} \pin(x) + \frac{1}{\lambda} \pout(x)$ is the extremal point.
+	By the remark of \cref{thm1}, $\log \pin(x) - \log g^*(x)$ gets same performance as $\log \pin(x) - \log \pout(x)$ in OoD detection. 
+	For any $L$, we can get $g^*(x)$, which has same performance as $\log \pin(x) - \log \pout(x)$. It means that KL-based indicator is the optimal indicator among all likelihood-ratio indicators. 
+\end{proof}
+
+
+\begin{theorem}\label{thm5}
+	$\log \frac{p_\theta(x)}{p_\gamma(x)}$ can be used for detecting OoD. Moreover, $\log \frac{p_\theta(x)}{p_\gamma(x)}$ represents whether a sample $x$ in mixture distribution have been optimized in the training process of $\theta$.
+\end{theorem}
+\begin{proof}
+	Let $p_{\hat{\gamma}}(x) = \alpha p_\theta(x) + \beta p_\omega(x)$. $\hat{\gamma}$ is the parameters that can be obtained by optimizer. 
+	Considering the indicator $\log p_\theta(x) - \log p_{\hat{\gamma}}(x) = -\log (\alpha + \beta \frac{p_\omega(x)}{p_\theta(x)})$, for $x_1 \sim \pin$ and $x_2 \sim \pout$, we have 
+	\begin{align*}
+		\log \frac{p_\theta(x_1)}{p_{\hat{\gamma}}(x_1)} - \log \frac{p_\theta(x_2)}{p_{\hat{\gamma}}(x_2)} = \log (\alpha + \beta \frac{p_\omega(x_2)}{p_\theta(x_2)}) - \log (\alpha + \beta \frac{p_\omega(x_1)}{p_\theta(x_1)})
+	\end{align*}
+	We have known that $\log \frac{p_\theta(x_1)}{p_\omega(x_1)} \gg 0$ and $\log \frac{p_\theta(x_2)}{p_\omega(x_2)} \ll 0$ by \cref{thm1}. Then, we have $\log \frac{p_\theta(x_1)}{p_{\hat{\gamma}}(x_1)} - \log \frac{p_\theta(x_2)}{p_{\hat{\gamma}}(x_2)} > 0$. It means that $\log \frac{p_\theta(x)}{p_{\hat{\gamma}}(x)}$ can be used for detecting OoD.
+	
+	Next, consider the $\gamma$ is optimized better than $\hat{\gamma}$, \IE $\E_{\pmix} \log p_\gamma(x) \geq \E_{\pmix} \log p_{\hat{\gamma}}(x)$. 
+	
+	\begin{align*}
+		\E_{\pmix} \log p_\gamma(x) = \alpha \E_{\pin} \log p_\gamma(x) + \beta \E_{\pout} \log p_\gamma(x)
+	\end{align*}
+	By $\E_{\pmix} \log p_\gamma(x) \geq \E_{\pmix} \log p_{\hat{\gamma}}(x)$, there are 3 case:
+	
+	\textbf{1.} $\E_{\pin} \log p_\gamma(x) \leq \E_{\pin} \log p_{\hat\gamma}(x)$ and $\E_{\pout} \log p_\gamma(x) \geq \E_{\pout} \log p_{\hat\gamma}(x)$. 
+	
+	\textbf{2.} $\E_{\pin} \log p_\gamma(x) \geq \E_{\pin} \log p_{\hat\gamma}(x)$ and $\E_{\pout} \log p_\gamma(x) \geq \E_{\pout} \log p_{\hat\gamma}(x)$. 
+	
+	
+	\textbf{3.} $\E_{\pin} \log p_\gamma(x) \geq \E_{\pin} \log p_{\hat\gamma}(x)$ and $\E_{\pout} \log p_\gamma(x) \leq \E_{\pout} \log p_{\hat\gamma}(x)$. 
+	
+	By assumption 4, 5 and simplified metric, we know that if  $\E_{\pin} \log p_\gamma(x)$ increase, the KL-based indicator $\log \frac{p_\theta(x)}{p_{{\gamma}}(x)}$ will be worse and if  $\E_{\pout} \log p_\gamma(x)$ increase, the KL-based indicator $\log \frac{p_\theta(x)}{p_{{\gamma}}(x)}$ will be better. 
+	
+	Therefore, in case 1, the performance of $\log \frac{p_\theta(x_1)}{p_{\gamma}(x_1)}$ will be better than $\log \frac{p_\theta(x_1)}{p_{\hat\gamma}(x_1)}$. In case 2 and 3, we know $\E_{\pin} \log p_{\hat\gamma}(x) \leq \E_{\pin} \log p_\theta(x)$ and $\E_{\pin} \log p_\gamma(x) \leq \E_{\pin} \log p_\theta(x)$ since $\theta$ is well-trained for such loss function. 
+	\begin{align*}
+		\beta \E_{\pout} \log p_\gamma(x) = \E_{\pmix} \log p_\gamma(x) - \alpha \E_{\pin} \log p_\gamma(x) \\
+		\geq \E_{\pmix} \log p_{\hat\gamma}(x) - \alpha \E_{\pin} \log p_\theta(x) \\
+		= \alpha \E_{\pin} \log \frac{p_{\hat \gamma}(x)}{p_\theta(x)} + \beta \E_{\pout} \log p_{\hat \gamma}(x) \\
+	\Rightarrow \E_{\pout} \log \frac{p_\gamma(x)}{p_{\hat\gamma}(x)} \geq \frac{\alpha}{\beta} \E_{\pin} \log \frac{p_{\hat \gamma}(x)}{p_\theta(x)}
+	\end{align*}
+	And we have 
+	\begin{equation*}
+		\E_{\pin} \log \frac{p_\gamma(x)}{p_{\hat\gamma}(x)} \leq \E_{\pin} \log \frac{p_\theta(x)}{p_{\hat\gamma}(x)}
+	\end{equation*}
+	Therefore, by our simplified metric, we have
+	\begin{align*}
+		(\E_{\pin(x)} \log \frac{p_\theta(x)}{p_{{\gamma}}(x)} - \E_{\pout(x)} \log \frac{p_\theta(x)}{p_{{\gamma}}(x)}) - (\E_{\pin(x)} \log \frac{p_\theta(x)}{p_{{\hat\gamma}}(x)} - \E_{\pout(x)} \log \frac{p_\theta(x)}{p_{\hat\gamma}(x)}) \\
+		=  \E_{\pout} \log \frac{p_\gamma(x)}{p_{\hat\gamma}(x)} -\E_{\pin} \log \frac{p_{\gamma}(x)}{p_{\hat\gamma}(x)}\geq \frac{\alpha}{\beta} \E_{\pin} \log \frac{p_{\hat \gamma}(x)}{p_\theta(x)} - \E_{\pin} \log \frac{p_\theta(x)}{p_{\hat\gamma}(x)} \\
+		= \frac{\alpha + \beta}{\beta} \E_{\pin} \log \frac{p_\theta(x)}{p_{\hat\gamma}(x)} = \frac{1}{\beta} \E_{\pin} \log \frac{p_\theta(x)}{p_{\hat\gamma}(x)} \geq 0
+	\end{align*}
+	It means that $\frac{p_\theta(x)}{p_{{\gamma}}(x)}$ is a better indicator than $\frac{p_\theta(x)}{p_{{\hat\gamma}}(x)}$ in cast 2 and 3. In conclusion,  $\frac{p_\theta(x)}{p_{{\gamma}}(x)}$ will be better and thus they can be used to detect OoD if $\gamma$ is trained better than $\hat{\gamma}$. 
+	Additional, by the above proof, the most important property is that $\theta$ is well-trained in $\pin$ and thus $p_\gamma(x) < p_\theta(x)$ in $\pin$, \IE $\log \frac{p_\theta(x)}{p_\gamma(x)}$ represents whether a sample $x$ in mixture distribution have been optimized in the training process of $\theta$. 
+\end{proof}
+
+\begin{theorem}\label{thm6}
+	Assumption 2 is a corollary of definition of OoD problem when $div$ is Wasserstein distance.
+\end{theorem}
+\begin{proof}
+	By the definition of OoD, exist a $L > 0$, for any $x_1 \sim \pin, x_2 \sim \pout$, their distance $\|x_1 - x_2\|$ is at least $L$. 
+	\begin{equation*}
+		 W^1(\pin, \pout) = \min_{f \in \Gamma(\pin, \pout)} \iint f(x_1, x_2) \|x_1 - x_2\| \dd x_1 \dd x_2 \geq L
+	\end{equation*}
+\end{proof}
+
+\begin{theorem}\label{thm7}
+	$D(x)$ is a symmetric indicator.
+\end{theorem}
+\begin{proof}
+	Let $D$ is the optimal discriminator in $W^1(\pin, \pout)$, for any $D'$ satisfying $Lip(D') \leq 1$, we have
+	\begin{align*}
+		\E_{\pout} D'(x) - \E_{\pin} D'(x) = \E_{\pin} [-D'(x)] - \E_{\pout} [-D'(x)] \\
+		\leq  \E_{\pin} D(x) - \E_{\pout} D(x) =  \E_{\pout} [-D(x)] - \E_{\pin} [-D(x)] 
+	\end{align*}
+	Therefore, $-D(x)$ is the optimal discriminator in $W^1(\pout, \pin)$. By the same way in \cref{thm1}, 
+	$D(x)$ is a symmetric indicator.
+\end{proof}
+
+\begin{theorem}\label{thm8}
+	$\hat{D}$ that is optimal solution in $W^1(\pin, \pmix)$ is same to the optimal solution $D$ in $W^1(\pin, \pout)$. Moreover, the neural networks trained by $W^1(\pin, \pmix)$ and $W^1(\pin, \pout)$ will share the same optimization process.
+\end{theorem}
+
+\begin{proof}
+	For any $D$ satisfying $Lip(D) \leq 1$, 
+	\begin{align*}
+		\E_{\pin} D(x) - \E_{\pmix} D(x) = \E_{\pin} D(x) - \alpha\E_{\pin} D(x) - \beta\E_{\pout} D(x) \\ 
+		= (1 - \alpha)\E_{\pin} D(x) - \beta\E_{\pout} D(x)
+		= \beta \E_{\pin} D(x) - \beta \E_{\pout} D(x) \\
+		\leq \beta \E_{\pin} \hat{D}(x) - \beta \E_{\pout} \hat{D}(x) = (1 - \alpha)\E_{\pin} \hat{D}(x) - \beta\E_{\pout} \hat{D}(x) \\
+		= \E_{\pin} \hat{D}(x) - \alpha\E_{\pin} \hat{D}(x) - \beta\E_{\pout} \hat{D}(x) = \E_{\pin} \hat{D}(x) - \E_{\pmix} \hat{D}(x)
+	\end{align*}
+	Therefore, $\hat{D}$ is also the optimal discriminator in $W^1(\pin, \pmix)$. Additional, in above proof, the loss functions for $D$ in $W^1(\pin, \pmix)$ and $W^1(\pin, \pout)$ are 
+	\begin{equation*}
+		\E_{\pin} D(x) - \E_{\pmix} D(x) = \beta (\E_{\pin} D(x) - \E_{\pout} D(x))
+	\end{equation*}
+	The two loss functions have same gradient direction for neural network optimization, thus the training optimization processes are same.
+\end{proof}
+
+\begin{theorem}\label{thm9}
+	The discriminator in $W^1(\pin, \pout)$ is the best indicator among all indicators that is 1-Lipschitz. Moreover, it is the best indicator who has limited gradient.
+\end{theorem}
+\begin{proof}
+	By our simplified metric, for any indicator $f$, 
+	\begin{equation*}
+		\E_{\pin} f(x) - \E_{\pout} f(x)
+	\end{equation*}
+	measures the performance of OoD detection. Thus 
+	\begin{equation*}
+		\max_{Lip(f) \leq 1} \E_{\pin} f(x) - \E_{\pout} f(x) = W^1(\pin, \pout)
+	\end{equation*} 
+	will search the best indicator among all indicators that is 1-Lipschitz. Especially, for a indicator $f$ has limited gradient $K$, function $g(x) = f(x) / K$ satisfies that $Lip(g) \leq 1$. By \cref{thm1}, $f \triangleq g$, and $g$ is worse than the optimal discriminator in $W^1(\pin, \pout)$. 
+	
+\end{proof}
+
+\section{Appendix D Detailed Experiments}
+
+\input{detailed_experiments}
+
+%% The file named.bst is a bibliography style file for BibTeX 0.99c
+\bibliographystyle{splncs04}
+\bibliography{reference}
+
+
+\end{document}
+
