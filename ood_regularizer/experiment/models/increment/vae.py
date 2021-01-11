@@ -50,8 +50,6 @@ class ExpConfig(spt.Config):
     mixed_train_epoch = 256
     mixed_train_skip = 4096
     mixed_times = 1
-    mixed_replace = 0
-    mixed_replace_ratio = 0.5
     dynamic_epochs = False
     retrain_for_batch = False
     in_dataset_test_ratio = 1.0
@@ -473,7 +471,7 @@ def main():
                         mean, std = np.mean(base), np.std(base)
                         return_arrays = []
                         for array in another_arrays:
-                            return_arrays.append(-np.abs((array - mean)) * config.stand_weight)
+                            return_arrays.append(-np.abs((array - mean) / std) * config.stand_weight)
                         return return_arrays
 
                     cifar_train_nll = get_ele(ele_test_ll,
@@ -504,16 +502,7 @@ def main():
                             mixed_index = np.random.randint(i if config.retrain_for_batch else 0,
                                                             min(len(mixed_array), i + config.mixed_train_skip),
                                                             config.batch_size)
-                            # print(mixed_index)
                             [batch_x] = normalize(mixed_array[mixed_index])
-                            # print(batch_x.shape)
-                            for step, [x] in loop.iter_steps(train_flow):
-                                break
-                            if np.random.rand() < config.mixed_replace_ratio:
-                                if config.mixed_replace > 0:
-                                    batch_x[:-config.mixed_replace] = x[:-config.mixed_replace]
-                            else:
-                                batch_x = x
                             # print(batch_x.shape)
 
                             if config.distill_ratio != 1.0:
@@ -528,17 +517,12 @@ def main():
                             _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
                                 input_x: batch_x
                             })
-                            # print(np.mean(batch_VAE_loss[0, :-1]), np.std(batch_VAE_loss[0, :-1]),
-                            #       batch_VAE_loss[0, -1])
                             loop.collect_metrics(theta_loss=batch_VAE_loss)
 
                         mixed_kl.append(get_ele(ele_test_ll,
                                                 spt.DataFlow.arrays([mixed_array[i: i + config.mixed_train_skip]],
                                                                     config.test_batch_size).map(normalize), input_x))
                         print(repeat_epoch, len(mixed_kl))
-                        k = len(mixed_kl) - 1
-                        print(-(mixed_kl[k] - mixed_ll[k]))
-                        print((index < len(x_test))[k])
                         loop.print_logs()
 
                     mixed_kl = np.concatenate(mixed_kl)
@@ -551,23 +535,14 @@ def main():
                                                                [config.in_dataset + ' Test',
                                                                 config.out_dataset + ' Test'], 'log(bit/dims)',
                                                                'kl_histogram'))
-                    import matplotlib.pyplot as plt
-                    plt.cla()
-                    plt.xlabel('kl')
-                    plt.ylabel('stand')
-                    plt.scatter(mixed_kl[index < len(x_test)], mixed_stand[index < len(x_test)], s=2, c='r')
-                    plt.scatter(mixed_kl[index >= len(x_test)], mixed_stand[index >= len(x_test)], s=2, c='g')
-                    plt.savefig('2d_show')
-
                     mixed_kl = mixed_kl - mixed_stand
                     cifar_kl = mixed_kl[index < len(x_test)]
                     svhn_kl = mixed_kl[index >= len(x_test)]
                     loop.collect_metrics(kl_with_stand_histogram=plot_fig([-cifar_kl, -svhn_kl],
-                                                                          ['red', 'green'],
-                                                                          [config.in_dataset + ' Test',
-                                                                           config.out_dataset + ' Test'],
-                                                                          'log(bit/dims)',
-                                                                          'kl_with_stand_histogram'))
+                                                               ['red', 'green'],
+                                                               [config.in_dataset + ' Test',
+                                                                config.out_dataset + ' Test'], 'log(bit/dims)',
+                                                               'kl_with_stand_histogram'))
                     loop.print_logs()
                     break
 
