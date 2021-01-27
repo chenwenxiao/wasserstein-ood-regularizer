@@ -6,7 +6,7 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_prec
 import tensorflow as tf
 
 
-def get_ele(op, flow, inputs, default_feed_dict={}):
+def get_ele(op, flow, inputs, default_feed_dict={}, print_log=True):
     if not isinstance(inputs, list):
         inputs = [inputs]
     packs = []
@@ -21,7 +21,8 @@ def get_ele(op, flow, inputs, default_feed_dict={}):
         # print(pack.shape)
         packs.append(pack)
     packs = np.concatenate(packs, axis=0)  # [len_of_flow]
-    print(packs.shape, np.mean(packs), np.std(packs))
+    if print_log:
+        print(packs.shape, np.mean(packs), np.std(packs))
     return packs
 
 

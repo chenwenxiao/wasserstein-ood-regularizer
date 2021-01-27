@@ -25,6 +25,9 @@ from ood_regularizer.experiment.datasets.overall import load_overall
 from ood_regularizer.experiment.datasets.svhn import load_svhn
 from ood_regularizer.experiment.utils import make_diagram, plot_fig, get_ele
 import os
+import scipy
+import matplotlib.pyplot as plt
+from imgaug import augmenters as iaa
 
 
 class ExpConfig(spt.Config):
@@ -48,17 +51,17 @@ class ExpConfig(spt.Config):
     use_transductive = True
     mixed_train = False
     mixed_train_epoch = 256
-    mixed_train_skip = 4096
-    mixed_times = 1
-    mixed_replace = 0
-    mixed_replace_ratio = 0.5
+    mixed_train_skip = 64
+    mixed_times = 64
+    mixed_replace = 32
+    mixed_replace_ratio = 1.0
     augment_range = 0
     dynamic_epochs = False
-    retrain_for_batch = False
+    retrain_for_batch = True
     in_dataset_test_ratio = 1.0
-    pretrain = False
+    pretrain = True
     distill_ratio = 1.0
-    stand_weight = 0.1
+    stand_weight = 1.0
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -405,6 +408,7 @@ def main():
     config.mixed_train_skip = config.mixed_train_skip // config.mixed_times
     config.mixed_train_epoch = config.mixed_train_epoch * config.mixed_times
     index = index[:100]
+    index[0] = 6787
     mixed_array = mixed_array[index]
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
@@ -486,10 +490,44 @@ def main():
                                               input_x)
                     [mixed_stand] = stand(cifar_train_nll, [mixed_ll])
 
+                    loop.collect_metrics(stand_histogram=plot_fig(
+                        [mixed_stand[index < len(x_test)], mixed_stand[index >= len(x_test)]],
+                        ['red', 'green'],
+                        [config.in_dataset + ' Test',
+                         config.out_dataset + ' Test'], 'log(bit/dims)',
+                        'stand_histogram'))
+
                     mixed_kl = []
+                    mixed_energy = []
+                    mixed_savgol_filter = []
+                    mixed_fft_filter = []
+                    mixed_ma_filter = []
+                    mixed_gaussian_filter = []
+
+                    from scipy.signal import savgol_filter
+                    from scipy.ndimage import gaussian_filter1d, median_filter
+
+                    def fft_filter(a, n):
+                        b = np.fft.fft(a)
+                        energy = np.sum(abs(b[n:]) ** 2)
+                        b[n:] = 0
+                        c = np.real(np.fft.ifft(b))
+                        return c, energy
+
+                    def get_ll(x, print_log=True):
+                        return get_ele(ele_test_ll,
+                                       spt.DataFlow.arrays([np.expand_dims(x, 0)], config.test_batch_size).map(
+                                           normalize), input_x, print_log=print_log)
+
+                    target = x_train[np.argmin(np.abs(cifar_train_nll - np.mean(cifar_train_nll)))]
+                    target_ll = get_ll(target, print_log=False)
                     # if restore_checkpoint is not None:
                     if not config.pretrain:
                         session.run(tf.global_variables_initializer())
+                    learning_rate.anneal()
+                    learning_rate.anneal()
+                    learning_rate.anneal()
+                    learning_rate.anneal()
                     loop.make_checkpoint()
                     print('Starting testing')
                     for i in range(0, len(mixed_array), config.mixed_train_skip):
@@ -504,16 +542,31 @@ def main():
                         print('Index: {}'.format(index[i]))
 
                         repeat_epoch = repeat_epoch * config.mixed_train_skip // config.batch_size
+
                         # data generator generate data for each batch
                         # repeat_epoch will determine how much time it generates
-                        record_ll = 1e20
+                        detective_ll = mixed_ll[i]
+                        # target_record = []
+                        detective_record = []
+                        # target_record.append(get_ll(target, print_log=False))
+                        detective_record.append(get_ll(mixed_array[i], print_log=False))
                         for pse_epoch in range(repeat_epoch):
                             mixed_index = np.random.randint(i if config.retrain_for_batch else 0,
                                                             min(len(mixed_array), i + config.mixed_train_skip),
                                                             config.batch_size)
                             # print(mixed_index)
-                            [batch_x] = normalize(mixed_array[mixed_index] + np.random.randint(
-                                -config.augment_range, config.augment_range + 1, mixed_array[mixed_index].shape))
+                            batch_x = mixed_array[mixed_index]
+
+                            aug = iaa.Affine(
+                                translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
+                                # order=3,  # turn on this if not just translation
+                                rotate=(-30, 30),
+                                mode='edge',
+                                backend='cv2'
+                            )
+                            batch_x = aug(images=batch_x)
+                            # batch_x[0] = target
+                            [batch_x] = normalize(batch_x)
                             # print(batch_x.shape)
                             for step, [x] in loop.iter_steps(train_flow):
                                 break
@@ -523,6 +576,12 @@ def main():
                             else:
                                 batch_x = x
                             # print(batch_x.shape)
+                            save_images_collection(
+                                images=batch_x,
+                                filename='aug_example.png',
+                                grid_size=(8, batch_x.shape[0] // 8),
+                                results=results,
+                            )
 
                             if config.distill_ratio != 1.0:
                                 ll = mixed_ll[mixed_index]
@@ -536,22 +595,73 @@ def main():
                             _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
                                 input_x: batch_x
                             })
+                            # target_record.append(get_ll(target, print_log=False))
+                            detective_record.append(get_ll(mixed_array[i], print_log=False))
                             # print(np.mean(batch_VAE_loss[0, :-1]), np.std(batch_VAE_loss[0, :-1]),
                             #       batch_VAE_loss[0, -1])
                             loop.collect_metrics(theta_loss=batch_VAE_loss)
-                            record_ll = min(record_ll, session.run(ele_test_ll, feed_dict={
-                                input_x: batch_x[-1:]
-                            }))
 
-                        mixed_kl.append(record_ll)
+                        # plt.cla()
+                        # plt.figure(figsize=(40, 30))
+                        # plt.xlabel('epochs')
+                        # plt.ylabel('log-likelihood')
+                        curve = np.asarray(detective_record) - mixed_ll[i]
+                        curve = np.reshape(curve, (-1))
+                        # plt.plot(np.arange(0, len(target_record)), np.asarray(target_record) - target_ll, color='blue')
+                        plt.plot(np.arange(0, len(curve)), curve, color='red' if (index[i] < len(x_test)) else 'green')
+                        # fft_curve, fft_energy = fft_filter(curve, len(curve) // 4)
+                        # savgol_curve = savgol_filter(curve, 51, 3)
+                        # ma_curve = median_filter(curve, 51)
+                        # gaussian_curve = gaussian_filter1d(curve, 51)
+                        # plt.plot(np.arange(0, len(detective_record)), fft_curve, color='yellow')
+                        # plt.plot(np.arange(0, len(detective_record)), savgol_curve, color='pink')
+                        # plt.plot(np.arange(0, len(detective_record)), ma_curve, color='brown')
+                        # plt.plot(np.arange(0, len(detective_record)), gaussian_curve, color='purple')
+
+                        # mixed_energy.append(fft_energy)
+                        # mixed_savgol_filter.append(np.sum((savgol_curve - curve) ** 2))
+                        # mixed_fft_filter.append(np.sum((fft_curve - curve) ** 2))
+                        # mixed_ma_filter.append(np.sum((ma_curve - curve) ** 2))
+                        # mixed_gaussian_filter.append(np.sum((gaussian_curve - curve) ** 2))
+
+                        target_kl = get_ll(target, False) - target_ll
+                        mixed_kl.append(get_ll(mixed_array[i], False) - detective_ll)
                         print(repeat_epoch, len(mixed_kl))
-                        k = len(mixed_kl) - 1
-                        print(-(mixed_kl[k] - mixed_ll[k]))
-                        print((index < len(x_test))[k])
+                        print(mixed_kl[i])
+                        print(index[i] < len(x_test))
+
+                        plt.savefig('log-likelihood_during_detection_{}'.format(i))
+                        # plt.cla()
+                        # plt.figure(figsize=(40, 30))
+                        # plt.xlabel('epochs')
+                        # plt.ylabel('log-likelihood')
+                        # curve = np.asarray(target_record) - target_ll
+                        # curve = np.reshape(curve, (-1))
+                        # plt.plot(np.arange(0, len(curve)), curve, color='red' if (index[i] < len(x_test)) else 'green')
+                        # plt.savefig('target_ll_during_detection_{}'.format(i))
+
                         loop.print_logs()
 
+                    plt.figure(figsize=(6, 8))
+
+                    # def show_histogram(mixed_array, name):
+                    #     dict = {}
+                    #     cifar_array = mixed_array[index < len(x_test)]
+                    #     svhn_array = mixed_array[index >= len(x_test)]
+                    #     dict[name] = plot_fig([cifar_array, svhn_array],
+                    #                           ['red', 'green'],
+                    #                           [config.in_dataset + ' Test',
+                    #                            config.out_dataset + ' Test'], 'log(bit/dims)',
+                    #                           name + '_histogram')
+                    #     loop.collect_metrics(dict)
+                    #
+                    # show_histogram(-np.asarray(mixed_energy), 'fft_energy')
+                    # show_histogram(-np.asarray(mixed_savgol_filter), 'savgol_filter')
+                    # show_histogram(-np.asarray(mixed_fft_filter), 'fft_filter')
+                    # show_histogram(-np.asarray(mixed_ma_filter), 'ma_filter')
+                    # show_histogram(-np.asarray(mixed_gaussian_filter), 'gaussian_filter')
+
                     mixed_kl = np.concatenate(mixed_kl)
-                    mixed_kl = mixed_kl - mixed_ll
                     cifar_kl = mixed_kl[index < len(x_test)]
                     svhn_kl = mixed_kl[index >= len(x_test)]
 
@@ -560,7 +670,6 @@ def main():
                                                                [config.in_dataset + ' Test',
                                                                 config.out_dataset + ' Test'], 'log(bit/dims)',
                                                                'kl_histogram'))
-                    import matplotlib.pyplot as plt
                     plt.cla()
                     plt.xlabel('kl')
                     plt.ylabel('stand')
@@ -568,15 +677,52 @@ def main():
                     plt.scatter(mixed_kl[index >= len(x_test)], mixed_stand[index >= len(x_test)], s=2, c='g')
                     plt.savefig('2d_show')
 
-                    mixed_kl = mixed_kl - mixed_stand
-                    cifar_kl = mixed_kl[index < len(x_test)]
-                    svhn_kl = mixed_kl[index >= len(x_test)]
+                    cifar_kl = (mixed_kl - mixed_stand)[index < len(x_test)]
+                    svhn_kl = (mixed_kl - mixed_stand)[index >= len(x_test)]
                     loop.collect_metrics(kl_with_stand_histogram=plot_fig([-cifar_kl, -svhn_kl],
                                                                           ['red', 'green'],
                                                                           [config.in_dataset + ' Test',
                                                                            config.out_dataset + ' Test'],
                                                                           'log(bit/dims)',
                                                                           'kl_with_stand_histogram'))
+                    cifar_kl = mixed_kl[index < len(x_test)]
+                    svhn_kl = mixed_kl[index >= len(x_test)]
+                    mean_kl, std_kl = np.mean(cifar_kl), np.std(cifar_kl)
+                    cifar_kl = -np.abs(cifar_kl - mean_kl) / std_kl
+                    svhn_kl = -np.abs(svhn_kl - mean_kl) / std_kl
+                    loop.collect_metrics(stand_kl_histogram=plot_fig([cifar_kl, svhn_kl],
+                                                                     ['red', 'green'],
+                                                                     [config.in_dataset + ' Test',
+                                                                      config.out_dataset + ' Test'],
+                                                                     'log(bit/dims)',
+                                                                     'stand_kl_histogram'))
+                    plt.cla()
+                    plt.xlabel('kl')
+                    plt.ylabel('stand')
+                    plt.scatter(cifar_kl, mixed_stand[index < len(x_test)], s=2, c='r')
+                    plt.scatter(svhn_kl, mixed_stand[index >= len(x_test)], s=2, c='g')
+                    plt.savefig('stand_2d_show')
+
+                    loop.collect_metrics(stand_kl_with_stand_ll_histogram=plot_fig(
+                        [cifar_kl + mixed_stand[index < len(x_test)], svhn_kl + mixed_stand[index >= len(x_test)]],
+                        ['red', 'green'],
+                        [config.in_dataset + ' Test',
+                         config.out_dataset + ' Test'],
+                        'log(bit/dims)',
+                        'stand_kl_with_stand_ll_histogram'))
+                    cifar_min = np.where(cifar_kl < mixed_stand[index < len(x_test)], cifar_kl,
+                                         mixed_stand[index < len(x_test)])
+                    svhn_min = np.where(svhn_kl < mixed_stand[index >= len(x_test)], svhn_kl,
+                                        mixed_stand[index >= len(x_test)])
+
+                    loop.collect_metrics(max_stand_kl_with_stand_ll_histogram=plot_fig(
+                        [cifar_min, svhn_min],
+                        ['red', 'green'],
+                        [config.in_dataset + ' Test',
+                         config.out_dataset + ' Test'],
+                        'log(bit/dims)',
+                        'max_stand_kl_with_stand_ll_histogram'))
+
                     loop.print_logs()
                     break
 
