@@ -59,7 +59,7 @@ class ExpConfig(spt.Config):
     dynamic_epochs = False
     retrain_for_batch = True
     in_dataset_test_ratio = 1.0
-    pretrain = True
+    pretrain = False
     distill_ratio = 1.0
     stand_weight = 1.0
 
@@ -558,12 +558,13 @@ def main():
                             else:
                                 batch_x = x
                             # print(batch_x.shape)
-                            save_images_collection(
-                                images=batch_x,
-                                filename='aug_example.png',
-                                grid_size=(8, batch_x.shape[0] // 8),
-                                results=results,
-                            )
+                            if pse_epoch == 0:
+                                save_images_collection(
+                                    images=batch_x,
+                                    filename='aug_example.png',
+                                    grid_size=(8, batch_x.shape[0] // 8),
+                                    results=results,
+                                )
 
                             if config.distill_ratio != 1.0:
                                 ll = mixed_ll[mixed_index]
@@ -587,12 +588,12 @@ def main():
                         curve = np.reshape(curve, (-1))
                         # plt.plot(np.arange(0, len(target_record)), np.asarray(target_record) - target_ll, color='blue')
                         plt.plot(np.arange(0, len(curve)), curve, color='red' if (index[i] < len(x_test)) else 'green')
+                        plt.savefig('log-likelihood_during_detection_{}'.format(i))
+
                         mixed_kl.append(get_ll(mixed_array[i], False) - detective_ll)
                         print(repeat_epoch, len(mixed_kl))
                         print(mixed_kl[i])
                         print(index[i] < len(x_test))
-
-                        plt.savefig('log-likelihood_during_detection_{}'.format(i))
 
                         loop.print_logs()
 
