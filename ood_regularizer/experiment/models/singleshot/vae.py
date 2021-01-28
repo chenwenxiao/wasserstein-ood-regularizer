@@ -53,7 +53,7 @@ class ExpConfig(spt.Config):
     mixed_train_epoch = 256
     mixed_train_skip = 64
     mixed_times = 64
-    mixed_replace = 64
+    mixed_replace = 32
     mixed_replace_ratio = 1.0
     augment_range = 0
     dynamic_epochs = False
@@ -408,6 +408,7 @@ def main():
     config.mixed_train_skip = config.mixed_train_skip // config.mixed_times
     config.mixed_train_epoch = config.mixed_train_epoch * config.mixed_times
     index = index[:100]
+    index[0] = 6787
     mixed_array = mixed_array[index]
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
@@ -484,6 +485,18 @@ def main():
                             return_arrays.append(-np.abs((array - mean) / std) * config.stand_weight)
                         return return_arrays
 
+                    cifar_train_nll = get_ele(ele_test_ll,
+                                              spt.DataFlow.arrays([x_train], config.test_batch_size).map(normalize),
+                                              input_x)
+                    [mixed_stand] = stand(cifar_train_nll, [mixed_ll])
+
+                    loop.collect_metrics(stand_histogram=plot_fig(
+                        [mixed_stand[index < len(x_test)], mixed_stand[index >= len(x_test)]],
+                        ['red', 'green'],
+                        [config.in_dataset + ' Test',
+                         config.out_dataset + ' Test'], 'log(bit/dims)',
+                        'stand_histogram'))
+
                     mixed_kl = []
 
                     def get_ll(x, print_log=True):
@@ -494,44 +507,13 @@ def main():
                     # if restore_checkpoint is not None:
                     if not config.pretrain:
                         session.run(tf.global_variables_initializer())
+                    learning_rate.anneal()
+                    learning_rate.anneal()
+                    learning_rate.anneal()
+                    learning_rate.anneal()
                     loop.make_checkpoint()
                     plt.cla()
-                    plt.xlabel('epochs')
-                    plt.ylabel('log-likelihood')
                     print('Starting testing')
-                    seq = iaa.Sequential([
-                        # iaa.Grayscale(alpha=(0.0, 1.0)),
-                        iaa.Fliplr(0.5),
-                        # éšæœºè£å‰ªå›¾ç‰‡è¾¹é•¿æ¯”ä¾‹çš„0~0.1
-                        iaa.Crop(percent=(0, 0.1)),
-                        # Sometimesæ˜¯æŒ‡æŒ‡é’ˆå¯¹50%çš„å›¾ç‰‡åšå¤„ç†
-                        iaa.GaussianBlur(sigma=(0, 1.0)),
-                        # å¢žå¼ºæˆ–å‡å¼±å›¾ç‰‡çš„å¯¹æ¯”åº¦
-                        iaa.LinearContrast((0.75, 1.5)),
-                        # æ·»åŠ é«˜æ–¯å™ªå£°
-                        # å¯¹äºŽ50%çš„å›¾ç‰‡,è¿™ä¸ªå™ªé‡‡æ ·å¯¹äºŽæ¯ä¸ªåƒç´ ç‚¹æŒ‡æ•´å¼ å›¾ç‰‡é‡‡ç”¨åŒä¸€ä¸ªå€¼
-                        # å‰©ä¸‹çš„50%çš„å›¾ç‰‡ï¼Œå¯¹äºŽé€šé“è¿›è¡Œé‡‡æ ·(ä¸€å¼ å›¾ç‰‡ä¼šæœ‰å¤šä¸ªå€¼)
-                        # æ”¹å˜åƒç´ ç‚¹çš„é¢œè‰²(ä¸ä»…ä»…æ˜¯äº®åº¦)
-                        iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05 * 255), per_channel=0.5),
-                        # è®©ä¸€äº›å›¾ç‰‡å˜çš„æ›´äº®,ä¸€äº›å›¾ç‰‡å˜å¾—æ›´æš—
-                        # å¯¹20%çš„å›¾ç‰‡,é’ˆå¯¹é€šé“è¿›è¡Œå¤„ç†
-                        # å‰©ä¸‹çš„å›¾ç‰‡,é’ˆå¯¹å›¾ç‰‡è¿›è¡Œå¤„ç†
-                        iaa.Multiply((0.8, 1.2), per_channel=0.2),
-                        # ä»¿å°„å˜æ¢
-                        iaa.Affine(
-                            # ç¼©æ”¾å˜æ¢
-                            scale={"x": (0.9, 1.1), "y": (0.9, 1.1)},
-                            # å¹³ç§»å˜æ¢
-                            translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
-                            # æ—‹è½¬
-                            rotate=(-30, 30),
-                            # å‰ªåˆ‡
-                            shear=(-8, 8),
-                            mode='edge',
-                            backend='cv2'
-                        ),
-                        # ä½¿ç”¨éšæœºç»„åˆä¸Šé¢çš„æ•°æ®å¢žå¼ºæ¥å¤„ç†å›¾ç‰‡
-                    ], random_order=False)
                     for i in range(0, len(mixed_array), config.mixed_train_skip):
                         if config.retrain_for_batch:
                             loop._checkpoint_saver.restore_latest()
@@ -556,14 +538,16 @@ def main():
                                                             config.batch_size)
                             # print(mixed_index)
                             batch_x = mixed_array[mixed_index]
-                            batch_x = seq.augment_images(batch_x)
-                            # batch_x[0] = target
-                            save_images_collection(
-                                images=batch_x,
-                                filename='aug_exampel.png',
-                                grid_size=(8, batch_x.shape[0] // 8),
-                                results=results,
+
+                            aug = iaa.Affine(
+                                translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},
+                                # order=3,  # turn on this if not just translation
+                                rotate=(-30, 30),
+                                mode='edge',
+                                backend='cv2'
                             )
+                            batch_x = aug(images=batch_x)
+                            # batch_x[0] = target
                             [batch_x] = normalize(batch_x)
                             # print(batch_x.shape)
                             for step, [x] in loop.iter_steps(train_flow):
@@ -574,6 +558,12 @@ def main():
                             else:
                                 batch_x = x
                             # print(batch_x.shape)
+                            save_images_collection(
+                                images=batch_x,
+                                filename='aug_example.png',
+                                grid_size=(8, batch_x.shape[0] // 8),
+                                results=results,
+                            )
 
                             if config.distill_ratio != 1.0:
                                 ll = mixed_ll[mixed_index]
@@ -587,41 +577,26 @@ def main():
                             _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
                                 input_x: batch_x
                             })
+                            # target_record.append(get_ll(target, print_log=False))
                             detective_record.append(get_ll(mixed_array[i], print_log=False))
                             # print(np.mean(batch_VAE_loss[0, :-1]), np.std(batch_VAE_loss[0, :-1]),
                             #       batch_VAE_loss[0, -1])
                             loop.collect_metrics(theta_loss=batch_VAE_loss)
 
-                        if i < 100:
-                            curve = np.asarray(detective_record) - mixed_ll[i]
-                            curve = np.reshape(curve, (-1))
-                            # plt.plot(np.arange(0, len(target_record)), np.asarray(target_record) - target_ll,
-                            #          color='blue')
-                            plt.plot(np.arange(0, len(curve)), curve,
-                                     color='red' if (index[i] < len(x_test)) else 'green')
+                        curve = np.asarray(detective_record) - mixed_ll[i]
+                        curve = np.reshape(curve, (-1))
+                        # plt.plot(np.arange(0, len(target_record)), np.asarray(target_record) - target_ll, color='blue')
+                        plt.plot(np.arange(0, len(curve)), curve, color='red' if (index[i] < len(x_test)) else 'green')
+                        mixed_kl.append(get_ll(mixed_array[i], False) - detective_ll)
+                        print(repeat_epoch, len(mixed_kl))
+                        print(mixed_kl[i])
+                        print(index[i] < len(x_test))
 
-                            mixed_kl.append(get_ll(mixed_array[i], False) - detective_ll)
-                            print(repeat_epoch, len(mixed_kl))
-                            print(mixed_kl[i])
-                            print(index[i] < len(x_test))
+                        plt.savefig('log-likelihood_during_detection_{}'.format(i))
 
-                            plt.savefig('log-likelihood_during_detection_{}'.format(i))
                         loop.print_logs()
 
                     plt.figure(figsize=(6, 8))
-
-                    cifar_train_nll = get_ele(ele_test_ll,
-                                              spt.DataFlow.arrays([x_train], config.test_batch_size).map(normalize),
-                                              input_x)
-                    [mixed_stand] = stand(cifar_train_nll, [mixed_ll])
-
-                    loop.collect_metrics(stand_histogram=plot_fig(
-                        [mixed_stand[index < len(x_test)], mixed_stand[index >= len(x_test)]],
-                        ['red', 'green'],
-                        [config.in_dataset + ' Test',
-                         config.out_dataset + ' Test'], 'log(bit/dims)',
-                        'stand_histogram'))
-
                     mixed_kl = np.concatenate(mixed_kl)
                     cifar_kl = mixed_kl[index < len(x_test)]
                     svhn_kl = mixed_kl[index >= len(x_test)]
