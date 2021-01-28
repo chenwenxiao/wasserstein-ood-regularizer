@@ -61,7 +61,7 @@ class ExpConfig(spt.Config):
     in_dataset_test_ratio = 1.0
     pretrain = True
     distill_ratio = 1.0
-    stand_weight = 1.0
+    stand_weight = 0.1
 
     in_dataset = 'cifar10'
     out_dataset = 'svhn'
@@ -408,7 +408,6 @@ def main():
     config.mixed_train_skip = config.mixed_train_skip // config.mixed_times
     config.mixed_train_epoch = config.mixed_train_epoch * config.mixed_times
     index = index[:100]
-    index[0] = 6787
     mixed_array = mixed_array[index]
 
     reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
