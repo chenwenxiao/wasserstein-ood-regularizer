@@ -53,13 +53,13 @@ class ExpConfig(spt.Config):
     mixed_train_epoch = 256
     mixed_train_skip = 64
     mixed_times = 64
-    mixed_replace = 32
+    mixed_replace = 64
     mixed_replace_ratio = 1.0
     augment_range = 0
     dynamic_epochs = False
     retrain_for_batch = True
     in_dataset_test_ratio = 1.0
-    pretrain = False
+    pretrain = True
     distill_ratio = 1.0
     stand_weight = 1.0
 
