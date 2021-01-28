@@ -44,7 +44,7 @@ class ExpConfig(spt.Config):
     # training parameters
     result_dir = None
     write_summary = True
-    max_epoch = 30
+    max_epoch = 100
     warm_up_start = 300
     initial_beta = -3.0
     uniform_scale = False
@@ -109,32 +109,100 @@ def dropout(inputs, training=False, scope=None):
 
 @add_arg_scope
 @spt.global_reuse
-def compress_conv2d(input):
-    return spt.layers.conv2d(input, 1, strides=2, scope='level_0')  # output: (28, 28, 16)
-
-
-@add_arg_scope
-@spt.global_reuse
-def entropy_net(x):
+def q_net(x, observed=None, n_z=None):
+    net = spt.BayesianNet(observed=observed)
     normalizer_fn = None
-    # x = tf.round(256.0 * x / 2 + 127.5)
-    # x = (x - 127.5) / 256.0 * 2
+
+    # compute the hidden features
     with arg_scope([spt.layers.resnet_conv2d_block],
                    kernel_size=config.kernel_size,
                    shortcut_kernel_size=config.shortcut_kernel_size,
                    activation_fn=tf.nn.leaky_relu,
                    normalizer_fn=normalizer_fn,
-                   kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
+                   kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg), ):
         h_x = tf.to_float(x)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 16, strides=2, scope='level_0')  # output: (28, 28, 16)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 32, strides=2, scope='level_2')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 64, strides=2, scope='level_3')  # output: (14, 14, 32)
-        h_x = spt.layers.resnet_conv2d_block(h_x, 64, strides=2, scope='level_4')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 16, scope='level_0')  # output: (28, 28, 16)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 32, scope='level_2')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 64, scope='level_3')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=config.extra_stride,
+                                             scope='level_4')  # output: (14, 14, 32)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_6')  # output: (7, 7, 64)
+        h_x = spt.layers.resnet_conv2d_block(h_x, 128, strides=2, scope='level_8')  # output: (7, 7, 64)
+
         h_x = spt.ops.reshape_tail(h_x, ndims=3, shape=[-1])
+        z_mean = spt.layers.dense(h_x, config.z_dim, scope='z_mean')
+        z_logstd = spt.layers.dense(h_x, config.z_dim, scope='z_logstd')
+
     # sample z ~ q(z|x)
-    h_x = spt.layers.dense(h_x, 1, scope='level_-1', use_bias=True)
-    # h_x = tf.clip_by_value(h_x, -1000, 1000)
-    return tf.squeeze(h_x, axis=-1)
+    z = net.add('z', spt.Normal(mean=z_mean, logstd=spt.ops.maybe_clip_value(z_logstd, min_val=config.min_logstd_of_q)),
+                n_samples=n_z, group_ndims=1)
+
+    return net
+
+
+@add_arg_scope
+@spt.global_reuse
+def p_net(observed=None, n_z=None):
+    net = spt.BayesianNet(observed=observed)
+    # sample z ~ p(z)
+    normal = spt.Normal(mean=tf.zeros([1, config.z_dim]),
+                        logstd=tf.zeros([1, config.z_dim]))
+    z = net.add('z', normal, n_samples=n_z, group_ndims=1)
+
+    normalizer_fn = None
+
+    # compute the hidden features
+    with arg_scope([spt.layers.resnet_deconv2d_block],
+                   kernel_size=config.kernel_size,
+                   shortcut_kernel_size=config.shortcut_kernel_size,
+                   activation_fn=tf.nn.leaky_relu,
+                   normalizer_fn=normalizer_fn,
+                   kernel_regularizer=spt.layers.l2_regularizer(config.l2_reg)):
+        h_z = spt.layers.dense(z, 128 * config.x_shape[0] // 4 * config.x_shape[
+            1] // 4 // config.extra_stride // config.extra_stride, scope='level_0',
+                               normalizer_fn=None)
+        h_z = spt.ops.reshape_tail(
+            h_z,
+            ndims=1,
+            shape=(config.x_shape[0] // 4 // config.extra_stride, config.x_shape[1] // 4 // config.extra_stride, 128)
+        )
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_2')  # output: (7, 7, 64)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=2, scope='level_3')  # output: (7, 7, 64)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 128, strides=config.extra_stride,
+                                               scope='level_5')  # output: (14, 14, 32)
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 64, scope='level_6')  # output:
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 32, scope='level_7')  # output:
+        h_z = spt.layers.resnet_deconv2d_block(h_z, 16, scope='level_8')  # output: (28, 28, 16)
+        x_mean = spt.layers.conv2d(
+            h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_mean',
+            kernel_initializer=tf.zeros_initializer(),  # activation_fn=tf.nn.tanh
+        )
+        x_logstd = spt.layers.conv2d(
+            h_z, config.x_shape[-1], (1, 1), padding='same', scope='x_logstd',
+            kernel_initializer=tf.zeros_initializer(),
+        )
+
+    beta = tf.get_variable(name='beta', shape=(), initializer=tf.constant_initializer(config.initial_beta),
+                           dtype=tf.float32, trainable=True)
+    x = net.add('x', DiscretizedLogistic(
+        mean=x_mean,
+        log_scale=spt.ops.maybe_clip_value(beta if config.uniform_scale else x_logstd, min_val=config.epsilon),
+        bin_size=2.0 / 256.0,
+        min_val=-1.0 + 1.0 / 256.0,
+        max_val=1.0 - 1.0 / 256.0,
+        epsilon=1e-10
+    ), group_ndims=3)
+    return net
+
+
+def get_all_loss(q_net, p_net):
+    with tf.name_scope('adv_prior_loss'):
+        train_recon = p_net['x'].log_prob()
+        train_kl = tf.reduce_mean(
+            -p_net['z'].log_prob() + q_net['z'].log_prob()
+        )
+        VAE_loss = -train_recon + train_kl
+    return VAE_loss
 
 
 class MyIterator(object):
@@ -229,9 +297,6 @@ def main():
     def normalize(x):
         return [(x - 127.5) / 256.0 * 2]
 
-    def normalize2d(x, y):
-        return [(x - 127.5) / 256.0 * 2, y]
-
     config.x_shape = x_train.shape[1:]
     config.x_shape_multiple = 1
     for x in config.x_shape:
@@ -242,269 +307,140 @@ def main():
     # input placeholders
     input_x = tf.placeholder(
         dtype=tf.float32, shape=(None,) + config.x_shape, name='input_x')
-    input_ll = tf.placeholder(
-        dtype=tf.float32, shape=(None,), name='input_ll')
     learning_rate = spt.AnnealingVariable(
         'learning_rate', config.initial_lr, config.lr_anneal_factor)
 
     # derive the loss and lower-bound for training
     with tf.name_scope('training'), \
          arg_scope([batch_norm], training=True):
-        train_q_net = entropy_net(input_x)
-        VAE_loss = tf.reduce_sum((train_q_net - input_ll) ** 2)
+        train_q_net = q_net(input_x, n_z=config.train_n_qz)
+        train_p_net = p_net(observed={'x': input_x, 'z': train_q_net['z']},
+                            n_z=config.train_n_qz)
+        VAE_loss = get_all_loss(train_q_net, train_p_net)
+
         VAE_loss += tf.losses.get_regularization_loss()
 
     # derive the nll and logits output for testing
     with tf.name_scope('testing'):
-        test_entropy_op = entropy_net(input_x)
+        test_q_net = q_net(input_x, n_z=config.test_n_qz)
+        test_chain = test_q_net.chain(p_net, observed={'x': input_x}, n_z=config.test_n_qz, latent_axis=0)
+        test_recon = tf.reduce_mean(
+            test_chain.model['x'].log_prob()
+        )
+        ele_test_ll = test_chain.vi.evaluation.is_loglikelihood() / config.x_shape_multiple / np.log(2)
+        test_nll = -tf.reduce_mean(
+            ele_test_ll
+        )
+        test_lb = tf.reduce_mean(test_chain.vi.lower_bound.elbo())
 
     # derive the optimizer
     with tf.name_scope('optimizing'):
-        VAE_params = tf.trainable_variables('entropy_net')
+        VAE_params = tf.trainable_variables('q_net') + tf.trainable_variables('p_net')
         with tf.variable_scope('theta_optimizer'):
             VAE_optimizer = tf.train.AdamOptimizer(learning_rate)
             VAE_grads = VAE_optimizer.compute_gradients(VAE_loss, VAE_params)
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             VAE_train_op = VAE_optimizer.apply_gradients(VAE_grads)
 
-    datasets = ['--in_dataset=celeba --out_dataset=tinyimagenet',
-                '--in_dataset=celeba --out_dataset=svhn',
-                '--in_dataset=celeba --out_dataset=cifar10',
-                '--in_dataset=celeba --out_dataset=cifar100',
-                '--in_dataset=celeba --out_dataset=isun',
-                '--in_dataset=celeba --out_dataset=lsun',
-                '--in_dataset=celeba --out_dataset=constant',
-                '--in_dataset=celeba --out_dataset=noise',
-                '--in_dataset=tinyimagenet --out_dataset=celeba',
-                '--in_dataset=tinyimagenet --out_dataset=svhn',
-                '--in_dataset=tinyimagenet --out_dataset=isun',
-                '--in_dataset=tinyimagenet --out_dataset=lsun',
-                '--in_dataset=tinyimagenet --out_dataset=constant',
-                '--in_dataset=tinyimagenet --out_dataset=noise',
-                '--in_dataset=svhn --out_dataset=celeba',
-                '--in_dataset=svhn --out_dataset=tinyimagenet',
-                '--in_dataset=svhn --out_dataset=cifar10',
-                '--in_dataset=svhn --out_dataset=cifar100',
-                '--in_dataset=svhn --out_dataset=isun',
-                '--in_dataset=svhn --out_dataset=lsun',
-                '--in_dataset=svhn --out_dataset=constant',
-                '--in_dataset=svhn --out_dataset=noise',
-                '--in_dataset=cifar10 --out_dataset=celeba',
-                '--in_dataset=cifar10 --out_dataset=svhn',
-                '--in_dataset=cifar10 --out_dataset=isun',
-                '--in_dataset=cifar10 --out_dataset=lsun',
-                '--in_dataset=cifar10 --out_dataset=constant',
-                '--in_dataset=cifar10 --out_dataset=noise',
-                '--in_dataset=cifar100 --out_dataset=celeba',
-                '--in_dataset=cifar100 --out_dataset=svhn',
-                '--in_dataset=cifar100 --out_dataset=isun',
-                '--in_dataset=cifar100 --out_dataset=lsun',
-                '--in_dataset=cifar100 --out_dataset=constant',
-                '--in_dataset=cifar100 --out_dataset=noise',
-                '--in_dataset=constant --out_dataset=celeba',
-                '--in_dataset=constant --out_dataset=tinyimagenet',
-                '--in_dataset=constant --out_dataset=svhn',
-                '--in_dataset=constant --out_dataset=cifar10',
-                '--in_dataset=constant --out_dataset=cifar100',
-                '--in_dataset=constant --out_dataset=isun',
-                '--in_dataset=constant --out_dataset=lsun',
-                '--in_dataset=constant --out_dataset=noise',
-                '--in_dataset=noise --out_dataset=celeba',
-                '--in_dataset=noise --out_dataset=tinyimagenet',
-                '--in_dataset=noise --out_dataset=svhn',
-                '--in_dataset=noise --out_dataset=cifar10',
-                '--in_dataset=noise --out_dataset=cifar100',
-                '--in_dataset=noise --out_dataset=isun',
-                '--in_dataset=noise --out_dataset=lsun',
-                '--in_dataset=noise --out_dataset=constant',
-                '--in_dataset=mnist28 --out_dataset=fashion_mnist28',
-                '--in_dataset=mnist28 --out_dataset=kmnist28',
-                '--in_dataset=mnist28 --out_dataset=not_mnist28',
-                '--in_dataset=mnist28 --out_dataset=omniglot28',
-                '--in_dataset=mnist28 --out_dataset=constant28',
-                '--in_dataset=mnist28 --out_dataset=noise28',
-                '--in_dataset=fashion_mnist28 --out_dataset=mnist28',
-                '--in_dataset=fashion_mnist28 --out_dataset=kmnist28',
-                '--in_dataset=fashion_mnist28 --out_dataset=not_mnist28',
-                '--in_dataset=fashion_mnist28 --out_dataset=omniglot28',
-                '--in_dataset=fashion_mnist28 --out_dataset=constant28',
-                '--in_dataset=fashion_mnist28 --out_dataset=noise28',
-                '--in_dataset=kmnist28 --out_dataset=mnist28',
-                '--in_dataset=kmnist28 --out_dataset=fashion_mnist28',
-                '--in_dataset=kmnist28 --out_dataset=not_mnist28',
-                '--in_dataset=kmnist28 --out_dataset=omniglot28',
-                '--in_dataset=kmnist28 --out_dataset=constant28',
-                '--in_dataset=kmnist28 --out_dataset=noise28',
-                '--in_dataset=not_mnist28 --out_dataset=mnist28',
-                '--in_dataset=not_mnist28 --out_dataset=fashion_mnist28',
-                '--in_dataset=not_mnist28 --out_dataset=kmnist28',
-                '--in_dataset=not_mnist28 --out_dataset=omniglot28',
-                '--in_dataset=not_mnist28 --out_dataset=constant28',
-                '--in_dataset=not_mnist28 --out_dataset=noise28',
-                '--in_dataset=omniglot28 --out_dataset=mnist28',
-                '--in_dataset=omniglot28 --out_dataset=fashion_mnist28',
-                '--in_dataset=omniglot28 --out_dataset=kmnist28',
-                '--in_dataset=omniglot28 --out_dataset=not_mnist28',
-                '--in_dataset=omniglot28 --out_dataset=constant28',
-                '--in_dataset=omniglot28 --out_dataset=noise28',
-                '--in_dataset=constant28 --out_dataset=mnist28',
-                '--in_dataset=constant28 --out_dataset=fashion_mnist28',
-                '--in_dataset=constant28 --out_dataset=kmnist28',
-                '--in_dataset=constant28 --out_dataset=not_mnist28',
-                '--in_dataset=constant28 --out_dataset=omniglot28',
-                '--in_dataset=constant28 --out_dataset=noise28',
-                '--in_dataset=noise28 --out_dataset=mnist28',
-                '--in_dataset=noise28 --out_dataset=fashion_mnist28',
-                '--in_dataset=noise28 --out_dataset=kmnist28',
-                '--in_dataset=noise28 --out_dataset=not_mnist28',
-                '--in_dataset=noise28 --out_dataset=omniglot28',
-                '--in_dataset=noise28 --out_dataset=constant28',
-                '--in_dataset=cifar10 --out_dataset=tinyimagenet',
-                '--in_dataset=cifar10 --out_dataset=cifar100',
-                '--in_dataset=cifar100 --out_dataset=tinyimagenet',
-                '--in_dataset=cifar100 --out_dataset=cifar10',
-                '--in_dataset=tinyimagenet --out_dataset=cifar10',
-                '--in_dataset=tinyimagenet --out_dataset=cifar100']
-    experiments_dirs = ["/mnt/mfs/mlstorage-experiments/cwx17/ff/f5/02279d802d3a37b583f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/4e/f5/02c52d867e432f1683f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/1e/f5/02c52d867e43e67583f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/3c/e5/02732c28dc8d397683f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/00/06/02279d802d3a05d583f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/be/f5/02c52d867e430c3783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/8b/e5/02732c28dc8de81583f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/76/e5/02812baa4f702b1683f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/7e/f5/02c52d867e43a7d683f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/10/06/02279d802d3a58c683f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/86/e5/02812baa4f709a8683f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/4c/e5/02732c28dc8d22a683f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/6e/f5/02c52d867e4383c683f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/70/06/02279d802d3a772883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/5c/e5/02732c28dc8dcd7783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/9e/f5/02c52d867e43340783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/2c/e5/02732c28dc8d9b2683f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/ce/f5/02c52d867e43496783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/de/f5/02c52d867e43359783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/ee/f5/02c52d867e4348c783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/30/06/02279d802d3a8e6783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/ae/f5/02c52d867e43ae1783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/1f/f5/02c52d867e434b3883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/fe/f5/02c52d867e43be0883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/c6/e5/02812baa4f70086883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/b0/06/02279d802d3acea883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/60/06/02279d802d3ab00883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/9c/e5/02732c28dc8d0a9883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/ac/e5/02732c28dc8dfa9883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/0f/f5/02c52d867e43e12883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/3f/f5/02c52d867e4324e883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/fc/e5/02732c28dc8da24983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/c0/06/02279d802d3ad4d883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/bc/e5/02732c28dc8d61c883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/f6/e5/02812baa4f70d15983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/d6/e5/02812baa4f70018883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/d0/06/02279d802d3ad07983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/4f/f5/02c52d867e43371983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/ec/e5/02732c28dc8d053983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/dc/e5/02732c28dc8d9f0983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/cc/e5/02732c28dc8dcbf883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/6f/f5/02c52d867e43d77983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/f0/06/02279d802d3aefc983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/af/f5/02c52d867e439c2a83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/cf/f5/02c52d867e43a96a83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/17/e5/02812baa4f70c1f983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/42/06/02279d802d3aef7c83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/61/06/02279d802d3a59da83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/87/e5/02812baa4f708c3c83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/c1/06/02279d802d3aedfb83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/77/e5/02812baa4f70db3c83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/bf/f5/02c52d867e433e2a83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/7f/f5/02c52d867e4360b983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/07/e5/02812baa4f7041b983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/e0/06/02279d802d3a717983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/37/e5/02812baa4f70d99a83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/71/06/02279d802d3a3c0b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/ef/f5/02c52d867e4352ea83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/81/06/02279d802d3a532b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/8f/f5/02c52d867e4372b983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/01/06/02279d802d3a39e983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/f0/06/02c52d867e432d7c83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/27/e5/02812baa4f70e85a83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/df/f5/02c52d867e4307aa83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/ff/f5/02c52d867e43c82b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/0d/e5/02732c28dc8d5f6a83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/5f/f5/02c52d867e43513983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/b1/06/02279d802d3a058b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/1d/e5/02732c28dc8da7ea83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/50/06/02c52d867e4349ab83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/21/06/02279d802d3a982a83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/57/e5/02812baa4f70d4cb83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/41/06/02c52d867e431e9c83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/60/06/02c52d867e43ecfb83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/11/06/02279d802d3a8ae983f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/18/e5/02812baa4f70198c83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/10/06/02c52d867e434d4b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/91/06/02279d802d3a946b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/2d/e5/02732c28dc8da80b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/9f/f5/02c52d867e43922a83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/51/06/02279d802d3ad8ca83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/00/06/02c52d867e434f3b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/a1/06/02279d802d3a0a6b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/47/e5/02812baa4f706ebb83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/80/06/02c52d867e43f76c83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/70/06/02c52d867e430a2c83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/20/06/02c52d867e43ce7b83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/67/e5/02812baa4f707aeb83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/d1/06/02279d802d3af83c83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/4d/e5/02732c28dc8dfbfb83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/41/06/02279d802d3acbaa83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/31/06/02279d802d3a5d6a83f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/40/06/02279d802d3acdc783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/50/06/02279d802d3aace783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/a0/06/02279d802d3afd6883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/e6/e5/02812baa4f7059f883f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/20/06/02279d802d3aad2783f5/",
-                        "/mnt/mfs/mlstorage-experiments/cwx17/8e/f5/02c52d867e43add683f5/"]
+    # derive the plotting function
+    with tf.name_scope('plotting'):
+        plot_net = p_net(n_z=config.sample_n_z)
+        vae_plots = tf.reshape(plot_net['x'].distribution.mean, (-1,) + config.x_shape)
+        vae_plots = 256.0 * vae_plots / 2 + 127.5
+        reconstruct_q_net = q_net(input_x)
+        reconstruct_z = reconstruct_q_net['z']
+        reconstruct_plots = 256.0 * tf.reshape(
+            p_net(observed={'z': reconstruct_z})['x'].distribution.mean,
+            (-1,) + config.x_shape
+        ) / 2 + 127.5
+        reconstruct_plots = tf.clip_by_value(reconstruct_plots, 0, 255)
+        vae_plots = tf.clip_by_value(vae_plots, 0, 255)
 
-    def load_data(a_name, b_name, train=False):
-        s = "--in_dataset={} --out_dataset={}".format(a_name, b_name)
-        index = datasets.index(s)
-        dir = experiments_dirs[index]
-        if train:
-            a_ll_path = '{}log_prob_histogram{} Train.npy'.format(dir, a_name)
-            b_ll_path = '{}log_prob_histogram{} Train.npy'.format(dir, b_name)
-        else:
-            a_ll_path = '{}log_prob_histogram{} Test.npy'.format(dir, a_name)
-            b_ll_path = '{}log_prob_histogram{} Test.npy'.format(dir, b_name)
-        return np.load(a_ll_path), np.load(b_ll_path)
+    def plot_samples(loop, extra_index=None):
+        if extra_index is None:
+            extra_index = loop.epoch
 
-    if '28' in config.in_dataset:
-        assist_datasets = ['noise28', 'constant28']
-    else:
-        assist_datasets = ['noise', 'constant']
+        try:
+            with loop.timeit('plot_time'):
+                # plot reconstructs
+                def plot_reconnstruct(flow, name, plots):
+                    for [x] in flow:
+                        x_samples = x
+                        images = np.zeros((300,) + config.x_shape, dtype=np.uint8)
+                        images[::3, ...] = np.round(256.0 * x / 2 + 127.5)
+                        images[1::3, ...] = np.round(256.0 * x_samples / 2 + 127.5)
+                        batch_reconstruct_plots = session.run(
+                            plots, feed_dict={input_x: x_samples})
+                        images[2::3, ...] = np.round(batch_reconstruct_plots)
+                        # print(np.mean(batch_reconstruct_z ** 2, axis=-1))
+                        save_images_collection(
+                            images=images,
+                            filename='plotting/{}-{}.png'.format(name, extra_index),
+                            grid_size=(20, 15),
+                            results=results,
+                        )
+                        break
 
-    cifar_train_nll, _ = load_data(config.in_dataset, config.out_dataset, train=True)
-    cifar_test_nll, svhn_test_nll = load_data(config.in_dataset, config.out_dataset, train=False)
-    print(np.mean(cifar_train_nll), np.std(cifar_train_nll))
-    print(np.mean(cifar_test_nll), np.std(cifar_test_nll))
-    print(np.mean(svhn_test_nll), np.std(svhn_test_nll))
-    entropy_x = [x_train]
-    entropy_nll = [cifar_train_nll]
-    for assist_dataset in assist_datasets:
-        (assist_train, _, __, ___) = load_overall(assist_dataset)
-        entropy_x.append(assist_train)
-        assist_nll, _ = load_data(assist_dataset, config.in_dataset, train=True)
-        entropy_nll.append(assist_nll)
-    entropy_x = np.concatenate(entropy_x)
-    entropy_nll = np.concatenate(entropy_nll)
-    print(entropy_x.shape, entropy_nll.shape)
+                plot_reconnstruct(reconstruct_test_flow, 'test.reconstruct/theta', reconstruct_plots)
+                plot_reconnstruct(reconstruct_train_flow, 'train.reconstruct/theta', reconstruct_plots)
 
-    train_flow = spt.DataFlow.arrays([entropy_x, entropy_nll], config.batch_size, shuffle=True,
-                                     skip_incomplete=True).map(normalize2d)
+                # plot samples
+                images = session.run(vae_plots)
+                save_images_collection(
+                    images=np.round(images),
+                    filename='plotting/sample/{}-{}.png'.format('theta', extra_index),
+                    grid_size=(10, 10),
+                    results=results,
+                )
+        except Exception as e:
+            print(e)
+
+    train_flow = spt.DataFlow.arrays([x_train], config.batch_size, shuffle=True, skip_incomplete=True).map(normalize)
+    mixed_train_flow = spt.DataFlow.arrays([
+        np.concatenate([x_train, np.random.randint(0, 256, x_train.shape)])],
+        config.batch_size, shuffle=True, skip_incomplete=True).map(normalize)
+
+    mixed_array = np.concatenate([x_test, svhn_test])
+    print(mixed_array.shape)
+    index = np.arange(len(mixed_array))
+    np.random.shuffle(index)
+    index = index[:len(index) // config.mixed_times]
+    config.mixed_train_skip = config.mixed_train_skip // config.mixed_times
+    config.mixed_train_epoch = config.mixed_train_epoch * config.mixed_times
+    index = index[:100]
+    mixed_array = mixed_array[index]
+
+    reconstruct_test_flow = spt.DataFlow.arrays([x_test], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_train_flow = spt.DataFlow.arrays([x_train], 100, shuffle=True, skip_incomplete=True).map(normalize)
+    reconstruct_omega_test_flow = spt.DataFlow.arrays([svhn_test], 100, shuffle=True, skip_incomplete=True).map(
+        normalize)
+    reconstruct_omega_train_flow = spt.DataFlow.arrays([svhn_train], 100, shuffle=True, skip_incomplete=True).map(
+        normalize)
 
     with spt.utils.create_session().as_default() as session, \
             train_flow.threaded(5) as train_flow:
         spt.utils.ensure_variables_initialized()
 
         experiment_dict = {
+            'tinyimagenet': '/mnt/mfs/mlstorage-experiments/cwx17/3d/d5/02c52d867e43fbb001f5',
+            'svhn': '/mnt/mfs/mlstorage-experiments/cwx17/8d/d5/02279d802d3afbb001f5',
+            'celeba': '/mnt/mfs/mlstorage-experiments/cwx17/e7/d5/02812baa4f70fbb001f5',
+            'cifar10': '/mnt/mfs/mlstorage-experiments/cwx17/6d/d5/02279d802d3afbb001f5',
+            'cifar100': '/mnt/mfs/mlstorage-experiments/cwx17/5d/d5/02279d802d3afbb001f5',
+            'omniglot': '/mnt/mfs/mlstorage-experiments/cwx17/a6/e5/02279d802d3a839f22f5',
+            'noise': '/mnt/mfs/mlstorage-experiments/cwx17/9c/d5/02812baa4f704f1f22f5',
+            'constant': '/mnt/mfs/mlstorage-experiments/cwx17/96/e5/02279d802d3a755d22f5',
+            'fashion_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/16/e5/02c52d867e43c8dc22f5',
+            'mnist': '/mnt/mfs/mlstorage-experiments/cwx17/86/e5/02279d802d3a365c22f5',
+            'kmnist': '/mnt/mfs/mlstorage-experiments/cwx17/06/e5/02c52d867e43118b22f5',
+            'not_mnist': '/mnt/mfs/mlstorage-experiments/cwx17/ce/d5/02732c28dc8d118b22f5',
+            'kmnist28': '/mnt/mfs/mlstorage-experiments/cwx17/bf/e5/02c52d867e43d5c5d2f5',
+            'mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/cf/e5/02c52d867e43d5c5d2f5',
+            'fashion_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/40/e5/02812baa4f70d5c5d2f5',
+            'constant28': '/mnt/mfs/mlstorage-experiments/cwx17/df/e5/02c52d867e43d5c5d2f5',
+            'not_mnist28': '/mnt/mfs/mlstorage-experiments/cwx17/a4/e5/02732c28dc8dd5c5d2f5',
+            'noise28': '/mnt/mfs/mlstorage-experiments/cwx17/70/f5/02279d802d3ad5c5d2f5',
+            'omniglot28': '/mnt/mfs/mlstorage-experiments/cwx17/b4/e5/02732c28dc8dd5c5d2f5',
         }
         print(experiment_dict)
         if config.in_dataset in experiment_dict:
@@ -518,7 +454,7 @@ def main():
 
         # train the network
         with spt.TrainLoop(tf.trainable_variables(),
-                           var_groups=['entropy_net'],
+                           var_groups=['q_net', 'p_net', 'posterior_flow', 'G_theta', 'D_psi', 'G_omega', 'D_kappa'],
                            max_epoch=config.max_epoch + 1,
                            max_step=config.max_step,
                            summary_dir=(results.system_path('train_summary')
@@ -537,39 +473,9 @@ def main():
             # adversarial training
             for epoch in epoch_iterator:
                 if epoch > config.max_epoch:
-
-                    loop.collect_metrics(ll_histogram=plot_fig(
-                        data_list=[cifar_test_nll, svhn_test_nll],
-                        color_list=['red', 'green'],
-                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                        x_label='bits/dim',
-                        fig_name='ll_histogram'))
-                    cifar_test_entropy = -get_ele(test_entropy_op,
-                                                  spt.DataFlow.arrays([x_test], config.test_batch_size).map(normalize),
-                                                  input_x)
-                    svhn_test_entropy = -get_ele(test_entropy_op,
-                                                 spt.DataFlow.arrays([svhn_test], config.test_batch_size).map(
-                                                     normalize),
-                                                 input_x)
-                    cifar_train_entropy = -get_ele(test_entropy_op,
-                                                   spt.DataFlow.arrays([x_train], config.test_batch_size).map(
-                                                       normalize),
-                                                   input_x)
-                    loop.collect_metrics(predict_entropy_histogram=plot_fig(
-                        data_list=[-cifar_test_entropy, -svhn_test_entropy],
-                        color_list=['red', 'green'],
-                        label_list=[config.in_dataset + ' Test', config.out_dataset + ' Test'],
-                        x_label='bits/dim',
-                        fig_name='predict_entropy_histogram'))
-                    cifar_kl = cifar_test_entropy + cifar_test_nll
-                    svhn_kl = svhn_test_entropy + svhn_test_nll
-                    cifar_train_kl = cifar_train_entropy + cifar_train_nll
-
-                    loop.collect_metrics(kl_histogram=plot_fig([-cifar_kl, -svhn_kl],
-                                                               ['red', 'green'],
-                                                               [config.in_dataset + ' Test',
-                                                                config.out_dataset + ' Test'], 'log(bit/dims)',
-                                                               'kl_histogram'))
+                    mixed_ll = get_ele(ele_test_ll,
+                                       spt.DataFlow.arrays([mixed_array], config.test_batch_size).map(normalize),
+                                       input_x)
 
                     def stand(base, another_arrays=None):
                         mean, std = np.mean(base), np.std(base)
@@ -578,41 +484,197 @@ def main():
                             return_arrays.append(-np.abs((array - mean) / std) * config.stand_weight)
                         return return_arrays
 
-                    [cifar_kl_stand, svhn_kl_stand] = stand(cifar_train_kl, [cifar_kl, svhn_kl])
-                    loop.collect_metrics(kl_stand_histogram=plot_fig([cifar_kl_stand, svhn_kl_stand],
-                                                                     ['red', 'green'],
-                                                                     [config.in_dataset + ' Test',
-                                                                      config.out_dataset + ' Test'], 'log(bit/dims)',
-                                                                     'stand_kl_histogram'))
+                    mixed_kl = []
 
-                    [cifar_test_stand, svhn_test_stand] = stand(cifar_train_nll, [cifar_test_nll, svhn_test_nll])
-                    loop.collect_metrics(stand_histogram=plot_fig([cifar_test_stand, svhn_test_stand],
-                                                                  ['red', 'green'],
-                                                                  [config.in_dataset + ' Test',
-                                                                   config.out_dataset + ' Test'],
-                                                                  'log(bit/dims)',
-                                                                  'stand_histogram'))
-                    cifar_kl_mean = np.mean(cifar_train_kl)
-                    cifar_kl_std = np.std(cifar_train_kl)
-                    loop.collect_metrics(kl_with_stand_histogram=plot_fig([
-                        cifar_test_stand - (cifar_kl - cifar_kl_mean) / cifar_kl_std,
-                        svhn_test_stand - (svhn_kl - cifar_kl_mean) / cifar_kl_std],
+                    def get_ll(x, print_log=True):
+                        return get_ele(ele_test_ll,
+                                       spt.DataFlow.arrays([np.expand_dims(x, 0)], config.test_batch_size).map(
+                                           normalize), input_x, print_log=print_log)
+
+                    # if restore_checkpoint is not None:
+                    if not config.pretrain:
+                        session.run(tf.global_variables_initializer())
+                    loop.make_checkpoint()
+                    plt.cla()
+                    plt.xlabel('epochs')
+                    plt.ylabel('log-likelihood')
+                    print('Starting testing')
+                    seq = iaa.Sequential([
+                        # iaa.Grayscale(alpha=(0.0, 1.0)),
+                        iaa.Fliplr(0.5),
+                        # éšæœºè£å‰ªå›¾ç‰‡è¾¹é•¿æ¯”ä¾‹çš„0~0.1
+                        iaa.Crop(percent=(0, 0.1)),
+                        # Sometimesæ˜¯æŒ‡æŒ‡é’ˆå¯¹50%çš„å›¾ç‰‡åšå¤„ç†
+                        iaa.GaussianBlur(sigma=(0, 1.0)),
+                        # å¢žå¼ºæˆ–å‡å¼±å›¾ç‰‡çš„å¯¹æ¯”åº¦
+                        iaa.LinearContrast((0.75, 1.5)),
+                        # æ·»åŠ é«˜æ–¯å™ªå£°
+                        # å¯¹äºŽ50%çš„å›¾ç‰‡,è¿™ä¸ªå™ªé‡‡æ ·å¯¹äºŽæ¯ä¸ªåƒç´ ç‚¹æŒ‡æ•´å¼ å›¾ç‰‡é‡‡ç”¨åŒä¸€ä¸ªå€¼
+                        # å‰©ä¸‹çš„50%çš„å›¾ç‰‡ï¼Œå¯¹äºŽé€šé“è¿›è¡Œé‡‡æ ·(ä¸€å¼ å›¾ç‰‡ä¼šæœ‰å¤šä¸ªå€¼)
+                        # æ”¹å˜åƒç´ ç‚¹çš„é¢œè‰²(ä¸ä»…ä»…æ˜¯äº®åº¦)
+                        iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05 * 255), per_channel=0.5),
+                        # è®©ä¸€äº›å›¾ç‰‡å˜çš„æ›´äº®,ä¸€äº›å›¾ç‰‡å˜å¾—æ›´æš—
+                        # å¯¹20%çš„å›¾ç‰‡,é’ˆå¯¹é€šé“è¿›è¡Œå¤„ç†
+                        # å‰©ä¸‹çš„å›¾ç‰‡,é’ˆå¯¹å›¾ç‰‡è¿›è¡Œå¤„ç†
+                        iaa.Multiply((0.8, 1.2), per_channel=0.2),
+                        # ä»¿å°„å˜æ¢
+                        iaa.Affine(
+                            # ç¼©æ”¾å˜æ¢
+                            scale={"x": (0.9, 1.1), "y": (0.9, 1.1)},
+                            # å¹³ç§»å˜æ¢
+                            translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
+                            # æ—‹è½¬
+                            rotate=(-30, 30),
+                            # å‰ªåˆ‡
+                            shear=(-8, 8),
+                            mode='edge',
+                            backend='cv2'
+                        ),
+                        # ä½¿ç”¨éšæœºç»„åˆä¸Šé¢çš„æ•°æ®å¢žå¼ºæ¥å¤„ç†å›¾ç‰‡
+                    ], random_order=False)
+                    for i in range(0, len(mixed_array), config.mixed_train_skip):
+                        if config.retrain_for_batch:
+                            loop._checkpoint_saver.restore_latest()
+                        if config.dynamic_epochs:
+                            repeat_epoch = int(
+                                config.mixed_train_epoch * len(mixed_array) / (9 * i + len(mixed_array)))
+                            repeat_epoch = max(1, repeat_epoch)
+                        else:
+                            repeat_epoch = config.mixed_train_epoch
+                        print('Index: {}'.format(index[i]))
+
+                        repeat_epoch = repeat_epoch * config.mixed_train_skip // config.batch_size
+
+                        # data generator generate data for each batch
+                        # repeat_epoch will determine how much time it generates
+                        detective_ll = mixed_ll[i]
+                        detective_record = []
+                        detective_record.append(get_ll(mixed_array[i], print_log=False))
+                        for pse_epoch in range(repeat_epoch):
+                            mixed_index = np.random.randint(i if config.retrain_for_batch else 0,
+                                                            min(len(mixed_array), i + config.mixed_train_skip),
+                                                            config.batch_size)
+                            # print(mixed_index)
+                            batch_x = mixed_array[mixed_index]
+                            batch_x = seq.augment_images(batch_x)
+                            # batch_x[0] = target
+                            save_images_collection(
+                                images=batch_x,
+                                filename='aug_exampel.png',
+                                grid_size=(8, batch_x.shape[0] // 8),
+                                results=results,
+                            )
+                            [batch_x] = normalize(batch_x)
+                            # print(batch_x.shape)
+                            for step, [x] in loop.iter_steps(train_flow):
+                                break
+                            if np.random.rand() < config.mixed_replace_ratio:
+                                if config.mixed_replace > 0:
+                                    batch_x[:-config.mixed_replace] = x[:-config.mixed_replace]
+                            else:
+                                batch_x = x
+                            # print(batch_x.shape)
+
+                            if config.distill_ratio != 1.0:
+                                ll = mixed_ll[mixed_index]
+                                ll_omega = session.run(ele_test_ll, feed_dict={
+                                    input_x: batch_x
+                                })
+                                batch_index = np.argsort(ll - ll_omega)
+                                batch_index = batch_index[:int(len(batch_index) * config.distill_ratio)]
+                                batch_x = batch_x[batch_index]
+
+                            _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
+                                input_x: batch_x
+                            })
+                            detective_record.append(get_ll(mixed_array[i], print_log=False))
+                            # print(np.mean(batch_VAE_loss[0, :-1]), np.std(batch_VAE_loss[0, :-1]),
+                            #       batch_VAE_loss[0, -1])
+                            loop.collect_metrics(theta_loss=batch_VAE_loss)
+
+                        if i < 100:
+                            curve = np.asarray(detective_record) - mixed_ll[i]
+                            curve = np.reshape(curve, (-1))
+                            # plt.plot(np.arange(0, len(target_record)), np.asarray(target_record) - target_ll,
+                            #          color='blue')
+                            plt.plot(np.arange(0, len(curve)), curve,
+                                     color='red' if (index[i] < len(x_test)) else 'green')
+
+                            mixed_kl.append(get_ll(mixed_array[i], False) - detective_ll)
+                            print(repeat_epoch, len(mixed_kl))
+                            print(mixed_kl[i])
+                            print(index[i] < len(x_test))
+
+                            plt.savefig('log-likelihood_during_detection_{}'.format(i))
+                        loop.print_logs()
+
+                    plt.figure(figsize=(6, 8))
+
+                    cifar_train_nll = get_ele(ele_test_ll,
+                                              spt.DataFlow.arrays([x_train], config.test_batch_size).map(normalize),
+                                              input_x)
+                    [mixed_stand] = stand(cifar_train_nll, [mixed_ll])
+
+                    loop.collect_metrics(stand_histogram=plot_fig(
+                        [mixed_stand[index < len(x_test)], mixed_stand[index >= len(x_test)]],
                         ['red', 'green'],
                         [config.in_dataset + ' Test',
-                         config.out_dataset + ' Test'],
-                        'log(bit/dims)',
-                        'kl_with_stand_histogram'))
+                         config.out_dataset + ' Test'], 'log(bit/dims)',
+                        'stand_histogram'))
+
+                    mixed_kl = np.concatenate(mixed_kl)
+                    cifar_kl = mixed_kl[index < len(x_test)]
+                    svhn_kl = mixed_kl[index >= len(x_test)]
+
+                    loop.collect_metrics(kl_histogram=plot_fig([-cifar_kl, -svhn_kl],
+                                                               ['red', 'green'],
+                                                               [config.in_dataset + ' Test',
+                                                                config.out_dataset + ' Test'], 'log(bit/dims)',
+                                                               'kl_histogram'))
+                    plt.cla()
+                    plt.xlabel('kl')
+                    plt.ylabel('stand')
+                    plt.scatter(mixed_kl[index < len(x_test)], mixed_stand[index < len(x_test)], s=2, c='r')
+                    plt.scatter(mixed_kl[index >= len(x_test)], mixed_stand[index >= len(x_test)], s=2, c='g')
+                    plt.savefig('2d_show')
+
+                    cifar_kl = (mixed_kl - mixed_stand)[index < len(x_test)]
+                    svhn_kl = (mixed_kl - mixed_stand)[index >= len(x_test)]
+                    loop.collect_metrics(kl_with_stand_histogram=plot_fig([-cifar_kl, -svhn_kl],
+                                                                          ['red', 'green'],
+                                                                          [config.in_dataset + ' Test',
+                                                                           config.out_dataset + ' Test'],
+                                                                          'log(bit/dims)',
+                                                                          'kl_with_stand_histogram'))
+                    cifar_kl = mixed_kl[index < len(x_test)]
+                    svhn_kl = mixed_kl[index >= len(x_test)]
+                    mean_kl, std_kl = np.mean(cifar_kl), np.std(cifar_kl)
+                    cifar_kl = -np.abs(cifar_kl - mean_kl) / std_kl
+                    svhn_kl = -np.abs(svhn_kl - mean_kl) / std_kl
+                    loop.collect_metrics(stand_kl_histogram=plot_fig([cifar_kl, svhn_kl],
+                                                                     ['red', 'green'],
+                                                                     [config.in_dataset + ' Test',
+                                                                      config.out_dataset + ' Test'],
+                                                                     'log(bit/dims)',
+                                                                     'stand_kl_histogram'))
+                    plt.cla()
+                    plt.xlabel('kl')
+                    plt.ylabel('stand')
+                    plt.scatter(cifar_kl, mixed_stand[index < len(x_test)], s=2, c='r')
+                    plt.scatter(svhn_kl, mixed_stand[index >= len(x_test)], s=2, c='g')
+                    plt.savefig('stand_2d_show')
 
                     loop.collect_metrics(stand_kl_with_stand_ll_histogram=plot_fig(
-                        [cifar_kl_stand + cifar_test_stand, svhn_kl_stand + svhn_test_stand],
+                        [cifar_kl + mixed_stand[index < len(x_test)], svhn_kl + mixed_stand[index >= len(x_test)]],
                         ['red', 'green'],
                         [config.in_dataset + ' Test',
                          config.out_dataset + ' Test'],
                         'log(bit/dims)',
                         'stand_kl_with_stand_ll_histogram'))
-                    cifar_min = np.where(cifar_kl_stand < cifar_test_stand, cifar_kl_stand,
-                                         cifar_test_stand)
-                    svhn_min = np.where(svhn_kl_stand < svhn_test_stand, svhn_kl_stand, svhn_test_stand)
+                    cifar_min = np.where(cifar_kl < mixed_stand[index < len(x_test)], cifar_kl,
+                                         mixed_stand[index < len(x_test)])
+                    svhn_min = np.where(svhn_kl < mixed_stand[index >= len(x_test)], svhn_kl,
+                                        mixed_stand[index >= len(x_test)])
 
                     loop.collect_metrics(max_stand_kl_with_stand_ll_histogram=plot_fig(
                         [cifar_min, svhn_min],
@@ -622,11 +684,12 @@ def main():
                         'log(bit/dims)',
                         'max_stand_kl_with_stand_ll_histogram'))
 
+                    loop.print_logs()
                     break
 
-                for step, [x, ll] in loop.iter_steps(train_flow):
+                for step, [x] in loop.iter_steps(train_flow):
                     _, batch_VAE_loss = session.run([VAE_train_op, VAE_loss], feed_dict={
-                        input_x: x, input_ll: ll
+                        input_x: x
                     })
                     loop.collect_metrics(VAE_loss=batch_VAE_loss)
 
@@ -635,6 +698,9 @@ def main():
 
                 if epoch == config.max_epoch:
                     loop._checkpoint_saver.save(epoch)
+
+                if epoch % config.plot_epoch_freq == 0:
+                    plot_samples(loop)
 
                 loop.collect_metrics(lr=learning_rate.get())
                 loop.print_logs()

@@ -153,6 +153,7 @@ algorithm=('models/likelihood/vae.py --self_ood=True --count_experiment=True'
 'models/increment/pixelcnn.py --mixed_train_skip=64 --count_experiment=True'
 'models/increment/wasserstein.py --mixed_train_skip=64 --count_experiment=True'
 'models/increment/glow.py --mixed_train_skip=64 --count_experiment=True'
+'models/singleshot/vae.py --count_experiment=True'
 )
 
 mlrun --legacy -- python ${algorithm[$1]} ${dataset[$2]}
